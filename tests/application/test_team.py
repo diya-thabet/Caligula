@@ -152,10 +152,15 @@ def test_workflow_rounds_review_challenges_and_report(store):
     # Two rounds, then nothing left to do.
     assert [r.round for r in result.rounds] == [1, 2] and result.stop_reason == "no_open_tasks"
     assert set(result.rounds[1].specialists) == {"official", "web_news", "funders_audit"}
-    # Code queued a challenge per supported core sub-claim, to official and web_news.
+    # Searching for the tender notice (C5) and the progress reports (C4) already
+    # challenged those; code queued a challenge for the other supported core
+    # sub-claims, to official and web_news.
+    expected = {t.expectation_id: (t.specialist, t.purpose) for t in ws.tasks if t.expectation_id}
+    assert expected == {"C3.E1": ("official", "support"), "C4.E1": ("funders_audit", "challenge"),
+                        "C5.E1": ("official", "challenge")}
     added = result.rounds[0].challenge_tasks_added
     challenged = {sid for t in ws.tasks if t.id in added for sid in t.subclaim_ids}
-    assert challenged == {"C3", "C4", "C5", "C6"} and len(added) == 8
+    assert challenged == {"C3", "C6"} and len(added) == 4
     # Specialists see their tasks in the brief; the reviewer's request reached round 2.
     assert "<your_tasks round=\"1\">" in briefs[("official", 1)]
     assert "business register" in briefs[("funders_audit", 2)]

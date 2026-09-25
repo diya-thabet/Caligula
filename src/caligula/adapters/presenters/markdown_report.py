@@ -10,7 +10,8 @@ from datetime import UTC, datetime
 
 from caligula.application.investigation.plan import TaskStatus
 from caligula.application.investigation.workspace import ProposalStatus, Workspace
-from caligula.domain.model.evidence import EvidenceEdge
+from caligula.domain.model.evidence import AbsenceFinding, EvidenceEdge
+from caligula.domain.model.registers import REGISTERS
 from caligula.domain.model.verdict import Verdict
 from caligula.domain.services.interest import Interest, interest, role_of
 from caligula.domain.services.provenance import origin_clusters
@@ -37,6 +38,12 @@ def _stake_note(ws: Workspace, e: EvidenceEdge) -> str:
     d = ws.store.get(e.doc_id)
     stake = interest(role_of(d.publisher, ws.allegation.parties), ws.allegation.bearing_of(e.subclaim_id), e.relation)
     return _STAKE.get(stake, "")
+
+
+def _absence_line(a: AbsenceFinding) -> str:
+    capture = f"capture `{a.doc_id}`" if a.doc_id else "no capture stored"
+    return (f"absence ({a.relation}) · {REGISTERS[a.register_id].name}: nothing found for « {a.query} » "
+            f"({capture})")
 
 
 def _cell(text: str) -> str:
@@ -90,22 +97,43 @@ def build_report(ws: Workspace, verdict: Verdict, review: str | None = None, poc
         same = sorted(d for d in siblings if d != doc_id and clusters[d] == clusters[doc_id])
         return f" · same origin as {', '.join(f'`{d}`' for d in same)}" if same else ""
 
+    def mark(status: str) -> str:
+        return {"accepted": "✓", "disputed": "✗", "pending": "?"}[status]
+
     for c in a.subclaims:
         props = [p for p in ws.proposals if isinstance(p.item, EvidenceEdge) and p.item.subclaim_id == c.id]
         direct = [e for e in ws.edges if e.subclaim_id == c.id and not any(p.item == e for p in props)]
-        if not props and not direct:
+        absent = [p for p in ws.proposals if isinstance(p.item, AbsenceFinding) and p.item.subclaim_id == c.id]
+        absent_direct = [f for f in ws.absences if f.subclaim_id == c.id and not any(p.item == f for p in absent)]
+        if not props and not direct and not absent and not absent_direct:
             continue
         out += [f"### {c.id}. {c.statement}", ""]
         siblings = [p.item.doc_id for p in props] + [e.doc_id for e in direct]
         for p in props:
             e = p.item
-            mark = {"accepted": "✓", "disputed": "✗", "pending": "?"}[p.status]
             note = f" — reviewer: {p.note}" if p.note and p.status != ProposalStatus.PENDING else ""
-            out.append(f"- {mark} {e.relation} · {_doc_line(ws, e.doc_id)} · proposed by {p.by}: "
+            out.append(f"- {mark(p.status)} {e.relation} · {_doc_line(ws, e.doc_id)} · proposed by {p.by}: "
                        f"« {e.quote} »{_stake_note(ws, e)}{origin_note(e.doc_id, siblings)}{note}")
         for e in direct:
             out.append(f"- ✓ {e.relation} · {_doc_line(ws, e.doc_id)}: « {e.quote} »"
                        f"{_stake_note(ws, e)}{origin_note(e.doc_id, siblings)}")
+        for p in absent:
+            note = f" — reviewer: {p.note}" if p.note and p.status != ProposalStatus.PENDING else ""
+            out.append(f"- {mark(p.status)} {_absence_line(p.item)} · proposed by {p.by}{note}")
+        out += [f"- ✓ {_absence_line(f)}" for f in absent_direct]
+        out.append("")
+
+    expected = a.expected()
+    if expected:
+        out += ["## Expected records", "",
+                "What should exist in a register if the sub-claim were false (or true), and what the search found.",
+                "", "| Record | Register | If absent | Searches | Absence counted |", "|---|---|---|---|---|"]
+        for eid, (cid, record) in expected.items():
+            searches = ", ".join(f"{t.id} {t.outcome.value if t.outcome else 'open'}"
+                                 for t in ws.tasks if t.expectation_id == eid) or "none"
+            counted = [f for f in ws.absences if f.subclaim_id == cid and f.register_id == record.register_id]
+            out.append(f"| {eid} {_cell(record.description)} | {record.register_id} | {record.absence_means} {cid} | "
+                       f"{searches} | {'yes' if counted else 'no'} |")
         out.append("")
 
     out += ["## Timeline", ""]

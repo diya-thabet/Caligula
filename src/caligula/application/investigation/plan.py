@@ -22,6 +22,9 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from caligula.domain.model.claims import Allegation
+from caligula.domain.model.evidence import Relation
+from caligula.domain.model.registers import REGISTERS
+from caligula.domain.services.interest import helps_accused
 
 SPECIALIST_NAMES = ("official", "funders_audit", "web_news", "social", "telegram")
 # Default route for each kind of question when the planner leaves a core sub-claim uncovered.
@@ -71,6 +74,7 @@ class PlannedTask(BaseModel):
     purpose: Literal["support", "challenge", "explore"]
     queries: list[str]
     urls: list[str]
+    expectation_id: str | None = None  # the expected record this task searches for, if any
 
 
 class BudgetWeight(BaseModel):
@@ -104,6 +108,31 @@ def _dt(value: str | None) -> datetime | None:
         return None
 
 
+def _expected_record_tasks(allegation: Allegation, tasks: list[Task], specialists: tuple[str, ...],
+                           fixes: list[str]) -> list[Task]:
+    """A search task for every expected record the planner did not assign."""
+    covered = {t.expectation_id for t in tasks}
+    added: list[Task] = []
+    for eid, (cid, record) in allegation.expected().items():
+        register = REGISTERS.get(record.register_id)
+        if eid in covered or register is None:
+            continue
+        if register.specialist not in specialists:
+            fixes.append(f"no specialist available to search {record.register_id} for {eid}")
+            continue
+        # Finding the record is what would help the accused: then the search is a challenge.
+        presence = Relation.CONTRADICTS if record.absence_means == Relation.SUPPORTS else Relation.SUPPORTS
+        purpose = "challenge" if helps_accused(allegation.bearing_of(cid), presence) else "support"
+        added.append(Task(
+            id=f"T{len(tasks) + len(added) + 1}", specialist=register.specialist, subclaim_ids=[cid],
+            purpose=purpose, created_by="code", expectation_id=eid,
+            objective=f"Search {register.name} for: {record.description}. If a proper search finds nothing, "
+                      "close this task not_found, say exactly what you searched, and give the stored capture "
+                      "of the empty result as the first doc_id: the absence is scored."))
+        fixes.append(f"added {register.specialist} task for expected record {eid}")
+    return added
+
+
 def normalize_plan(draft: PlanDraft, allegation: Allegation, total_budget: int,
                    specialists: tuple[str, ...] = SPECIALIST_NAMES) -> Plan:
     known = {c.id for c in allegation.subclaims}
@@ -116,8 +145,11 @@ def normalize_plan(draft: PlanDraft, allegation: Allegation, total_budget: int,
         ids = [i for i in t.subclaim_ids if i in known]
         if len(ids) != len(t.subclaim_ids):
             fixes.append(f"removed unknown sub-claims from task '{t.objective[:40]}'")
+        expectation = t.expectation_id if t.expectation_id in allegation.expected() else None
         tasks.append(Task(id=f"T{len(tasks) + 1}", specialist=t.specialist, objective=t.objective,
-                          subclaim_ids=ids, purpose=t.purpose, queries=t.queries, urls=t.urls))
+                          subclaim_ids=ids, purpose=t.purpose, queries=t.queries, urls=t.urls,
+                          expectation_id=expectation))
+    tasks += _expected_record_tasks(allegation, tasks, specialists, fixes)
 
     claims = {c.id: c for c in allegation.subclaims}
     for cid in allegation.core_subclaims:

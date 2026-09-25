@@ -15,6 +15,7 @@ from caligula.domain.model.claims import Allegation, Hypothesis, Party, SubClaim
 from caligula.domain.model.documents import Document
 from caligula.domain.model.evidence import AmountRole, EvidenceEdge, FinancialFigure, Relation
 from caligula.domain.model.intake import Intake
+from caligula.domain.model.registers import REGISTERS
 
 if TYPE_CHECKING:
     from caligula.application.investigation.plan import PlanDraft
@@ -91,13 +92,20 @@ evidence falsify some of them.
 to warrant further scrutiny. Exclude the causal inference.
 - financial_subclaim: the sub-claim about an amount being inflated or \
 unaccounted for, or null if there is none.
+- expected_records: for each sub-claim, the records that should exist if it \
+were false (or true), in a register that would list them: a tender notice, \
+an emergency decree, a disbursement record, a company registration. \
+register_id is one of: {registers}. absence_means says what finding \
+nothing would mean for the sub-claim (supports or contradicts). Only \
+registers where absence is informative; skip the rest.
 - bearing of each sub-claim: "against" if its truth incriminates the party \
 whose conduct is at issue, "for" if it would clear them (an innocent \
 explanation), "neutral" for context.
 - parties: the bodies, companies or offices whose conduct is at issue (role \
 accused) and whoever makes the allegation, if known (role complainant), with \
 every name they publish under (acronyms, French and English forms). What they \
-publish is weighed as an interested statement."""
+publish is weighed as an interested statement.""".replace(
+    "{registers}", ", ".join(f"{k} ({r.name})" for k, r in REGISTERS.items()))
 
 READ_SYSTEM = """\
 You read one document for an investigation. For each listed sub-claim, decide \
@@ -166,6 +174,9 @@ every core sub-claim from at least two different kinds of source. Include \
 at least one task that looks for the innocent explanation (purpose \
 "challenge") of the central allegation. Prefer sources the accused cannot \
 edit for amounts and dates.
+- For every expected record listed under a sub-claim, one task that searches \
+the named register for it, with expectation_id set to the record's id \
+(e.g. "C5.E1"); code adds any you leave out.
 - budget_weights: relative effort per specialist for this kind of case."""
 
 
@@ -203,15 +214,19 @@ class ClaudeAnalyst:
             f"| questions: {'; '.join(c.verification_questions)}"
             for c in allegation.subclaims
         )
+        expected = "\n".join(f"{eid} ({cid}): {r.description} [register {r.register_id}, "
+                             f"absence {r.absence_means} {cid}]" for eid, (cid, r) in allegation.expected().items())
         hyps = "\n".join(f"{h.id}: {h.statement} predicts {h.predicts}" for h in allegation.hypotheses)
         prompt = (f"<claim>\n{allegation.text}\n</claim>\n\n<subclaims>\n{claims}\n</subclaims>\n\n"
-                  f"<hypotheses>\n{hyps}\n</hypotheses>")
+                  f"<hypotheses>\n{hyps}\n</hypotheses>\n\n<expected_records>\n{expected}\n</expected_records>")
         return self._parse(PLAN_SYSTEM, prompt, PlanDraft)
 
     def decompose(self, allegation_id: str, text: str) -> Allegation:
         d = self._parse(DECOMPOSE_SYSTEM + DECOMPOSE_LANGUAGE, f"<allegation>\n{text}\n</allegation>", _Decomposition)
-        # Drop references to sub-claims the model did not define.
+        # Drop references to sub-claims the model did not define, and unknown registers.
         known = {c.id for c in d.subclaims}
+        for c in d.subclaims:
+            c.expected_records = [r for r in c.expected_records if r.register_id in REGISTERS]
         return Allegation(
             id=allegation_id,
             text=text,

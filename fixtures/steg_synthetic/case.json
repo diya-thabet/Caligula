@@ -29,7 +29,14 @@
           "Is there an archived JORT or TUNEPS award notice with amount and date?",
           "Does a funder record the same project?"
         ],
-        "attested_before": "2026-07-21T00:00:00Z"
+        "attested_before": "2026-07-21T00:00:00Z",
+        "expected_records": [
+          {
+            "description": "Award notice for market 2026-017 in the JORT",
+            "register_id": "jort",
+            "absence_means": "contradicts"
+          }
+        ]
       },
       {
         "id": "C4",
@@ -38,6 +45,13 @@
           "Are there progress reports?",
           "Do satellite images show construction?",
           "Is there a dated field photo?"
+        ],
+        "expected_records": [
+          {
+            "description": "Progress reports or provisional acceptance of the works in the lender's project records",
+            "register_id": "funder_records",
+            "absence_means": "supports"
+          }
         ]
       },
       {
@@ -46,6 +60,13 @@
         "verification_questions": [
           "Was a tender notice published on TUNEPS before the award?",
           "Was an emergency procedure legally justified?"
+        ],
+        "expected_records": [
+          {
+            "description": "TUNEPS tender notice for the Rades-Fictive extension, published before the award",
+            "register_id": "tuneps",
+            "absence_means": "supports"
+          }
         ]
       },
       {

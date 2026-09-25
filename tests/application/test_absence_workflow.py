@@ -5,6 +5,8 @@ import json
 import typing
 from datetime import UTC, datetime
 
+from caligula.adapters.presenters.markdown_report import build_report
+from caligula.application.investigation.plan import PlanDraft, PlannedTask, normalize_plan
 from caligula.application.investigation.toolkit import RegisterName, build_tools
 from caligula.application.investigation.workspace import AgentContext
 from caligula.domain.model.claims import ExpectedRecord
@@ -45,6 +47,24 @@ def test_not_found_on_expected_record_is_proposed_as_absence(store):
     reviewer["review_proposal"](proposal_id="P1", decision="accept", note="search covered the award period")
     [item] = ws.verdict().weighed
     assert (item.kind, item.subclaim_id, item.weight, item.doc_id) == ("absence", "C5", 0.8, "tuneps_search")
+    report = build_report(ws, ws.verdict())
+    assert ("✓ absence (supports) · TUNEPS: public procurement notices and awards: nothing found for "
+            "« extension centrale Rades-Fictive » (capture `tuneps_search`)") in report
+    assert "| C5.E1 TUNEPS tender notice for the Rades-Fictive extension | tuneps | supports C5 | T1 not_found | yes |" \
+        in report
+
+
+def test_plan_searches_every_expected_record_once(store):
+    ws = workspace(store)
+    expect_tender_notice(ws)
+    mine = PlannedTask(specialist="official", objective="TUNEPS notice", subclaim_ids=["C5"], purpose="support",
+                       queries=["Rades-Fictive"], urls=[], expectation_id="C5.E1")
+    bogus = mine.model_copy(update={"objective": "made up", "expectation_id": "C5.E9"})
+    plan = normalize_plan(PlanDraft(entities=[], window_start=None, window_end=None, tasks=[mine, bogus],
+                                    budget_weights=[]), ws.allegation, 50)
+    assert [(t.objective, t.expectation_id) for t in plan.tasks if t.subclaim_ids == ["C5"]][:2] == [
+        ("TUNEPS notice", "C5.E1"), ("made up", None)]
+    assert not any("expected record C5.E1" in f for f in plan.fixes)
 
 
 def test_absence_that_cannot_be_checked_does_not_count(store):
