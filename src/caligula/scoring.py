@@ -1,0 +1,169 @@
+"""Evidence math. No LLM output reaches this module unvalidated, and no number
+here comes from the LLM.
+
+The weights are priors, not calibrated values. They must be fitted against a
+labelled set of past cases before any score is published (see docs/architecture.md).
+"""
+
+from __future__ import annotations
+
+from caligula.models import (
+    Allegation,
+    AmountRole,
+    EvidenceEdge,
+    FinancialAnomaly,
+    FinancialFigure,
+    HypothesisResult,
+    Relation,
+    RetconFlag,
+    SourceKind,
+    SubClaimResult,
+)
+from caligula.provenance import group_by_cluster
+from caligula.store import EvidenceStore
+
+# Inverse to how easily the accused party can silently change the source.
+SOURCE_WEIGHTS: dict[SourceKind, float] = {
+    SourceKind.AUDIT: 0.85,
+    SourceKind.FOREIGN_MIRROR: 0.80,
+    SourceKind.ARCHIVE: 0.75,
+    SourceKind.STATISTICS: 0.70,
+    SourceKind.OSINT: 0.70,
+    SourceKind.CONTRIBUTOR: 0.60,
+    SourceKind.OFFICIAL_LIVE: 0.50,
+    SourceKind.NEWS: 0.35,
+    SourceKind.SOCIAL: 0.15,
+}
+# A version that diverges from an earlier attested copy is itself suspect.
+RETCONNED_PENALTY = 0.3
+
+SUPPORTED, CONTRADICTED, CONTESTED = "supported", "contradicted", "contested"
+PARTIAL, UNVERIFIED = "partially_supported", "unverified"
+STRONG, WEAK = 0.7, 0.3
+
+ANOMALY_RATIO = 0.20
+ANOMALY_MIN_CLUSTERS = 2
+
+
+def doc_weights(store: EvidenceStore, retcons: list[RetconFlag]) -> dict[str, float]:
+    retconned = {f.later_doc_id for f in retcons}
+    return {
+        doc.id: SOURCE_WEIGHTS[doc.source_kind] * (RETCONNED_PENALTY if doc.id in retconned else 1.0)
+        for doc in store.documents.values()
+    }
+
+
+def _noisy_or(cluster_weights: list[float]) -> float:
+    p_none = 1.0
+    for w in cluster_weights:
+        p_none *= 1.0 - w
+    return 1.0 - p_none
+
+
+def score_subclaims(
+    allegation: Allegation,
+    edges: list[EvidenceEdge],
+    weights: dict[str, float],
+    clusters: dict[str, str],
+) -> dict[str, SubClaimResult]:
+    results = {}
+    for claim in allegation.subclaims:
+        by_rel = {
+            rel: {e.doc_id for e in edges if e.subclaim_id == claim.id and e.relation == rel}
+            for rel in (Relation.SUPPORTS, Relation.CONTRADICTS)
+        }
+        sup_groups = group_by_cluster(by_rel[Relation.SUPPORTS], clusters)
+        con_groups = group_by_cluster(by_rel[Relation.CONTRADICTS], clusters)
+        # One independent origin counts once, at the weight of its best document.
+        support = _noisy_or([max(weights[d] for d in g) for g in sup_groups])
+        contra = _noisy_or([max(weights[d] for d in g) for g in con_groups])
+        results[claim.id] = SubClaimResult(
+            id=claim.id,
+            statement=claim.statement,
+            status=_status(support, contra),
+            support=round(support, 3),
+            contradiction=round(contra, 3),
+            supporting_clusters=sup_groups,
+            contradicting_clusters=con_groups,
+            qualifying_docs=sorted(
+                {e.doc_id for e in edges if e.subclaim_id == claim.id and e.relation == Relation.QUALIFIES}
+            ),
+        )
+    return results
+
+
+def _status(support: float, contra: float) -> str:
+    if support >= STRONG and contra < WEAK:
+        return SUPPORTED
+    if contra >= STRONG and support < WEAK:
+        return CONTRADICTED
+    if support >= WEAK and contra >= WEAK:
+        return CONTESTED
+    if support > 0 or contra > 0:
+        return PARTIAL
+    return UNVERIFIED
+
+
+def evaluate_hypotheses(
+    allegation: Allegation, subclaims: dict[str, SubClaimResult]
+) -> list[HypothesisResult]:
+    known = {SUPPORTED: True, CONTRADICTED: False}
+    out = []
+    for hyp in allegation.hypotheses:
+        reasons, falsified, open_ = [], False, False
+        for claim_id, predicted in hyp.predicts.items():
+            observed = known.get(subclaims[claim_id].status)
+            if observed is None:
+                open_ = True
+                reasons.append(f"{claim_id} is {subclaims[claim_id].status}")
+            elif observed != predicted:
+                falsified = True
+                reasons.append(f"predicts {claim_id}={predicted}, evidence says {observed}")
+            else:
+                reasons.append(f"{claim_id}={observed} as predicted")
+        status = "falsified" if falsified else "open" if open_ else "consistent"
+        out.append(HypothesisResult(id=hyp.id, statement=hyp.statement, status=status, reasons=reasons))
+    return out
+
+
+def detect_financial_anomaly(
+    figures: list[FinancialFigure],
+    retcons: list[RetconFlag],
+    clusters: dict[str, str],
+) -> FinancialAnomaly | None:
+    """discrepancy = committed amount - what the work can be shown to cost.
+
+    Figures from a version that was rewritten after an earlier attested copy
+    are excluded; the attested copy is used instead.
+    """
+    retconned = {f.later_doc_id for f in retcons}
+    usable = [f for f in figures if f.doc_id not in retconned]
+
+    def pick(role: AmountRole) -> list[FinancialFigure]:
+        return [f for f in usable if f.role == role]
+
+    reference = pick(AmountRole.ALLOCATED) or pick(AmountRole.DISBURSED)
+    spend = pick(AmountRole.PROVEN_SPEND) or pick(AmountRole.BENCHMARK)
+    if not reference or not spend:
+        return None
+    ref = max(reference, key=lambda f: f.amount_tnd)
+    if spend[0].role == AmountRole.PROVEN_SPEND:
+        proven = sum(f.amount_tnd for f in spend)
+    else:
+        # Several comparables: take the most expensive, so doubt favours the accused.
+        spend = [max(spend, key=lambda f: f.amount_tnd)]
+        proven = spend[0].amount_tnd
+    discrepancy = ref.amount_tnd - proven
+    ratio = discrepancy / ref.amount_tnd
+    used = [ref, *spend, *(f for f in pick(AmountRole.DISBURSED) if f is not ref)]
+    independent = len({clusters[f.doc_id] for f in used})
+    return FinancialAnomaly(
+        reference_role=ref.role,
+        reference_amount_tnd=ref.amount_tnd,
+        proven_spend_tnd=proven,
+        discrepancy_tnd=discrepancy,
+        discrepancy_ratio=round(ratio, 3),
+        independent_clusters=independent,
+        flagged=ratio > ANOMALY_RATIO and independent >= ANOMALY_MIN_CLUSTERS,
+        figures=used,
+    )

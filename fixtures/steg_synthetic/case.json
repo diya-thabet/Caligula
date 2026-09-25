@@ -1,0 +1,509 @@
+{
+  "_note": "Synthetic test case. Every entity, document and number is fictional.",
+  "allegation": {
+    "id": "STEG-2026-07-21-SYNTHETIC",
+    "text": "Synthetic scenario (all entities fictional). The 21/07/2026 outage was caused by a production deficit. A state-funded 450 MW expansion (market 2026-017) was awarded without competitive tender to Société Zeta Travaux at an inflated price, nothing was built, and funds were misappropriated through a link between the contractor and the signing official.",
+    "subject": "STEG / Ministry of Energy (fictional scenario)",
+    "claim_type": "corruption_procurement",
+    "subclaims": [
+      {
+        "id": "C1",
+        "statement": "A major power outage occurred on 21/07/2026.",
+        "verification_questions": [
+          "Is the outage documented by a source independent of STEG?"
+        ]
+      },
+      {
+        "id": "C2",
+        "statement": "Peak electricity demand in 2026 rose significantly (more than 5%) over 2025.",
+        "verification_questions": [
+          "What were the 2025 and 2026 annual peaks in INS or grid operator data?",
+          "Was summer 2026 exceptionally hot?"
+        ]
+      },
+      {
+        "id": "C3",
+        "statement": "A funded capacity-expansion project (market 2026-017) existed before the outage.",
+        "verification_questions": [
+          "Is there an archived JORT or TUNEPS award notice with amount and date?",
+          "Does a funder record the same project?"
+        ]
+      },
+      {
+        "id": "C4",
+        "statement": "No capacity has been added on the project site since the award.",
+        "verification_questions": [
+          "Are there progress reports?",
+          "Do satellite images show construction?",
+          "Is there a dated field photo?"
+        ]
+      },
+      {
+        "id": "C5",
+        "statement": "The contract was awarded without a competitive tender.",
+        "verification_questions": [
+          "Was a tender notice published on TUNEPS before the award?",
+          "Was an emergency procedure legally justified?"
+        ]
+      },
+      {
+        "id": "C6",
+        "statement": "The committed amount exceeds the cost of comparable works by more than 20%.",
+        "verification_questions": [
+          "What did comparable works cost in prior TUNEPS awards?"
+        ]
+      },
+      {
+        "id": "C7",
+        "statement": "The contractor is linked to the official who signed the award.",
+        "verification_questions": [
+          "Who are the contractor's managers and owners in the RNE?",
+          "Who signed the award?"
+        ]
+      },
+      {
+        "id": "C8",
+        "statement": "Project funds were misappropriated.",
+        "verification_questions": [
+          "Is there any documented use of the disbursed funds?"
+        ]
+      }
+    ],
+    "hypotheses": [
+      {
+        "id": "H1",
+        "statement": "The outage was caused by a production deficit, not a demand surge.",
+        "predicts": {
+          "C1": true,
+          "C2": false
+        }
+      },
+      {
+        "id": "H2",
+        "statement": "The outage was caused by a demand surge.",
+        "predicts": {
+          "C1": true,
+          "C2": true
+        }
+      },
+      {
+        "id": "H3",
+        "statement": "Expansion funds were diverted through a non-competitive award.",
+        "predicts": {
+          "C3": true,
+          "C4": true,
+          "C5": true,
+          "C6": true
+        }
+      }
+    ],
+    "core_subclaims": [
+      "C3",
+      "C4",
+      "C5",
+      "C6"
+    ],
+    "financial_subclaim": "C6"
+  },
+  "documents": [
+    {
+      "id": "steg_communique",
+      "file": "docs/steg_communique.txt",
+      "canonical_url": "https://fixture.example/steg_communique",
+      "url": "https://fixture.example/steg_communique",
+      "source_kind": "official_live",
+      "publisher": "STEG",
+      "title": "",
+      "published_at": "2026-07-21T20:00:00Z",
+      "observed_at": "2026-07-21T21:00:00Z",
+      "cites": [],
+      "derived_from": []
+    },
+    {
+      "id": "news_outage",
+      "file": "docs/news_outage.txt",
+      "canonical_url": "https://fixture.example/news_outage",
+      "url": "https://fixture.example/news_outage",
+      "source_kind": "news",
+      "publisher": "Le Quotidien Fictif",
+      "title": "",
+      "published_at": "2026-07-22T06:00:00Z",
+      "observed_at": "2026-07-22T08:00:00Z",
+      "cites": [
+        "steg_communique"
+      ],
+      "derived_from": []
+    },
+    {
+      "id": "nightlights",
+      "file": "docs/nightlights.txt",
+      "canonical_url": "https://fixture.example/nightlights",
+      "url": "https://fixture.example/nightlights",
+      "source_kind": "osint",
+      "publisher": "NASA Black Marble (analyse)",
+      "title": "",
+      "published_at": "2026-07-23T00:00:00Z",
+      "observed_at": "2026-07-23T00:00:00Z",
+      "cites": [],
+      "derived_from": []
+    },
+    {
+      "id": "ins_peak",
+      "file": "docs/ins_peak.txt",
+      "canonical_url": "https://fixture.example/ins_peak",
+      "url": "https://fixture.example/ins_peak",
+      "source_kind": "statistics",
+      "publisher": "INS (fictif)",
+      "title": "",
+      "published_at": "2026-09-01T00:00:00Z",
+      "observed_at": "2026-09-02T00:00:00Z",
+      "cites": [],
+      "derived_from": []
+    },
+    {
+      "id": "weather",
+      "file": "docs/weather.txt",
+      "canonical_url": "https://fixture.example/weather",
+      "url": "https://fixture.example/weather",
+      "source_kind": "osint",
+      "publisher": "Station Tunis-Carthage",
+      "title": "",
+      "published_at": "2026-07-22T00:00:00Z",
+      "observed_at": "2026-07-22T00:00:00Z",
+      "cites": [],
+      "derived_from": []
+    },
+    {
+      "id": "jort_award_v1",
+      "file": "docs/jort_award_v1.txt",
+      "canonical_url": "https://jort.example.tn/2026/017",
+      "url": "https://web.archive.org/web/20260301100000id_/https://jort.example.tn/2026/017",
+      "source_kind": "archive",
+      "publisher": "Wayback Machine",
+      "title": "",
+      "published_at": "2026-02-20T00:00:00Z",
+      "observed_at": "2026-03-01T10:00:00Z",
+      "cites": [],
+      "derived_from": []
+    },
+    {
+      "id": "jort_award_v2",
+      "file": "docs/jort_award_v2.txt",
+      "canonical_url": "https://jort.example.tn/2026/017",
+      "url": "https://jort.example.tn/2026/017",
+      "source_kind": "official_live",
+      "publisher": "JORT (fictif)",
+      "title": "",
+      "published_at": "2026-02-20T00:00:00Z",
+      "observed_at": "2026-09-20T09:00:00Z",
+      "cites": [],
+      "derived_from": []
+    },
+    {
+      "id": "tuneps_search",
+      "file": "docs/tuneps_search.txt",
+      "canonical_url": "https://fixture.example/tuneps_search",
+      "url": "https://fixture.example/tuneps_search",
+      "source_kind": "archive",
+      "publisher": "Wayback Machine",
+      "title": "",
+      "published_at": "2026-02-15T00:00:00Z",
+      "observed_at": "2026-02-15T12:00:00Z",
+      "cites": [],
+      "derived_from": []
+    },
+    {
+      "id": "worldbank",
+      "file": "docs/worldbank.txt",
+      "canonical_url": "https://fixture.example/worldbank",
+      "url": "https://fixture.example/worldbank",
+      "source_kind": "foreign_mirror",
+      "publisher": "Bailleur international (fictif)",
+      "title": "",
+      "published_at": "2026-06-30T00:00:00Z",
+      "observed_at": "2026-09-10T00:00:00Z",
+      "cites": [],
+      "derived_from": []
+    },
+    {
+      "id": "benchmark",
+      "file": "docs/benchmark.txt",
+      "canonical_url": "https://fixture.example/benchmark",
+      "url": "https://fixture.example/benchmark",
+      "source_kind": "archive",
+      "publisher": "Wayback Machine",
+      "title": "",
+      "published_at": "2024-11-05T00:00:00Z",
+      "observed_at": "2024-11-06T00:00:00Z",
+      "cites": [],
+      "derived_from": []
+    },
+    {
+      "id": "site_report",
+      "file": "docs/site_report.txt",
+      "canonical_url": "https://fixture.example/site_report",
+      "url": "https://fixture.example/site_report",
+      "source_kind": "contributor",
+      "publisher": "Contributeur anonyme",
+      "title": "",
+      "published_at": "2026-08-10T00:00:00Z",
+      "observed_at": "2026-08-10T16:00:00Z",
+      "cites": [],
+      "derived_from": []
+    },
+    {
+      "id": "sentinel",
+      "file": "docs/sentinel.txt",
+      "canonical_url": "https://fixture.example/sentinel",
+      "url": "https://fixture.example/sentinel",
+      "source_kind": "osint",
+      "publisher": "Copernicus Sentinel-2 (analyse)",
+      "title": "",
+      "published_at": "2026-09-05T00:00:00Z",
+      "observed_at": "2026-09-06T00:00:00Z",
+      "cites": [],
+      "derived_from": []
+    },
+    {
+      "id": "audit",
+      "file": "docs/audit.txt",
+      "canonical_url": "https://fixture.example/audit",
+      "url": "https://fixture.example/audit",
+      "source_kind": "audit",
+      "publisher": "Cour des comptes (fictif)",
+      "title": "",
+      "published_at": "2026-09-15T00:00:00Z",
+      "observed_at": "2026-09-15T00:00:00Z",
+      "cites": [],
+      "derived_from": []
+    },
+    {
+      "id": "steg_procedure",
+      "file": "docs/steg_procedure.txt",
+      "canonical_url": "https://fixture.example/steg_procedure",
+      "url": "https://fixture.example/steg_procedure",
+      "source_kind": "official_live",
+      "publisher": "STEG",
+      "title": "",
+      "published_at": "2026-09-18T00:00:00Z",
+      "observed_at": "2026-09-18T12:00:00Z",
+      "cites": [],
+      "derived_from": []
+    },
+    {
+      "id": "news_jort_b",
+      "file": "docs/news_jort_b.txt",
+      "canonical_url": "https://fixture.example/news_jort_b",
+      "url": "https://fixture.example/news_jort_b",
+      "source_kind": "news",
+      "publisher": "Média fictif b",
+      "title": "",
+      "published_at": "2026-03-02T00:00:00Z",
+      "observed_at": "2026-03-02T00:00:00Z",
+      "cites": [
+        "jort_award_v1"
+      ],
+      "derived_from": []
+    },
+    {
+      "id": "news_jort_c",
+      "file": "docs/news_jort_c.txt",
+      "canonical_url": "https://fixture.example/news_jort_c",
+      "url": "https://fixture.example/news_jort_c",
+      "source_kind": "news",
+      "publisher": "Média fictif c",
+      "title": "",
+      "published_at": "2026-03-02T00:00:00Z",
+      "observed_at": "2026-03-02T00:00:00Z",
+      "cites": [
+        "jort_award_v1"
+      ],
+      "derived_from": []
+    },
+    {
+      "id": "news_jort_d",
+      "file": "docs/news_jort_d.txt",
+      "canonical_url": "https://fixture.example/news_jort_d",
+      "url": "https://fixture.example/news_jort_d",
+      "source_kind": "news",
+      "publisher": "Média fictif d",
+      "title": "",
+      "published_at": "2026-03-03T00:00:00Z",
+      "observed_at": "2026-03-03T00:00:00Z",
+      "cites": [],
+      "derived_from": [
+        "news_jort_b"
+      ]
+    }
+  ],
+  "recorded_readings": {
+    "_note": "What an LLM reading pass proposed; replayed offline and validated like live output.",
+    "edges": [
+      {
+        "doc_id": "steg_communique",
+        "subclaim_id": "C1",
+        "relation": "supports",
+        "quote": "une coupure d'électricité a touché plusieurs gouvernorats le 21/07/2026",
+        "rationale": ""
+      },
+      {
+        "doc_id": "news_outage",
+        "subclaim_id": "C1",
+        "relation": "supports",
+        "quote": "plusieurs gouvernorats privés d'électricité le 21/07/2026",
+        "rationale": ""
+      },
+      {
+        "doc_id": "nightlights",
+        "subclaim_id": "C1",
+        "relation": "supports",
+        "quote": "Baisse de radiance nocturne de 62 % sur le Grand Tunis",
+        "rationale": ""
+      },
+      {
+        "doc_id": "ins_peak",
+        "subclaim_id": "C2",
+        "relation": "contradicts",
+        "quote": "2026 : 4 870 MW (+0,8 % par rapport à 2025)",
+        "rationale": ""
+      },
+      {
+        "doc_id": "weather",
+        "subclaim_id": "C2",
+        "relation": "contradicts",
+        "quote": "Aucun épisode de chaleur exceptionnel par rapport à l'été 2025.",
+        "rationale": ""
+      },
+      {
+        "doc_id": "jort_award_v1",
+        "subclaim_id": "C3",
+        "relation": "supports",
+        "quote": "Marché n° 2026-017 : extension de 450 MW de la centrale de Rades-Fictive.",
+        "rationale": ""
+      },
+      {
+        "doc_id": "jort_award_v2",
+        "subclaim_id": "C3",
+        "relation": "supports",
+        "quote": "Marché n° 2026-017 : extension de 450 MW de la centrale de Rades-Fictive.",
+        "rationale": ""
+      },
+      {
+        "doc_id": "worldbank",
+        "subclaim_id": "C3",
+        "relation": "supports",
+        "quote": "Composante 2 : extension de capacité, centrale de Rades-Fictive (marché n° 2026-017).",
+        "rationale": ""
+      },
+      {
+        "doc_id": "news_jort_b",
+        "subclaim_id": "C3",
+        "relation": "supports",
+        "quote": "le marché n° 2026-017 de 120 000 000 TND a été attribué",
+        "rationale": ""
+      },
+      {
+        "doc_id": "news_jort_c",
+        "subclaim_id": "C3",
+        "relation": "supports",
+        "quote": "le marché n° 2026-017 de 120 000 000 TND a été attribué",
+        "rationale": ""
+      },
+      {
+        "doc_id": "news_jort_d",
+        "subclaim_id": "C3",
+        "relation": "supports",
+        "quote": "le marché n° 2026-017 de 120 000 000 TND a été attribué",
+        "rationale": ""
+      },
+      {
+        "doc_id": "site_report",
+        "subclaim_id": "C4",
+        "relation": "supports",
+        "quote": "terrain nu, aucun engin de chantier, aucune fondation visible",
+        "rationale": ""
+      },
+      {
+        "doc_id": "sentinel",
+        "subclaim_id": "C4",
+        "relation": "supports",
+        "quote": "aucun changement de surface bâtie détecté",
+        "rationale": ""
+      },
+      {
+        "doc_id": "jort_award_v1",
+        "subclaim_id": "C5",
+        "relation": "supports",
+        "quote": "par procédure de gré à gré",
+        "rationale": ""
+      },
+      {
+        "doc_id": "tuneps_search",
+        "subclaim_id": "C5",
+        "relation": "supports",
+        "quote": "Aucun avis d'appel d'offres publié entre le 01/01/2025 et le 15/02/2026 pour cet objet.",
+        "rationale": ""
+      },
+      {
+        "doc_id": "audit",
+        "subclaim_id": "C5",
+        "relation": "supports",
+        "quote": "Le recours au gré à gré pour le marché n° 2026-017 n'est pas justifié par une situation d'urgence documentée.",
+        "rationale": ""
+      },
+      {
+        "doc_id": "steg_procedure",
+        "subclaim_id": "C5",
+        "relation": "qualifies",
+        "quote": "attribué conformément à la procédure d'urgence prévue par le décret n° 2026-0412",
+        "rationale": "Accused party's own justification; checked against the audit."
+      },
+      {
+        "doc_id": "news_outage",
+        "subclaim_id": "C8",
+        "relation": "supports",
+        "quote": "Le ministre a reconnu un détournement de fonds.",
+        "rationale": "Hallucinated quote."
+      },
+      {
+        "doc_id": "jort_award_v1",
+        "subclaim_id": "C9",
+        "relation": "supports",
+        "quote": "par procédure de gré à gré",
+        "rationale": "Unknown sub-claim."
+      }
+    ],
+    "figures": [
+      {
+        "doc_id": "jort_award_v1",
+        "role": "allocated",
+        "amount_tnd": 120000000,
+        "quote": "pour un montant de 120 000 000 TND"
+      },
+      {
+        "doc_id": "jort_award_v2",
+        "role": "allocated",
+        "amount_tnd": 80000000,
+        "quote": "pour un montant de 80 000 000 TND"
+      },
+      {
+        "doc_id": "worldbank",
+        "role": "disbursed",
+        "amount_tnd": 110000000,
+        "quote": "Montant décaissé au 30/06/2026 : 110 000 000 TND (équivalent)."
+      },
+      {
+        "doc_id": "benchmark",
+        "role": "benchmark",
+        "amount_tnd": 60000000,
+        "quote": "pour un montant de 60 000 000 TND"
+      },
+      {
+        "doc_id": "site_report",
+        "role": "proven_spend",
+        "amount_tnd": 5000000,
+        "quote": "aucun engin de chantier"
+      }
+    ]
+  }
+}

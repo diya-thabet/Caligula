@@ -1,0 +1,4 @@
+[DOCUMENT FICTIF - données synthétiques de test]
+STEG - Communiqué
+Suite à un déficit de production, une coupure d'électricité a touché plusieurs gouvernorats le 21/07/2026 entre 14h00 et 19h30.
+La pointe de consommation enregistrée ce jour a atteint 4 870 MW. Les équipes sont mobilisées pour rétablir le service.

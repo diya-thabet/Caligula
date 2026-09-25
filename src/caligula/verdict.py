@@ -1,0 +1,116 @@
+"""Assemble the structured verdict from validated evidence.
+
+The engine never outputs "corruption proven". The strongest verdict is
+`high_suspicion`: every core sub-claim is supported by independent evidence and
+a deterministic signal (financial anomaly or rewritten official record) is
+present. Attributing it to a person is out of scope for the engine and requires
+human review with a right of reply.
+"""
+
+from __future__ import annotations
+
+from caligula.models import (
+    Allegation,
+    EvidenceEdge,
+    FinancialFigure,
+    RejectedEvidence,
+    SubClaimResult,
+    Verdict,
+)
+from caligula.provenance import group_by_cluster, origin_clusters
+from caligula.retcon import detect_retcons
+from caligula.scoring import (
+    CONTRADICTED,
+    SUPPORTED,
+    detect_financial_anomaly,
+    doc_weights,
+    evaluate_hypotheses,
+    score_subclaims,
+)
+from caligula.store import EvidenceStore
+from caligula.validate import validate_edges, validate_figures
+
+DISCLAIMER = (
+    "Evidence assessment, not a finding of guilt. Scores use uncalibrated priors. "
+    "No individual is named by the engine; any attribution requires human review "
+    "and a right of reply."
+)
+
+
+def build_verdict(
+    store: EvidenceStore,
+    allegation: Allegation,
+    edges: list[EvidenceEdge],
+    figures: list[FinancialFigure],
+) -> Verdict:
+    edges, rejected_edges = validate_edges(store, allegation, edges)
+    figures, rejected_figures = validate_figures(store, figures)
+    rejected: list[RejectedEvidence] = rejected_edges + rejected_figures
+
+    retcons = detect_retcons(store)
+    clusters = origin_clusters(store)
+    subclaims = score_subclaims(allegation, edges, doc_weights(store, retcons), clusters)
+
+    financial = detect_financial_anomaly(figures, retcons, clusters)
+    if financial and allegation.financial_subclaim:
+        figure_clusters = group_by_cluster({f.doc_id for f in financial.figures}, clusters)
+        _apply_financial(subclaims[allegation.financial_subclaim], financial.flagged, figure_clusters)
+
+    hypotheses = evaluate_hypotheses(allegation, subclaims)
+    verdict, confidence = _overall(allegation, subclaims, bool(financial and financial.flagged), bool(retcons))
+
+    # Ask for more wherever a sub-claim is unsettled or rests on a single origin.
+    missing = [
+        f"{c.id}: {q}"
+        for c in allegation.subclaims
+        if _independent_origins(subclaims[c.id]) < 2
+        for q in c.verification_questions
+    ]
+    return Verdict(
+        allegation_id=allegation.id,
+        verdict=verdict,
+        confidence=confidence,
+        by_subclaim=list(subclaims.values()),
+        hypotheses=hypotheses,
+        financial=financial,
+        retcon_flags=retcons,
+        rejected_evidence=rejected,
+        missing_evidence=missing,
+        disclaimer=DISCLAIMER,
+    )
+
+
+def _independent_origins(result: SubClaimResult) -> int:
+    if result.status == SUPPORTED:
+        return len(result.supporting_clusters)
+    if result.status == CONTRADICTED:
+        return len(result.contradicting_clusters)
+    return 0
+
+
+def _apply_financial(result: SubClaimResult, flagged: bool, figure_clusters: list[list[str]]) -> None:
+    # An exonerating document (contradicting edge) still blocks the computed result.
+    if flagged and result.status != CONTRADICTED and not result.contradicting_clusters:
+        result.status = SUPPORTED
+        result.support = max(result.support, 0.9)
+        result.supporting_clusters = figure_clusters
+
+
+def _overall(
+    allegation: Allegation,
+    subclaims: dict[str, SubClaimResult],
+    anomaly: bool,
+    retcon: bool,
+) -> tuple[str, float]:
+    core = [subclaims[i] for i in allegation.core_subclaims if i in subclaims]
+    if not core:
+        return "unverified", 0.0
+    confidence = round(sum(abs(c.support - c.contradiction) for c in core) / len(core), 3)
+    if any(c.status == CONTRADICTED for c in core):
+        return "contradicted", confidence
+    supported = sum(c.status == SUPPORTED for c in core)
+    if supported == len(core) and (anomaly or retcon):
+        return "high_suspicion", confidence
+    if supported:
+        return "partially_supported", confidence
+    return "unverified", confidence
