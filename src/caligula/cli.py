@@ -23,7 +23,18 @@ def main(argv: list[str] | None = None) -> int:
     cal.add_argument("--blobs", type=Path, default=Path("blobs"))
     scr = sub.add_parser("screen", help="rank procurement awards by red flags")
     scr.add_argument("awards_json", type=Path)
+    inv = sub.add_parser("investigate", help="run the investigator agent on a claim (needs Claude API access)")
+    inv.add_argument("claim", help="claim or allegation text")
+    inv.add_argument("--mode", choices=["factcheck", "investigate"], default="factcheck")
+    inv.add_argument("--id", default="claim", help="case id")
+    inv.add_argument("--case-dir", type=Path, help="preload documents from a case directory")
+    inv.add_argument("--no-web", action="store_true", help="disable web search")
+    inv.add_argument("--blobs", type=Path, default=Path("blobs"))
+    inv.add_argument("--db", help="PostgreSQL DSN; default is an in-memory store")
     args = parser.parse_args(argv)
+
+    if args.command == "investigate":
+        return investigate(args)
 
     if args.command == "calibrate":
         return calibrate(args.root, BlobStore(args.blobs))
@@ -37,6 +48,37 @@ def main(argv: list[str] | None = None) -> int:
         investigator = ClaudeInvestigator()
     verdict = run_case(args.case_dir, open_store(args.db, BlobStore(args.blobs)), investigator)
     print(verdict.model_dump_json(indent=2) if args.json else summarize(verdict))
+    return 0
+
+
+def investigate(args: argparse.Namespace) -> int:
+    from caligula.agent.reply import public_reply
+    from caligula.agent.runner import InvestigatorAgent
+    from caligula.agent.workspace import Connectors, Mode, Workspace
+    from caligula.case import load_case
+    from caligula.ingest.sources import LiveFetcher, WorldBankClient
+    from caligula.ingest.wayback import WaybackClient
+    from caligula.llm.claude import ClaudeInvestigator
+
+    store = open_store(args.db, BlobStore(args.blobs))
+    if args.case_dir:
+        load_case(args.case_dir, store)
+    mode = Mode(args.mode)
+    allegation = ClaudeInvestigator().decompose(args.id, args.claim)
+    connectors = Connectors(wayback=WaybackClient(), live=LiveFetcher(), funders=WorldBankClient())
+    ws = Workspace(store=store, allegation=allegation, mode=mode, connectors=connectors)
+    result = InvestigatorAgent(web_search=not args.no_web).run(ws)
+
+    print(summarize(result.verdict))
+    print(f"\nAgent summary ({len(result.trace)} tool calls, stop: {result.stop_reason}):\n{result.summary}")
+    if result.unknown_citations:
+        print(f"\nWARNING: summary cites unknown documents: {result.unknown_citations}")
+    print(f"\nPublic reply:\n{public_reply(result, mode, store)}")
+    if hasattr(store, "save_investigation"):
+        store.save_investigation(
+            args.id, mode.value, allegation.model_dump(mode="json"), result.verdict.model_dump(mode="json"),
+            [vars(t) for t in result.trace],
+        )
     return 0
 
 

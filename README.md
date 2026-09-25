@@ -20,20 +20,35 @@ See [docs/architecture.md](docs/architecture.md) for the design and roadmap.
 ```bash
 python -m venv .venv && . .venv/bin/activate
 pip install -e '.[dev]'
-pytest
+pytest                                   # Postgres tests run when CALIGULA_TEST_DSN is set
 
 # Offline: replays recorded readings of the synthetic STEG case
 caligula run fixtures/steg_synthetic
 
-# Live: Claude decomposes the allegation and reads each document
-# (needs ANTHROPIC_API_KEY or an `ant auth login` profile)
-caligula run fixtures/steg_synthetic --live
+# Same case on PostgreSQL + pgvector
+docker compose up -d
+caligula run fixtures/steg_synthetic --db postgresql://caligula:caligula@localhost:5432/caligula
+
+# Rank procurement awards by red flags
+caligula screen fixtures/awards_synthetic.json
+
+# Score labelled cases and sweep the thresholds
+caligula calibrate fixtures
+
+# Agent (needs ANTHROPIC_API_KEY or an `ant auth login` profile)
+caligula investigate "Le taux de chômage est tombé à 12 % en 2026" --mode factcheck
+caligula investigate "$(jq -r .allegation.text fixtures/steg_synthetic/case.json)" \
+    --mode investigate --case-dir fixtures/steg_synthetic
 ```
 
-The STEG case in `fixtures/` is synthetic: every company, document and amount
-is fictional. It exercises the full pipeline: a demand-surge hypothesis gets
-falsified, a JORT award rewritten from 120M to 80M TND gets flagged, three
-articles citing one leak count as one source, and invented quotes are rejected.
+OCR needs `tesseract-ocr` with the `ara` and `fra` models and `poppler-utils`.
+
+The STEG case and award records in `fixtures/` are synthetic: every company,
+document and amount is fictional. The STEG case exercises the full pipeline: a
+demand-surge hypothesis gets falsified, a JORT award rewritten from 120M to 80M
+TND gets flagged, three articles citing one leak count as one source, and
+invented quotes are rejected.
 
 Caligula's output is an evidence assessment, not a finding of guilt. It does not
 name individuals; attribution requires human review and a right of reply.
+See [docs/agent.md](docs/agent.md) for the investigator agent.

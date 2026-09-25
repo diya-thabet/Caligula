@@ -127,15 +127,30 @@ sub-claim; it is what the verdict is about, and it is never marked proven.
 
 ## Roadmap
 
-- **V1 (this commit):** store, hashing, retcon diff, provenance clusters,
+- **V1 (done):** store, hashing, retcon diff, provenance clusters,
   validation, scoring, hypotheses, financial check, Wayback and contributor
   ingesters, Claude decomposition and reading, synthetic STEG case.
-- **V2:** Postgres + pgvector store (documents, versions, edges, entities);
-  OCR for scanned JORT; retrieval (BM25 + vector + entity + date filters);
-  temporal checks (a document cannot attest an event before it happened);
-  entity resolution across Arabic/French spellings; calibration set.
-- **V3:** iterative investigation loop (plan, search, read, find gap, search
-  again, challenge phase that looks for exonerating evidence) using the tool
-  runner; Sentinel-2 and night-lights comparisons; stance-shift claim type.
-- **V4:** entity graph and relationship ranking behind human review and right
-  of reply; report generator; public API so others can replicate a verdict.
+- **V2 (done):** `EvidenceStore` interface with PostgreSQL + pgvector
+  (append-only documents table); PDF text layer with Tesseract `ara+fra` OCR
+  fallback (retcons on OCR text need human review); hybrid retrieval (BM25 /
+  tsvector + vectors, reciprocal rank fusion, source-kind and date filters);
+  temporal validation; Arabic/French name matching (people are proposed for
+  review, never merged); `Params` + calibration harness (accuracy, Brier,
+  threshold sweep); procurement red-flag screening.
+- **V3 (first version done, see [agent.md](agent.md)):** investigator agent
+  on the Claude tool runner with fact-check and investigation modes, enforced
+  challenge phase, budgets, Wayback / live / World Bank connectors, web search
+  for discovery, public-reply policy. Next: retcon and stance monitors,
+  triage queue, Sentinel-2 and night-lights tools.
+- **V4:** relationship graph for reviewers (company, owner, signatory) behind
+  human review and right of reply; reviewer UI; report generator; public API
+  so others can replicate a verdict.
+
+## Not verified yet
+
+- The live paths (`--live`, `investigate`) have only run against a scripted
+  stand-in for Claude; the first real run needs API credentials.
+- JORT, TUNEPS, RNE, Wayback and World Bank were unreachable from the build
+  environment, so the connectors are tested against mocked responses only.
+- The embedder is a character n-gram baseline; a neural multilingual embedder
+  should replace it once chosen.
