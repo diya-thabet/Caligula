@@ -5,6 +5,7 @@ import os
 import psycopg
 import pytest
 
+from caligula.application.evidence_store import EvidenceStore
 from caligula.case import run_case
 from caligula.domain.model.documents import SourceKind
 from conftest import FIXTURE, add_doc
@@ -15,13 +16,13 @@ pytestmark = pytest.mark.skipif(not DSN, reason="CALIGULA_TEST_DSN not set")
 
 @pytest.fixture
 def pg(blobs):
-    from caligula.pg import PostgresEvidenceStore
+    from caligula.adapters.persistence.postgres import PostgresDocumentRepository
 
-    store = PostgresEvidenceStore(DSN, blobs)
-    store.conn.execute("DROP TABLE IF EXISTS custody_records, investigations, documents CASCADE")
-    store.init_schema()
-    yield store
-    store.conn.close()
+    repository = PostgresDocumentRepository(DSN)
+    repository.conn.execute("DROP TABLE IF EXISTS custody_records, investigations, documents CASCADE")
+    repository.init_schema()
+    yield EvidenceStore(repository, blobs)
+    repository.conn.close()
 
 
 def test_fixture_verdict_matches_memory_store(pg, store):
@@ -31,7 +32,7 @@ def test_fixture_verdict_matches_memory_store(pg, store):
 def test_documents_are_append_only(pg):
     add_doc(pg, "a", "montant 120 TND")
     with pytest.raises(psycopg.errors.RaiseException):
-        pg.conn.execute("UPDATE documents SET text = 'montant 80 TND' WHERE id = 'a'")
+        pg.repository.conn.execute("UPDATE documents SET text = 'montant 80 TND' WHERE id = 'a'")
     with pytest.raises(ValueError):
         add_doc(pg, "a", "again")
 

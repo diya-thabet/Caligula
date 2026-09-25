@@ -23,9 +23,9 @@ from caligula.agent.loop import WEB_SEARCH, run_loop
 from caligula.agent.prompts import SYSTEM
 from caligula.agent.tools import build_tools
 from caligula.agent.workspace import TraceEntry, Workspace
+from caligula.application.evidence_store import EvidenceStore
 from caligula.domain.model.verdict import Verdict
 from caligula.llm.claude import MODEL
-from caligula.store import EvidenceStore
 
 
 @dataclass

@@ -11,6 +11,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+from caligula.application.evidence_store import EvidenceStore
 from caligula.domain.model.claims import Allegation
 from caligula.domain.model.documents import SourceKind
 from caligula.domain.model.evidence import EvidenceEdge, FinancialFigure
@@ -19,7 +20,6 @@ from caligula.domain.services.scoring import DEFAULT_PARAMS, Params
 from caligula.domain.services.verdict import build_verdict
 from caligula.ingest.text import extract_text
 from caligula.llm.claude import ClaudeInvestigator
-from caligula.store import EvidenceStore
 
 
 def load_case(case_dir: Path, store: EvidenceStore) -> dict:
@@ -76,7 +76,10 @@ def case_workspace(case_dir: Path, store: EvidenceStore):
     from caligula.agent.workspace import Mode, Workspace
 
     case = load_case(case_dir, store)
-    ws = Workspace(store=store, allegation=Allegation.model_validate(case["allegation"]), mode=Mode.INVESTIGATE)
+    from caligula.adapters.persistence.ledger_jsonl import JsonlLedger
+
+    ws = Workspace(store=store, allegation=Allegation.model_validate(case["allegation"]), mode=Mode.INVESTIGATE,
+                   ledger=JsonlLedger())
     for e in case["recorded_readings"]["edges"]:
         ws.record(EvidenceEdge.model_validate(e), "recorded")
     for f in case["recorded_readings"]["figures"]:

@@ -17,7 +17,6 @@ import math
 import re
 from collections import Counter
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
 from typing import Protocol
 
 from caligula.domain.services.text import normalize_text
@@ -28,13 +27,6 @@ RRF_K = 60
 
 def tokenize(text: str) -> list[str]:
     return _TOKEN.findall(normalize_text(text))
-
-
-@dataclass(frozen=True)
-class SearchHit:
-    doc_id: str
-    score: float
-    snippet: str
 
 
 class Embedder(Protocol):

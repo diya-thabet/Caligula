@@ -1,4 +1,4 @@
-"""PostgreSQL + pgvector implementation of `EvidenceStore`."""
+"""PostgreSQL + pgvector implementation of the `DocumentRepository` port."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ from importlib.resources import files
 import psycopg
 from psycopg.rows import dict_row
 
+from caligula.adapters.persistence.search import Embedder, HashingEmbedder, rrf, snippet
+from caligula.application.ports.storage import SearchHit
 from caligula.domain.model.documents import Document, SourceKind
-from caligula.retrieval import Embedder, SearchHit, rrf, snippet
-from caligula.store import BlobStore, EvidenceStore
 
 _COLUMNS = (
     "id, canonical_url, url, source_kind, publisher, title, published_at, observed_at, "
@@ -25,15 +25,15 @@ def _vec(values: list[float]) -> str:
     return "[" + ",".join(f"{v:.6f}" for v in values) + "]"
 
 
-class PostgresEvidenceStore(EvidenceStore):
-    def __init__(self, dsn: str, blobs: BlobStore, embedder: Embedder | None = None):
-        super().__init__(blobs, embedder)
+class PostgresDocumentRepository:
+    def __init__(self, dsn: str, embedder: Embedder | None = None):
+        self.embedder = embedder or HashingEmbedder()
         self.conn = psycopg.connect(dsn, row_factory=dict_row, autocommit=True)
 
     def init_schema(self) -> None:
-        self.conn.execute(files("caligula").joinpath("schema.sql").read_text())
+        self.conn.execute(files("caligula.adapters.persistence").joinpath("schema.sql").read_text())
 
-    def _insert(self, doc: Document) -> None:
+    def add(self, doc: Document) -> None:
         self.conn.execute(
             f"INSERT INTO documents ({_COLUMNS}, embedding) "
             "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::vector)",

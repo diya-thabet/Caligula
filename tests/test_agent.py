@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 import httpx
 
+from caligula.adapters.persistence.ledger_jsonl import JsonlLedger
 from caligula.agent.reply import public_reply
 from caligula.agent.runner import InvestigatorAgent
 from caligula.agent.workspace import Connectors, Mode, Workspace
@@ -52,7 +53,8 @@ def agent_for(script, record, calls):
 
 def workspace(store, mode=Mode.INVESTIGATE, **kw):
     case = load_case(FIXTURE, store)
-    return Workspace(store=store, allegation=Allegation.model_validate(case["allegation"]), mode=mode, **kw)
+    return Workspace(store=store, allegation=Allegation.model_validate(case["allegation"]), mode=mode,
+                     ledger=JsonlLedger(), **kw)
 
 
 def test_agent_builds_case_and_must_challenge_before_finishing(store):

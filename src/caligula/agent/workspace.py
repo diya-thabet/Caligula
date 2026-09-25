@@ -16,6 +16,8 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 
 from caligula.agent.plan import EntityHint, Outcome, Task, TaskStatus
+from caligula.application.evidence_store import EvidenceStore
+from caligula.application.ports.storage import Ledger
 from caligula.domain.model.claims import Allegation
 from caligula.domain.model.evidence import EvidenceEdge, FinancialFigure, RejectedEvidence
 from caligula.domain.model.verdict import Verdict
@@ -25,8 +27,6 @@ from caligula.domain.services.verdict import build_verdict
 from caligula.ingest.sources import LiveFetcher, WorldBankClient
 from caligula.ingest.telegram import TelegramClient
 from caligula.ingest.wayback import WaybackClient
-from caligula.ledger import Ledger
-from caligula.store import EvidenceStore
 
 
 class Mode(StrEnum):
@@ -102,9 +102,9 @@ class Workspace:
     store: EvidenceStore
     allegation: Allegation
     mode: Mode
+    ledger: Ledger
     connectors: Connectors = field(default_factory=Connectors)
     params: Params = DEFAULT_PARAMS
-    ledger: Ledger = field(default_factory=Ledger)
     review_required: bool = False
     edges: list[EvidenceEdge] = field(default_factory=list)
     figures: list[FinancialFigure] = field(default_factory=list)

@@ -19,12 +19,13 @@ from __future__ import annotations
 
 import itertools
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from caligula.application.evidence_store import EvidenceStore
 from caligula.case import run_case
 from caligula.domain.services.scoring import DEFAULT_PARAMS, Params
-from caligula.store import BlobStore, MemoryEvidenceStore
 
 SUSPICIOUS = {"high_suspicion", "partially_supported"}
 
@@ -41,12 +42,12 @@ def labelled_cases(root: Path) -> list[Path]:
     return sorted(p.parent for p in root.rglob("labels.json"))
 
 
-def evaluate(cases: list[Path], blobs: BlobStore, params: Params = DEFAULT_PARAMS) -> Metrics:
+def evaluate(cases: list[Path], new_store: Callable[[], EvidenceStore], params: Params = DEFAULT_PARAMS) -> Metrics:
     verdict_hits = claim_hits = claim_total = 0
     brier = 0.0
     for case_dir in cases:
         labels = json.loads((case_dir / "labels.json").read_text(encoding="utf-8"))
-        v = run_case(case_dir, MemoryEvidenceStore(blobs), params=params)
+        v = run_case(case_dir, new_store(), params=params)
         verdict_hits += v.verdict == labels["verdict"]
         status = {c.id: c.status for c in v.by_subclaim}
         for claim_id, expected in labels.get("subclaims", {}).items():
@@ -63,10 +64,10 @@ def evaluate(cases: list[Path], blobs: BlobStore, params: Params = DEFAULT_PARAM
     )
 
 
-def sweep(cases: list[Path], blobs: BlobStore) -> list[tuple[Params, Metrics]]:
+def sweep(cases: list[Path], new_store: Callable[[], EvidenceStore]) -> list[tuple[Params, Metrics]]:
     """Grid search over status thresholds, best first (subclaim accuracy, then Brier)."""
     results = []
     for strong, weak, penalty in itertools.product((0.6, 0.7, 0.8), (0.2, 0.3, 0.4), (0.1, 0.3, 0.5)):
         params = DEFAULT_PARAMS.with_(strong=strong, weak=weak, retconned_penalty=penalty)
-        results.append((params, evaluate(cases, blobs, params)))
+        results.append((params, evaluate(cases, new_store, params)))
     return sorted(results, key=lambda r: (-r[1].subclaim_accuracy, -r[1].verdict_accuracy, r[1].brier))

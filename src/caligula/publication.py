@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 
-from caligula.ledger import Ledger
+from caligula.application.ports.storage import Ledger
 
 DEFAULT_REPLY_WINDOW = timedelta(days=7)
 

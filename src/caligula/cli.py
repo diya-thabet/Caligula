@@ -4,9 +4,11 @@ import argparse
 import sys
 from pathlib import Path
 
+from caligula.adapters.persistence.blob_fs import FileBlobStorage
+from caligula.adapters.persistence.memory import MemoryDocumentRepository
+from caligula.application.evidence_store import EvidenceStore
 from caligula.case import run_case
 from caligula.domain.model.verdict import Verdict
-from caligula.store import BlobStore, EvidenceStore, MemoryEvidenceStore
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -47,7 +49,7 @@ def main(argv: list[str] | None = None) -> int:
         return investigate(args)
 
     if args.command == "calibrate":
-        return calibrate(args.root, BlobStore(args.blobs))
+        return calibrate(args.root, FileBlobStorage(args.blobs))
     if args.command == "screen":
         return screen_awards(args.awards_json)
 
@@ -56,7 +58,7 @@ def main(argv: list[str] | None = None) -> int:
         from caligula.llm.claude import ClaudeInvestigator
 
         investigator = ClaudeInvestigator()
-    store = open_store(args.db, BlobStore(args.blobs))
+    store = open_store(args.db, FileBlobStorage(args.blobs))
     verdict = run_case(args.case_dir, store, investigator)
     print(verdict.model_dump_json(indent=2) if args.json else summarize(verdict))
     if args.report:
@@ -75,6 +77,7 @@ def write_report(path: Path, text: str) -> None:
 
 
 def investigate(args: argparse.Namespace) -> int:
+    from caligula.adapters.persistence.ledger_jsonl import JsonlLedger
     from caligula.agent.reply import public_reply
     from caligula.agent.runner import InvestigatorAgent
     from caligula.agent.team import InvestigationTeam
@@ -85,10 +88,9 @@ def investigate(args: argparse.Namespace) -> int:
     from caligula.ingest.sources import LiveFetcher, WorldBankClient
     from caligula.ingest.telegram import TelegramClient
     from caligula.ingest.wayback import WaybackClient
-    from caligula.ledger import Ledger
     from caligula.llm.claude import ClaudeInvestigator
 
-    ledger = Ledger(args.ledger)
+    ledger = JsonlLedger(args.ledger)
     llm = ClaudeInvestigator()
     intake = llm.classify(args.claim)
     decision = decide(intake)
@@ -110,7 +112,7 @@ def investigate(args: argparse.Namespace) -> int:
             print("Stopped: a lawyer must approve the scope first (re-run with --legal-approved NAME).")
             return 3
 
-    store = open_store(args.db, BlobStore(args.blobs))
+    store = open_store(args.db, FileBlobStorage(args.blobs))
     if args.case_dir:
         load_case(args.case_dir, store)
     mode = Mode(args.mode)
@@ -142,23 +144,26 @@ def investigate(args: argparse.Namespace) -> int:
     broken = ledger.verify()
     print(f"\nLedger: {len(ledger.entries)} entries, head {ledger.head[:16]}, "
           f"{'intact' if broken is None else f'BROKEN at entry {broken}'}")
-    if hasattr(store, "save_investigation"):
-        store.save_investigation(
+    if hasattr(store.repository, "save_investigation"):
+        store.repository.save_investigation(
             args.id, mode.value, allegation.model_dump(mode="json"), result.verdict.model_dump(mode="json"),
             [vars(t) for t in result.trace],
         )
     return 0
 
 
-def calibrate(root: Path, blobs: BlobStore) -> int:
+def calibrate(root: Path, blobs: FileBlobStorage) -> int:
     from caligula.calibration import evaluate, labelled_cases, sweep
 
     cases = labelled_cases(root)
     if not cases:
         print(f"no labels.json under {root}")
         return 1
-    print(f"{len(cases)} labelled case(s); current parameters: {evaluate(cases, blobs)}")
-    for params, metrics in sweep(cases, blobs)[:5]:
+    def new_store() -> EvidenceStore:
+        return EvidenceStore(MemoryDocumentRepository(), blobs)
+
+    print(f"{len(cases)} labelled case(s); current parameters: {evaluate(cases, new_store)}")
+    for params, metrics in sweep(cases, new_store)[:5]:
         print(f"  strong={params.strong} weak={params.weak} retcon_penalty={params.retconned_penalty}: {metrics}")
     return 0
 
@@ -179,14 +184,14 @@ def screen_awards(path: Path) -> int:
     return 0
 
 
-def open_store(dsn: str | None, blobs: BlobStore) -> EvidenceStore:
+def open_store(dsn: str | None, blobs: FileBlobStorage) -> EvidenceStore:
     if not dsn:
-        return MemoryEvidenceStore(blobs)
-    from caligula.pg import PostgresEvidenceStore
+        return EvidenceStore(MemoryDocumentRepository(), blobs)
+    from caligula.adapters.persistence.postgres import PostgresDocumentRepository
 
-    store = PostgresEvidenceStore(dsn, blobs)
-    store.init_schema()
-    return store
+    repository = PostgresDocumentRepository(dsn)
+    repository.init_schema()
+    return EvidenceStore(repository, blobs)
 
 
 def summarize(v: Verdict) -> str:

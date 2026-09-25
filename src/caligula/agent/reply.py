@@ -12,7 +12,7 @@ import re
 from caligula.agent.runner import InvestigationResult
 from caligula.agent.team import TeamResult
 from caligula.agent.workspace import Mode
-from caligula.store import EvidenceStore
+from caligula.application.evidence_store import EvidenceStore
 
 TEXT = {
     "en": {

@@ -2,13 +2,13 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
+from caligula.adapters.persistence.ledger_jsonl import JsonlLedger
 from caligula.domain.model.intake import ClaimType, Decision, Intake, SubjectType
 from caligula.domain.model.procurement import Award, Company, Tender
 from caligula.domain.services.intake_policy import decide
 from caligula.domain.services.privacy import minimise
 from caligula.domain.services.red_flags import screen_companies
 from caligula.ingest.telegram import PrivateSourceError, channel_name, parse_preview
-from caligula.ledger import Ledger
 from caligula.publication import Publication, PublicationError
 
 
@@ -23,14 +23,14 @@ def test_minimise_masks_identifiers_but_keeps_amounts_and_dates():
 
 def test_ledger_detects_tampering(tmp_path):
     path = tmp_path / "ledger.jsonl"
-    ledger = Ledger(path)
+    ledger = JsonlLedger(path)
     ledger.append("capture", "official", doc_id="a", raw_sha256="x" * 64)
     ledger.append("review", "reviewer", id="P1", status="accepted")
     ledger.append("publication", "editor", step="editor_approved")
-    assert Ledger(path).verify() is None
+    assert JsonlLedger(path).verify() is None
     lines = path.read_text().splitlines()
     path.write_text("\n".join([lines[0], lines[1].replace("accepted", "disputed"), lines[2]]) + "\n")
-    assert Ledger(path).verify() == 1
+    assert JsonlLedger(path).verify() == 1
 
 
 SAMPLE = """
@@ -87,7 +87,7 @@ def test_policy_decisions():
 
 
 def test_publication_requires_approvals_and_reply_window():
-    ledger = Ledger()
+    ledger = JsonlLedger()
     now = datetime(2026, 10, 1, tzinfo=UTC)
     pub = Publication("CASE-1", "Findings...", ["Company Z"], ledger)
     with pytest.raises(PublicationError, match="needs editor then legal approval"):
