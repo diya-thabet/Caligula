@@ -39,7 +39,7 @@ from caligula.application.ports.llm import AgentRunner, ClaimAnalyst
 from caligula.domain.model.verdict import Verdict
 
 READ = ["search_evidence", "read_document", "compare_versions", "compare_names", "assess"]
-WORK = ["list_tasks", "complete_task", "post_lead", "record_evidence", "record_amount", "report"]
+WORK = ["list_tasks", "complete_task", "post_lead", "record_evidence", "record_amount", "record_absence", "report"]
 ARCHIVE = ["find_archived_captures", "ingest_archived_capture"]
 
 
@@ -157,7 +157,7 @@ class InvestigationTeam:
 
     @staticmethod
     def _apply_plan(ws: Workspace, plan: Plan) -> None:
-        ws.entities = plan.entities
+        ws.entities, ws.window = plan.entities, plan.window
         for t in plan.tasks:
             ws.add_task(**t.model_dump(exclude={"id", "status", "outcome", "note", "doc_ids"}))
 
@@ -225,7 +225,8 @@ class InvestigationTeam:
         ctx = AgentContext(name=spec.name, budget=budget)
         tools = build_tools(ws, ctx, spec.tools)
         system = f"{_COLLECTOR}\n\n{SPECIALIST_FOCUS[spec.name]}"
-        tasks = [t.model_dump(include={"id", "objective", "subclaim_ids", "purpose", "queries", "urls"})
+        tasks = [t.model_dump(include={"id", "objective", "subclaim_ids", "purpose", "queries", "urls",
+                                       "expectation_id"}, exclude_none=True)
                  for t in ws.open_tasks(spec.name)]
         entities = [e.model_dump() for e in ws.entities]
         brief = (case_brief(ws, budget)

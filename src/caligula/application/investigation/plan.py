@@ -51,6 +51,7 @@ class Task(BaseModel):
     urls: list[str] = Field(default_factory=list)
     round: int = 1
     created_by: str = "planner"
+    expectation_id: str | None = None  # an expected record this task searches for ("C5.E1")
     status: TaskStatus = TaskStatus.OPEN
     outcome: Outcome | None = None
     note: str = ""

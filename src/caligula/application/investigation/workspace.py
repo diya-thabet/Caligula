@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import threading
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import StrEnum
 
 from caligula.application.evidence_store import EvidenceStore
@@ -20,8 +21,9 @@ from caligula.application.investigation.plan import EntityHint, Outcome, Task, T
 from caligula.application.ports.sources import ArchiveSource, FunderRecords, TelegramChannels, TextExtractor, WebFetcher
 from caligula.application.ports.storage import Ledger
 from caligula.domain.model.claims import Allegation, Party
-from caligula.domain.model.evidence import EvidenceEdge, FinancialFigure, RejectedEvidence
+from caligula.domain.model.evidence import AbsenceFinding, EvidenceEdge, FinancialFigure, RejectedEvidence
 from caligula.domain.model.verdict import Verdict
+from caligula.domain.services.absence import validate_absences
 from caligula.domain.services.scoring import DEFAULT_PARAMS, SUPPORTED, Params
 from caligula.domain.services.validation import validate_edges, validate_figures
 from caligula.domain.services.verdict import build_verdict
@@ -49,11 +51,14 @@ class ProposalStatus(StrEnum):
     DISPUTED = "disputed"
 
 
+Item = EvidenceEdge | FinancialFigure | AbsenceFinding
+
+
 @dataclass
 class Proposal:
     id: str
     by: str
-    item: EvidenceEdge | FinancialFigure
+    item: Item
     status: ProposalStatus = ProposalStatus.PENDING
     note: str = ""
 
@@ -107,10 +112,12 @@ class Workspace:
     review_required: bool = False
     edges: list[EvidenceEdge] = field(default_factory=list)
     figures: list[FinancialFigure] = field(default_factory=list)
+    absences: list[AbsenceFinding] = field(default_factory=list)
     proposals: list[Proposal] = field(default_factory=list)
     tasks: list[Task] = field(default_factory=list)
     leads: list[Lead] = field(default_factory=list)
     entities: list[EntityHint] = field(default_factory=list)
+    window: tuple[datetime | None, datetime | None] = (None, None)  # period under investigation
     round: int = 1
     rejected: list[RejectedEvidence] = field(default_factory=list)
     trace: list[TraceEntry] = field(default_factory=list)
@@ -192,15 +199,29 @@ class Workspace:
                 }
             return out
 
+    def absence_for(self, task: Task, searched_at: datetime) -> AbsenceFinding | None:
+        """The absence finding implied by a task that searched for an expected record and found nothing."""
+        expected = self.allegation.expected().get(task.expectation_id or "")
+        if task.outcome != Outcome.NOT_FOUND or expected is None:
+            return None
+        subclaim_id, record = expected
+        return AbsenceFinding(subclaim_id=subclaim_id, relation=record.absence_means, register_id=record.register_id,
+                              query="; ".join(task.queries) or record.description, searched_at=searched_at,
+                              window_start=self.window[0], window_end=self.window[1],
+                              doc_id=task.doc_ids[0] if task.doc_ids else None,
+                              note=f"{task.id}: {task.note}")
+
     def add_search(self, purpose: Purpose, subclaim_id: str | None, query: str) -> None:
         with self.lock:
             self.searches.append((purpose, subclaim_id, query))
 
-    def record(self, item: EvidenceEdge | FinancialFigure, by: str) -> tuple[str | None, str | None]:
+    def record(self, item: Item, by: str) -> tuple[str | None, str | None]:
         """Validate and record. Returns (rejection reason, proposal id)."""
         with self.lock:
             if isinstance(item, EvidenceEdge):
                 kept, rejected = validate_edges(self.store.corpus(), self.allegation, [item])
+            elif isinstance(item, AbsenceFinding):
+                kept, rejected = validate_absences(self.store.corpus(), self.allegation, [item])
             else:
                 kept, rejected = validate_figures(self.store.corpus(), [item])
             self.rejected += rejected
@@ -218,8 +239,13 @@ class Workspace:
             self.ledger.append("proposal", by, id=proposal.id, item=item.model_dump(mode="json"))
             return None, proposal.id
 
-    def _accept(self, item: EvidenceEdge | FinancialFigure) -> None:
-        target = self.edges if isinstance(item, EvidenceEdge) else self.figures
+    def _target(self, item: Item) -> list:
+        if isinstance(item, EvidenceEdge):
+            return self.edges
+        return self.absences if isinstance(item, AbsenceFinding) else self.figures
+
+    def _accept(self, item: Item) -> None:
+        target = self._target(item)
         if item not in target:
             target.append(item)
 
@@ -229,8 +255,7 @@ class Workspace:
             if p is None:
                 raise KeyError(proposal_id)
             if p.status == ProposalStatus.ACCEPTED and not accept:
-                target = self.edges if isinstance(p.item, EvidenceEdge) else self.figures
-                target.remove(p.item)
+                self._target(p.item).remove(p.item)
             p.status = ProposalStatus.ACCEPTED if accept else ProposalStatus.DISPUTED
             p.note = note
             if accept:
@@ -240,7 +265,8 @@ class Workspace:
 
     def verdict(self) -> Verdict:
         with self.lock:
-            v = build_verdict(self.store.corpus(), self.allegation, list(self.edges), list(self.figures), self.params)
+            v = build_verdict(self.store.corpus(), self.allegation, list(self.edges), list(self.figures), self.params,
+                              absences=list(self.absences))
             v.rejected_evidence = self.rejected + v.rejected_evidence
             return v
 

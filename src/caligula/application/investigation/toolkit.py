@@ -27,7 +27,7 @@ from caligula.application.ports.llm import Tool, ToolRefusal
 from caligula.application.ports.sources import ExtractedText, PrivateSourceError
 from caligula.domain.model.claims import Party, PartyRole
 from caligula.domain.model.documents import SourceKind
-from caligula.domain.model.evidence import AmountRole, EvidenceEdge, FinancialFigure, Relation
+from caligula.domain.model.evidence import AbsenceFinding, AmountRole, EvidenceEdge, FinancialFigure, Relation
 from caligula.domain.services.interest import interest, role_of
 from caligula.domain.services.names import EntityKind, match
 from caligula.domain.services.privacy import MINIMISED_KINDS, minimise
@@ -39,6 +39,10 @@ KindName = Literal[
     "official_live", "archive", "foreign_mirror", "audit", "statistics", "contributor", "osint", "news", "social"
 ]
 SpecialistName = Literal["official", "funders_audit", "web_news", "social", "telegram"]
+# Keys of domain.model.registers.REGISTERS (a test keeps them in sync).
+RegisterName = Literal[
+    "tuneps", "jort", "rne", "funder_records", "audit_reports", "official_site", "news_archive", "web_search"
+]
 
 
 def _date(value: str | None) -> datetime | None:
@@ -290,7 +294,7 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         return json.dumps({"stored": stored, "posts_on_page": len(posts), "page_back_with_before": oldest},
                           ensure_ascii=False)
 
-    def _record(item: EvidenceEdge | FinancialFigure) -> str:
+    def _record(item: EvidenceEdge | FinancialFigure | AbsenceFinding) -> str:
         reason, proposal_id = ws.record(item, ctx.name)
         if reason:
             raise ToolRefusal(f"Rejected: {reason}")
@@ -341,6 +345,38 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         return _record(FinancialFigure(doc_id=doc_id, role=AmountRole(role), amount_tnd=amount_tnd, quote=quote))
 
     @metered
+    def record_absence(
+        subclaim_id: str,
+        register_id: RegisterName,
+        relation: Literal["supports", "contradicts"],
+        query: str,
+        doc_id: str | None = None,
+        window_start: str | None = None,
+        window_end: str | None = None,
+        note: str = "",
+    ) -> str:
+        """Record that a proper search of a register found nothing, when that absence
+        bears on a sub-claim: no tender notice on TUNEPS supports "no competitive
+        tender"; no emergency decree in the JORT contradicts "an emergency justified
+        it". It weighs as much as the register is complete (TUNEPS, JORT, RNE high;
+        web search almost nothing), halved if you did not store a capture of the
+        empty result page (store it with ingest_url or ingest_archived_capture first).
+
+        Args:
+            subclaim_id: Sub-claim id.
+            register_id: Where you searched.
+            relation: What the absence means for the sub-claim.
+            query: Exactly what you searched for (terms, filters, reference numbers).
+            doc_id: Stored capture of the empty result page, if any.
+            window_start: ISO date: start of the period the search covered.
+            window_end: ISO date: end of the period the search covered.
+            note: Anything that limits the search (register down, partial coverage).
+        """
+        return _record(AbsenceFinding(subclaim_id=subclaim_id, register_id=register_id, relation=Relation(relation),
+                                      query=query, searched_at=datetime.now(UTC), doc_id=doc_id,
+                                      window_start=_date(window_start), window_end=_date(window_end), note=note))
+
+    @metered
     def compare_names(names: list[str], kind: Literal["person", "company"]) -> str:
         """Check whether names in different spellings may refer to the same company or
         person (word order, accents, Ben/Bin, Arabic transliterations). Person matches
@@ -386,7 +422,8 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
     def list_tasks() -> str:
         """Your open tasks for this round, and leads other agents left for you. Work the
         tasks in order of importance; close each one with complete_task."""
-        tasks = [t.model_dump(include={"id", "objective", "subclaim_ids", "purpose", "queries", "urls", "created_by"})
+        tasks = [t.model_dump(include={"id", "objective", "subclaim_ids", "purpose", "queries", "urls", "created_by",
+                                       "expectation_id"}, exclude_none=True)
                  for t in ws.open_tasks(ctx.name)]
         leads = [{"from": lead.by, "note": lead.note} for lead in ws.leads_for(ctx.name)]
         return json.dumps({"tasks": tasks, "leads": leads}, ensure_ascii=False)
@@ -400,6 +437,8 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
     ) -> str:
         """Close one of your tasks. "not_found" means you searched properly and the
         thing does not exist in reach (absence is information: say where you looked).
+        On a task with an expectation_id, "not_found" is recorded as scored absence
+        evidence; pass the stored capture of the empty result as the first doc_id.
         "blocked" means the source was unreachable or needs access we do not have.
 
         Args:
@@ -413,7 +452,13 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         except (KeyError, ValueError) as exc:
             raise ToolRefusal(str(exc)) from exc
         left = len(ws.open_tasks(ctx.name))
-        return f"{t.id} closed ({t.outcome}). {left} open task(s) left."
+        absence, extra = ws.absence_for(t, datetime.now(UTC)), ""
+        if absence:
+            try:
+                extra = f" Absence recorded: {_record(absence)}"
+            except ToolRefusal as exc:
+                extra = f" The absence does not count: {exc}"
+        return f"{t.id} closed ({t.outcome}). {left} open task(s) left.{extra}"
 
     @metered
     def post_lead(
@@ -459,6 +504,11 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         rows = []
         for p in ws.proposals:
             if p.status != status:
+                continue
+            if isinstance(p.item, AbsenceFinding):
+                rows.append({"id": p.id, "by": p.by, "absence": p.item.model_dump(mode="json", exclude_none=True),
+                             "register_completeness": ws.params.completeness.get(p.item.register_id),
+                             "note": p.note})
                 continue
             d = ws.store.get(p.item.doc_id)
             row = {"id": p.id, "by": p.by, **p.item.model_dump(mode="json"), "doc_kind": d.source_kind,
@@ -573,8 +623,8 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
 
     everything = {t.__name__: t for t in [
         search_evidence, read_document, compare_versions, find_archived_captures, ingest_archived_capture,
-        ingest_url, search_funder_records, fetch_telegram_channel, record_evidence, record_amount, compare_names,
-        assess, list_tasks, complete_task, post_lead, report, list_proposals, review_proposal, register_party,
+        ingest_url, search_funder_records, fetch_telegram_channel, record_evidence, record_amount, record_absence,
+        compare_names, assess, list_tasks, complete_task, post_lead, report, list_proposals, review_proposal, register_party,
         request_collection, complete_review, finish,
     ]}
     if names is None:
@@ -585,5 +635,5 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
 SINGLE_AGENT_TOOLS = [
     "search_evidence", "read_document", "compare_versions", "find_archived_captures", "ingest_archived_capture",
     "ingest_url", "search_funder_records", "fetch_telegram_channel", "record_evidence", "record_amount",
-    "compare_names", "register_party", "assess", "finish",
+    "record_absence", "compare_names", "register_party", "assess", "finish",
 ]

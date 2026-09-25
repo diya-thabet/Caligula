@@ -76,6 +76,10 @@ class Allegation(BaseModel):
     financial_subclaim: str | None = None
     parties: list[Party] = Field(default_factory=list)
 
+    def expected(self) -> dict[str, tuple[str, ExpectedRecord]]:
+        """Every expected record by id ("C5.E1"), with its sub-claim id."""
+        return {f"{c.id}.E{n}": (c.id, r) for c in self.subclaims for n, r in enumerate(c.expected_records, 1)}
+
     def bearing_of(self, subclaim_id: str) -> Bearing:
         claim = next(c for c in self.subclaims if c.id == subclaim_id)
         if claim.bearing is not None:
