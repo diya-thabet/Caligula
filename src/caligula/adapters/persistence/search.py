@@ -51,7 +51,7 @@ class HashingEmbedder:
 
 
 def cosine(a: Sequence[float], b: Sequence[float]) -> float:
-    return sum(x * y for x, y in zip(a, b))
+    return sum(x * y for x, y in zip(a, b, strict=True))
 
 
 class BM25:

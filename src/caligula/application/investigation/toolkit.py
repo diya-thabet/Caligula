@@ -13,6 +13,7 @@ import json
 from collections.abc import Callable, Iterable
 from datetime import UTC, datetime
 from functools import wraps
+from itertools import pairwise
 from typing import Literal
 
 from caligula.application.investigation.plan import Outcome
@@ -172,7 +173,7 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         if not versions:
             raise ToolRefusal(f"No stored versions for {canonical_url}.")
         out = [{"doc_id": v.id, "kind": v.source_kind, "observed_at": v.observed_at.isoformat()} for v in versions]
-        for a, b in zip(versions, versions[1:]):
+        for a, b in pairwise(versions):
             changes = [c.model_dump() for c in diff_fields(a, b)] if a.text_sha256 != b.text_sha256 else []
             out.append({"from": a.id, "to": b.id, "changes": changes})
         return json.dumps(out, ensure_ascii=False)

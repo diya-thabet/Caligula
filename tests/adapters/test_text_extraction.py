@@ -8,7 +8,7 @@ from caligula.domain.services.extraction import extract_amounts
 
 
 def test_plain_text_passthrough():
-    assert extract_text("Montant : 5 TND".encode(), "a.txt").method == "plain"
+    assert extract_text(b"Montant : 5 TND", "a.txt").method == "plain"
 
 
 @pytest.mark.skipif(not ocr_available(), reason="tesseract/poppler not installed")

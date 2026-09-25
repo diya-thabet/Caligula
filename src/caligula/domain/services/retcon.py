@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from collections.abc import Iterable
+from itertools import pairwise
 
 from caligula.domain.model.documents import Document
 from caligula.domain.model.verdict import FieldChange, RetconFlag
@@ -33,7 +34,7 @@ def detect_retcons(documents: Iterable[Document]) -> list[RetconFlag]:
     flags = []
     for url, docs in by_url.items():
         versions = sorted(docs, key=lambda d: d.observed_at)
-        for earlier, later in zip(versions, versions[1:]):
+        for earlier, later in pairwise(versions):
             if earlier.text_sha256 == later.text_sha256:
                 continue
             changes = diff_fields(earlier, later)
