@@ -8,29 +8,12 @@ does not prove the content is true.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import UTC, datetime
-
 import httpx
+
+from caligula.application.ports.sources import ArchivedCopy, Capture
 
 CDX_URL = "https://web.archive.org/cdx/search/cdx"
 RAW_URL = "https://web.archive.org/web/{timestamp}id_/{url}"
-
-
-@dataclass(frozen=True)
-class Capture:
-    timestamp: str
-    original: str
-    digest: str  # Wayback's own SHA-1 (base32) of the payload
-    mimetype: str
-
-    @property
-    def captured_at(self) -> datetime:
-        return datetime.strptime(self.timestamp, "%Y%m%d%H%M%S").replace(tzinfo=UTC)
-
-    @property
-    def raw_url(self) -> str:
-        return RAW_URL.format(timestamp=self.timestamp, url=self.original)
 
 
 class WaybackClient:
@@ -55,7 +38,8 @@ class WaybackClient:
         rows = resp.json() if resp.content.strip() else []
         return [Capture(*row) for row in rows[1:]]  # first row is the header
 
-    def fetch(self, capture: Capture) -> bytes:
-        resp = self.http.get(capture.raw_url)
+    def fetch(self, original: str, timestamp: str) -> ArchivedCopy:
+        raw_url = RAW_URL.format(timestamp=timestamp, url=original)
+        resp = self.http.get(raw_url)
         resp.raise_for_status()
-        return resp.content
+        return ArchivedCopy(raw_url, resp.content, Capture(timestamp, original, "", "").captured_at)

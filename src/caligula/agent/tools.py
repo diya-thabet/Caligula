@@ -19,15 +19,13 @@ from anthropic.lib.tools import ToolError
 
 from caligula.agent.plan import Outcome
 from caligula.agent.workspace import AgentContext, ProposalStatus, Purpose, Workspace
+from caligula.application.ports.sources import ExtractedText, PrivateSourceError
 from caligula.domain.model.documents import SourceKind
 from caligula.domain.model.evidence import AmountRole, EvidenceEdge, FinancialFigure, Relation
 from caligula.domain.services.names import EntityKind, match
 from caligula.domain.services.privacy import MINIMISED_KINDS, minimise
 from caligula.domain.services.retcon import diff_fields
 from caligula.domain.services.text import sha256_bytes
-from caligula.ingest.telegram import PrivateSourceError
-from caligula.ingest.text import extract_text
-from caligula.ingest.wayback import Capture
 
 MAX_READ = 8000
 KindName = Literal[
@@ -85,7 +83,9 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
                 return doc_id
             extraction = "plain"
             if text is None:
-                extracted = extract_text(raw, filename or url)
+                extractor = ws.connectors.extractor
+                extracted = (extractor.extract(raw, filename or url) if extractor
+                             else ExtractedText(raw.decode("utf-8", "replace"), "plain"))
                 text, extraction = extracted.text, extracted.method
             masked: dict[str, int] = {}
             if kind in MINIMISED_KINDS:
@@ -206,10 +206,9 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         """
         if ws.connectors.wayback is None:
             raise ToolError("Archive connector not configured.")
-        cap = Capture(timestamp=timestamp, original=url, digest="", mimetype="")
-        raw = ws.connectors.wayback.fetch(cap)
-        doc_id = store_document(raw, kind=SourceKind.ARCHIVE, url=cap.raw_url, canonical_url=url,
-                                publisher=publisher, observed_at=cap.captured_at, filename=url)
+        copy = ws.connectors.wayback.fetch(url, timestamp)
+        doc_id = store_document(copy.content, kind=SourceKind.ARCHIVE, url=copy.url, canonical_url=url,
+                                publisher=publisher, observed_at=copy.captured_at, filename=url)
         return f"Stored as {doc_id}."
 
     @beta_tool

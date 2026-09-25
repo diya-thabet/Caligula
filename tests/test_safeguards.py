@@ -3,12 +3,13 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from caligula.adapters.persistence.ledger_jsonl import JsonlLedger
+from caligula.adapters.sources.telegram import channel_name, parse_preview
+from caligula.application.ports.sources import PrivateSourceError
 from caligula.domain.model.intake import ClaimType, Decision, Intake, SubjectType
 from caligula.domain.model.procurement import Award, Company, Tender
 from caligula.domain.services.intake_policy import decide
 from caligula.domain.services.privacy import minimise
 from caligula.domain.services.red_flags import screen_companies
-from caligula.ingest.telegram import PrivateSourceError, channel_name, parse_preview
 from caligula.publication import Publication, PublicationError
 
 

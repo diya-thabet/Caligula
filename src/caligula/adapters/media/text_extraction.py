@@ -12,18 +12,13 @@ import re
 import shutil
 import subprocess
 import tempfile
-from dataclasses import dataclass
 from pathlib import Path
+
+from caligula.application.ports.sources import ExtractedText
 
 OCR_LANGS = "fra+eng"
 # Below this many characters per page, a PDF text layer is treated as missing.
 MIN_CHARS_PER_PAGE = 40
-
-
-@dataclass(frozen=True)
-class ExtractedText:
-    text: str
-    method: str  # plain | pdf_text | ocr
 
 
 def _run(args: list[str], stdin: bytes | None = None) -> str:
@@ -85,3 +80,13 @@ def ocr_pdf(raw: bytes, langs: str = OCR_LANGS, dpi: int = 300) -> str:
         subprocess.run(["pdftoppm", "-r", str(dpi), "-png", str(pdf), str(Path(tmp) / "page")], check=True)
         pages = sorted(Path(tmp).glob("page*.png"))
         return "\n\f".join(ocr_image(p.read_bytes(), langs) for p in pages)
+
+
+class PopplerTesseractExtractor:
+    """`TextExtractor` adapter: poppler for text layers, Tesseract for scans."""
+
+    def __init__(self, langs: str = OCR_LANGS):
+        self.langs = langs
+
+    def extract(self, raw: bytes, filename: str = "") -> ExtractedText:
+        return extract_text(raw, filename)

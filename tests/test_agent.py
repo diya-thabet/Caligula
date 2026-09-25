@@ -7,12 +7,12 @@ from types import SimpleNamespace
 import httpx
 
 from caligula.adapters.persistence.ledger_jsonl import JsonlLedger
+from caligula.adapters.sources.worldbank import WorldBankClient
 from caligula.agent.reply import public_reply
 from caligula.agent.runner import InvestigatorAgent
 from caligula.agent.workspace import Connectors, Mode, Workspace
 from caligula.case import load_case
 from caligula.domain.model.claims import Allegation
-from caligula.ingest.sources import WorldBankClient
 from conftest import FIXTURE
 
 

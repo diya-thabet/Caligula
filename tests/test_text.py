@@ -3,8 +3,8 @@ import io
 import pytest
 from PIL import Image, ImageDraw, ImageFont
 
+from caligula.adapters.media.text_extraction import extract_text, ocr_available
 from caligula.domain.services.extraction import extract_amounts
-from caligula.ingest.text import extract_text, ocr_available
 
 
 def test_plain_text_passthrough():
@@ -23,7 +23,7 @@ def test_scanned_pdf_falls_back_to_ocr():
 
 
 def test_ocr_digit_repair_only_touches_numbers():
-    from caligula.ingest.text import repair_ocr_digits
+    from caligula.adapters.media.text_extraction import repair_ocr_digits
 
     assert repair_ocr_digits("Montant : 120 000 OOO TND le 2O26-O3-01") == "Montant : 120 000 000 TND le 2026-03-01"
     assert repair_ocr_digits("Office OIL, Oil and Lol") == "Office OIL, Oil and Lol"

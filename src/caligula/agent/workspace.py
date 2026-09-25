@@ -17,6 +17,7 @@ from enum import StrEnum
 
 from caligula.agent.plan import EntityHint, Outcome, Task, TaskStatus
 from caligula.application.evidence_store import EvidenceStore
+from caligula.application.ports.sources import ArchiveSource, FunderRecords, TelegramChannels, TextExtractor, WebFetcher
 from caligula.application.ports.storage import Ledger
 from caligula.domain.model.claims import Allegation
 from caligula.domain.model.evidence import EvidenceEdge, FinancialFigure, RejectedEvidence
@@ -24,9 +25,6 @@ from caligula.domain.model.verdict import Verdict
 from caligula.domain.services.scoring import DEFAULT_PARAMS, SUPPORTED, Params
 from caligula.domain.services.validation import validate_edges, validate_figures
 from caligula.domain.services.verdict import build_verdict
-from caligula.ingest.sources import LiveFetcher, WorldBankClient
-from caligula.ingest.telegram import TelegramClient
-from caligula.ingest.wayback import WaybackClient
 
 
 class Mode(StrEnum):
@@ -91,10 +89,11 @@ class AgentContext:
 
 @dataclass
 class Connectors:
-    wayback: WaybackClient | None = None
-    live: LiveFetcher | None = None
-    funders: WorldBankClient | None = None
-    telegram: TelegramClient | None = None
+    wayback: ArchiveSource | None = None
+    live: WebFetcher | None = None
+    funders: FunderRecords | None = None
+    telegram: TelegramChannels | None = None
+    extractor: TextExtractor | None = None  # plain UTF-8 decoding when absent
 
 
 @dataclass

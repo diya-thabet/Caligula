@@ -11,29 +11,16 @@ reposting one message count as one source.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
 from datetime import datetime
 from html import unescape
 from html.parser import HTMLParser
 
 import httpx
 
+from caligula.application.ports.sources import PrivateSourceError, TelegramPost
+
 PREVIEW = "https://t.me/s/{channel}"
 _CHANNEL = re.compile(r"^[A-Za-z][A-Za-z0-9_]{3,31}$")
-
-
-class PrivateSourceError(ValueError):
-    pass
-
-
-@dataclass(frozen=True)
-class TelegramPost:
-    channel: str
-    post_id: int
-    url: str
-    posted_at: datetime | None
-    text: str
-    forwarded_from: str | None
 
 
 def channel_name(ref: str) -> str:

@@ -5,8 +5,8 @@ from datetime import UTC, datetime
 import httpx
 from PIL import Image
 
-from caligula.ingest.contributor import sanitize_upload
-from caligula.ingest.wayback import WaybackClient
+from caligula.adapters.media.image_sanitizer import sanitize_upload
+from caligula.adapters.sources.wayback import WaybackClient
 
 
 def geotagged_jpeg() -> bytes:
@@ -50,7 +50,8 @@ def test_wayback_lists_captures_and_fetches_raw_mode():
     client = WaybackClient(httpx.Client(transport=httpx.MockTransport(handler)))
     [cap] = client.captures("https://jort.example/a", since="2026")
     assert cap.captured_at == datetime(2026, 3, 1, 10, tzinfo=UTC)
-    assert client.fetch(cap) == b"raw pdf bytes"
+    copy = client.fetch(cap.original, cap.timestamp)
+    assert (copy.content, copy.captured_at) == (b"raw pdf bytes", cap.captured_at)
     assert seen[0].params["collapse"] == "digest"
     assert str(seen[1]) == "https://web.archive.org/web/20260301100000id_/https://jort.example/a"
 

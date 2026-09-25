@@ -77,7 +77,12 @@ def write_report(path: Path, text: str) -> None:
 
 
 def investigate(args: argparse.Namespace) -> int:
+    from caligula.adapters.media.text_extraction import PopplerTesseractExtractor
     from caligula.adapters.persistence.ledger_jsonl import JsonlLedger
+    from caligula.adapters.sources.telegram import TelegramClient
+    from caligula.adapters.sources.wayback import WaybackClient
+    from caligula.adapters.sources.web import LiveFetcher
+    from caligula.adapters.sources.worldbank import WorldBankClient
     from caligula.agent.reply import public_reply
     from caligula.agent.runner import InvestigatorAgent
     from caligula.agent.team import InvestigationTeam
@@ -85,9 +90,6 @@ def investigate(args: argparse.Namespace) -> int:
     from caligula.case import load_case
     from caligula.domain.model.intake import Decision
     from caligula.domain.services.intake_policy import decide
-    from caligula.ingest.sources import LiveFetcher, WorldBankClient
-    from caligula.ingest.telegram import TelegramClient
-    from caligula.ingest.wayback import WaybackClient
     from caligula.llm.claude import ClaudeInvestigator
 
     ledger = JsonlLedger(args.ledger)
@@ -118,7 +120,7 @@ def investigate(args: argparse.Namespace) -> int:
     mode = Mode(args.mode)
     allegation = llm.decompose(args.id, args.claim)
     connectors = Connectors(wayback=WaybackClient(), live=LiveFetcher(), funders=WorldBankClient(),
-                            telegram=TelegramClient())
+                            telegram=TelegramClient(), extractor=PopplerTesseractExtractor())
     ws = Workspace(store=store, allegation=allegation, mode=mode, connectors=connectors, ledger=ledger)
     if args.team:
         rubric = args.rubric.read_text(encoding="utf-8") if args.rubric else ""
