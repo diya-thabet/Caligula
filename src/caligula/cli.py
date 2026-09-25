@@ -81,14 +81,14 @@ def investigate(args: argparse.Namespace) -> int:
     from caligula.adapters.llm.claude_runner import ClaudeAgentRunner
     from caligula.adapters.media.text_extraction import PopplerTesseractExtractor
     from caligula.adapters.persistence.ledger_jsonl import JsonlLedger
+    from caligula.adapters.presenters.public_reply import public_reply
     from caligula.adapters.sources.telegram import TelegramClient
     from caligula.adapters.sources.wayback import WaybackClient
     from caligula.adapters.sources.web import LiveFetcher
     from caligula.adapters.sources.worldbank import WorldBankClient
-    from caligula.agent.reply import public_reply
-    from caligula.agent.runner import InvestigatorAgent
-    from caligula.agent.team import InvestigationTeam
-    from caligula.agent.workspace import Connectors, Mode, Workspace
+    from caligula.application.investigation.single_agent import InvestigatorAgent
+    from caligula.application.investigation.team import InvestigationTeam
+    from caligula.application.investigation.workspace import Connectors, Mode, Workspace
     from caligula.case import load_case
     from caligula.domain.model.intake import Decision
     from caligula.domain.services.intake_policy import decide

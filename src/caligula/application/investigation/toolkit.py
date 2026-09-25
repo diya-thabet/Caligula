@@ -15,8 +15,13 @@ from datetime import UTC, datetime
 from functools import wraps
 from typing import Literal
 
-from caligula.agent.plan import Outcome
-from caligula.agent.workspace import AgentContext, ProposalStatus, Purpose, Workspace
+from caligula.application.investigation.plan import Outcome
+from caligula.application.investigation.workspace import (
+    AgentContext,
+    ProposalStatus,
+    Purpose,
+    Workspace,
+)
 from caligula.application.ports.llm import Tool, ToolRefusal
 from caligula.application.ports.sources import ExtractedText, PrivateSourceError
 from caligula.domain.model.documents import SourceKind

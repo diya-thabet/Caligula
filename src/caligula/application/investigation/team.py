@@ -25,11 +25,16 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
-from caligula.agent.plan import MIN_BUDGET, Plan, TaskStatus, normalize_plan
-from caligula.agent.prompts import _COLLECTOR, REVIEWER, SPECIALIST_FOCUS
-from caligula.agent.runner import case_brief, unknown_citations
-from caligula.agent.tools import build_tools
-from caligula.agent.workspace import AgentContext, ProposalStatus, TraceEntry, Workspace
+from caligula.application.investigation.brief import case_brief, unknown_citations
+from caligula.application.investigation.plan import MIN_BUDGET, Plan, TaskStatus, normalize_plan
+from caligula.application.investigation.prompts import _COLLECTOR, REVIEWER, SPECIALIST_FOCUS
+from caligula.application.investigation.toolkit import build_tools
+from caligula.application.investigation.workspace import (
+    AgentContext,
+    ProposalStatus,
+    TraceEntry,
+    Workspace,
+)
 from caligula.application.ports.llm import AgentRunner, ClaimAnalyst
 from caligula.domain.model.verdict import Verdict
 

@@ -15,8 +15,8 @@ import threading
 from dataclasses import dataclass, field
 from enum import StrEnum
 
-from caligula.agent.plan import EntityHint, Outcome, Task, TaskStatus
 from caligula.application.evidence_store import EvidenceStore
+from caligula.application.investigation.plan import EntityHint, Outcome, Task, TaskStatus
 from caligula.application.ports.sources import ArchiveSource, FunderRecords, TelegramChannels, TextExtractor, WebFetcher
 from caligula.application.ports.storage import Ledger
 from caligula.domain.model.claims import Allegation

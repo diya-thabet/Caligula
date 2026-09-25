@@ -73,7 +73,7 @@ def run_case(
 
 def case_workspace(case_dir: Path, store: EvidenceStore):
     """The recorded case as a workspace (for reports on offline runs)."""
-    from caligula.agent.workspace import Mode, Workspace
+    from caligula.application.investigation.workspace import Mode, Workspace
 
     case = load_case(case_dir, store)
     from caligula.adapters.persistence.ledger_jsonl import JsonlLedger

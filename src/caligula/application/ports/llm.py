@@ -15,7 +15,7 @@ from caligula.domain.model.evidence import EvidenceEdge, FinancialFigure
 from caligula.domain.model.intake import Intake
 
 if TYPE_CHECKING:
-    from caligula.agent.plan import PlanDraft
+    from caligula.application.investigation.plan import PlanDraft
 
 Tool = Callable[..., str]
 

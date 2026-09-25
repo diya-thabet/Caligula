@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from caligula.agent.workspace import Mode
+from caligula.application.investigation.workspace import Mode
 
 LANGUAGE = """\
 Work with French and English sources. Write your reports in the language of \

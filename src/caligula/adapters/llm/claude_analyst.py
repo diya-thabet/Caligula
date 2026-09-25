@@ -17,7 +17,7 @@ from caligula.domain.model.evidence import AmountRole, EvidenceEdge, FinancialFi
 from caligula.domain.model.intake import Intake
 
 if TYPE_CHECKING:
-    from caligula.agent.plan import PlanDraft
+    from caligula.application.investigation.plan import PlanDraft
 
 MODEL = "claude-opus-5"
 # Route policy declines to Anthropic's recommended fallback model instead of failing the call.
@@ -188,7 +188,7 @@ class ClaudeAnalyst:
         return self._parse(CLASSIFY_SYSTEM, f"<request>\n{text}\n</request>", Intake)
 
     def plan(self, allegation: Allegation) -> PlanDraft:
-        from caligula.agent.plan import PlanDraft
+        from caligula.application.investigation.plan import PlanDraft
 
         claims = "\n".join(
             f"{c.id}{' (core)' if c.id in allegation.core_subclaims else ''}: {c.statement} "

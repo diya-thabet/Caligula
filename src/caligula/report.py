@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from caligula.agent.plan import TaskStatus
-from caligula.agent.workspace import ProposalStatus, Workspace
+from caligula.application.investigation.plan import TaskStatus
+from caligula.application.investigation.workspace import ProposalStatus, Workspace
 from caligula.domain.model.evidence import EvidenceEdge
 from caligula.domain.model.verdict import Verdict
 from caligula.domain.services.provenance import origin_clusters

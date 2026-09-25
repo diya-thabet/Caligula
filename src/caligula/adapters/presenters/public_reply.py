@@ -9,10 +9,10 @@ from __future__ import annotations
 
 import re
 
-from caligula.agent.runner import InvestigationResult
-from caligula.agent.team import TeamResult
-from caligula.agent.workspace import Mode
 from caligula.application.evidence_store import EvidenceStore
+from caligula.application.investigation.single_agent import InvestigationResult
+from caligula.application.investigation.team import TeamResult
+from caligula.application.investigation.workspace import Mode
 
 TEXT = {
     "en": {
