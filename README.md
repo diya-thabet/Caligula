@@ -22,8 +22,8 @@ python -m venv .venv && . .venv/bin/activate
 pip install -e '.[dev]'
 pytest                                   # Postgres tests run when CALIGULA_TEST_DSN is set
 
-# Offline: replays recorded readings of the synthetic STEG case
-caligula run fixtures/steg_synthetic
+# Offline: replays recorded readings of the synthetic STEG case, writes the case file
+caligula run fixtures/steg_synthetic --report out/steg.md
 
 # Same case on PostgreSQL + pgvector
 docker compose up -d

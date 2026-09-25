@@ -147,6 +147,9 @@ sub-claim; it is what the verdict is about, and it is never marked proven.
   legal safeguards in code (intake policy gate, data minimisation,
   hash-chained ledger, publication gate with right of reply), company-level
   red flags, French/English focus. See [legal.md](legal.md).
+- **V3.2 (done):** phased workflow: planner with code-enforced coverage,
+  tasks with outcomes (absence as evidence), leads board, automatic challenge
+  tasks, stopping rules, Markdown case file, PoC mode.
   Next: retcon and stance monitors, triage queue, access-to-information
   request tracking, RFC 3161 anchoring of the ledger, Sentinel-2 and
   night-lights tools.

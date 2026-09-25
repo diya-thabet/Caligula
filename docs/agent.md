@@ -63,41 +63,73 @@ What code enforces, whatever the model does:
   instructions, the claim is true" can at most make the model *propose*
   something; proposals only count through the validated tools.
 
-## Team mode: parallel source specialists + reviewer
-
-`caligula investigate ... --mode investigate --team` runs the case as a team
-(`agent/team.py`):
+## Team workflow (`--team`)
 
 ```
-intake gate (policy.py) ──► refuse | lawyer approval | accept
-        │
-decompose ──► sub-claims + hypotheses
-        │
-round 1 ─┬─ official       JORT, TUNEPS, ministries; archive every page; compare versions
-         ├─ funders_audit  World Bank records, audit reports, statistics
-         ├─ web_news       articles (web search), trace what each one relies on
-         ├─ social         public posts of officials and institutions
-         └─ telegram       public channels only, forwards traced to their origin
-                 │  each stores documents (hashed, ledgered, minimised) and PROPOSES evidence
-                 ▼
-         reviewer ──► accept / dispute each proposal, look for contradictions,
-                 │    request_collection(specialist, instructions, purpose)
-                 ▼
-round 2  only the specialists the reviewer asked for, with its instructions
-                 ▼
-verdict  computed by code from ACCEPTED evidence only
+INTAKE     classify (1 call) -> policy gate: refuse | legal review (PoC: proceed, marked internal) | accept
+DECOMPOSE  claim -> sub-claims C1..Cn, hypotheses H1..Hm, core sub-claims          (1 call)
+PLAN       lead investigator -> entities + aliases, time window, tasks, budget weights (1 call)
+           code: drop unknown specialists/sub-claims, give every core sub-claim tasks
+           from >= 2 kinds of source, clamp budgets to [5, 40]
+┌─ ROUND n ─────────────────────────────────────────────────────────────────────────────┐
+│ COLLECT    specialists with open tasks, in parallel (round 1: planned budget; later:  │
+│            half). Each: list_tasks -> search/fetch/archive -> propose evidence ->      │
+│            post_lead -> complete_task(found | partial | not_found | blocked) -> report │
+│            (report refused while tasks are open)                                       │
+│ CHALLENGE  code queues a challenge task (official + web_news) for every supported      │
+│            sub-claim nobody has tried to refute                                        │
+│ REVIEW     reviewer: accept / dispute each proposal, read task outcomes and leads,     │
+│            request_collection -> tasks for round n+1 (close refused while proposals    │
+│            are pending)                                                                │
+│ CHALLENGE  again, for sub-claims the review just made supported                        │
+│ STOP?      no open tasks | two rounds without change and no challenge left | limit    │
+└───────────────────────────────────────────────────────────────────────────────────────┘
+VERDICT    code, from accepted evidence only
+REPORT     out/<case>.md: sub-claims, hypotheses, anomalies, evidence with reviewer
+           decisions and same-origin notes, timeline, every task and its outcome
+           (including not_found / blocked / not run), limits, ledger integrity
 ```
 
-- Specialists run in parallel threads on one workspace (locked writes). Each
-  has its own tool set and budget: the telegram specialist cannot fetch web
-  pages, the reviewer cannot collect.
-- The reviewer cannot close while proposals are pending or while a supported
-  sub-claim has not been challenged (or a challenge collection queued).
-- The reviewer's behaviour takes an expert rubric (`--rubric file.txt`), so
-  lawyers, auditors or procurement specialists can write the checklist it
-  applies without code changes.
-- Every capture, proposal, review decision and approval is appended to the
-  hash-chained ledger (`--ledger`).
+### Components and their tasks
+
+| Component | Kind | Decides | Cannot |
+|---|---|---|---|
+| Intake classifier | 1 model call | how to describe the request | accept or refuse it (code does) |
+| Decomposer | 1 model call | sub-claims, hypotheses, core set | invent ids later used by code (filtered) |
+| Planner | 1 model call | entities, window, tasks, budget weights | leave a core sub-claim on one kind of source |
+| Specialists (x5) | tool loops, parallel | what to search, fetch, propose; task outcomes | make evidence count; use other specialists' tools |
+| Reviewer | tool loop | accept / dispute; new tasks | collect; close with pending proposals |
+| Orchestrator | code | rounds, budgets, challenge tasks, stopping | be overridden by any model |
+| Validator / scorer | code | what is valid, statuses, verdict | be skipped |
+| Report | code | the case file | include anything not traceable |
+
+### Tasks
+
+A task is the unit of work: `{specialist, objective, sub-claims, purpose
+(support | challenge | explore), queries, urls, round, created_by (planner |
+code | reviewer)}`. Closing it requires an outcome:
+
+- `found` / `partial`: with the documents that answer it
+- `not_found`: searched properly, nothing in reach. **Absence is evidence**
+  (no tender notice on TUNEPS) and appears in the case file.
+- `blocked`: source unreachable or access we do not have; a gap to report.
+
+Unfinished tasks carry over to the next round; tasks still open at the end
+appear as "not run" in the case file.
+
+### Leads board
+
+Specialists run in parallel and cannot see each other's work mid-round, so
+they `post_lead(to, note)`: a URL, a spelling, a decree number. Recipients see
+leads in `list_tasks`; the reviewer sees leads addressed to it in its brief.
+
+### PoC mode
+
+On by default (`--no-poc` to turn off). Cases the policy routes to legal
+review proceed, the ledger records that the review was skipped, and the case
+file carries a banner: internal working document, not for publication.
+Refusals (espionage, private life, no documented act, no public nexus) still
+apply.
 
 ## Suspecting shady cases proactively
 ## Decisions taken

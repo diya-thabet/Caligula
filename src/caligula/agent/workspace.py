@@ -15,6 +15,7 @@ import threading
 from dataclasses import dataclass, field
 from enum import StrEnum
 
+from caligula.agent.plan import EntityHint, Outcome, Task, TaskStatus
 from caligula.ingest.sources import LiveFetcher, WorldBankClient
 from caligula.ingest.telegram import TelegramClient
 from caligula.ingest.wayback import WaybackClient
@@ -64,11 +65,13 @@ class Proposal:
 
 
 @dataclass
-class CollectionRequest:
-    specialist: str
-    instructions: str
-    subclaim_id: str | None
-    purpose: Purpose
+class Lead:
+    """A tip one agent leaves for another during a round (the shared board)."""
+
+    by: str
+    to: str
+    note: str
+    round: int
 
 
 @dataclass
@@ -110,7 +113,10 @@ class Workspace:
     edges: list[EvidenceEdge] = field(default_factory=list)
     figures: list[FinancialFigure] = field(default_factory=list)
     proposals: list[Proposal] = field(default_factory=list)
-    requests: list[CollectionRequest] = field(default_factory=list)
+    tasks: list[Task] = field(default_factory=list)
+    leads: list[Lead] = field(default_factory=list)
+    entities: list[EntityHint] = field(default_factory=list)
+    round: int = 1
     rejected: list[RejectedEvidence] = field(default_factory=list)
     trace: list[TraceEntry] = field(default_factory=list)
     searches: list[tuple[Purpose, str | None, str]] = field(default_factory=list)
@@ -128,6 +134,56 @@ class Workspace:
     def log(self, agent: str, tool: str, args: dict, outcome: str) -> None:
         with self.lock:
             self.trace.append(TraceEntry(len(self.trace) + 1, agent, tool, args, outcome))
+
+    # --- tasks and leads ---------------------------------------------------
+
+    def add_task(self, **fields) -> Task:
+        with self.lock:
+            task = Task(id=f"T{len(self.tasks) + 1}", **fields)
+            self.tasks.append(task)
+            self.ledger.append("task", task.created_by, id=task.id, specialist=task.specialist,
+                               objective=task.objective, purpose=task.purpose, round=task.round)
+            return task
+
+    def open_tasks(self, specialist: str | None = None) -> list[Task]:
+        with self.lock:
+            return [t for t in self.tasks if t.status == TaskStatus.OPEN and t.round <= self.round
+                    and (specialist is None or t.specialist == specialist)]
+
+    def close_task(self, task_id: str, specialist: str, outcome: Outcome, note: str, doc_ids: list[str]) -> Task:
+        with self.lock:
+            task = next((t for t in self.tasks if t.id == task_id), None)
+            if task is None or task.specialist != specialist:
+                raise KeyError(f"no task {task_id} assigned to {specialist}")
+            unknown = [d for d in doc_ids if self.store.get(d) is None]
+            if unknown:
+                raise ValueError(f"unknown documents {unknown}")
+            task.status, task.outcome, task.note, task.doc_ids = TaskStatus.DONE, outcome, note, doc_ids
+            self.ledger.append("task_closed", specialist, id=task.id, outcome=outcome.value, doc_ids=doc_ids)
+            return task
+
+    def post_lead(self, by: str, to: str, note: str) -> None:
+        with self.lock:
+            self.leads.append(Lead(by, to, note, self.round))
+
+    def leads_for(self, specialist: str) -> list[Lead]:
+        with self.lock:
+            return [lead for lead in self.leads if lead.to in (specialist, "all") and lead.by != specialist]
+
+    def coverage(self) -> dict[str, dict]:
+        """Per sub-claim: which specialists were tasked, task outcomes, and whether it was challenged."""
+        with self.lock:
+            challenged = {sid for purpose, sid, _ in self.searches if purpose == Purpose.CHALLENGE}
+            out = {}
+            for c in self.allegation.subclaims:
+                tasks = [t for t in self.tasks if c.id in t.subclaim_ids]
+                out[c.id] = {
+                    "specialists": sorted({t.specialist for t in tasks}),
+                    "outcomes": {t.id: t.outcome.value if t.outcome else "open" for t in tasks},
+                    "challenged": c.id in challenged
+                    or any(t.purpose == "challenge" and t.status == TaskStatus.DONE for t in tasks),
+                }
+            return out
 
     def add_search(self, purpose: Purpose, subclaim_id: str | None, query: str) -> None:
         with self.lock:
@@ -184,5 +240,5 @@ class Workspace:
     def unchallenged(self, verdict: Verdict | None = None) -> list[str]:
         """Supported sub-claims nobody has yet tried to refute."""
         verdict = verdict or self.verdict()
-        challenged = {sid for purpose, sid, _ in self.searches if purpose == Purpose.CHALLENGE}
-        return [c.id for c in verdict.by_subclaim if c.status == SUPPORTED and c.id not in challenged]
+        cov = self.coverage()
+        return [c.id for c in verdict.by_subclaim if c.status == SUPPORTED and not cov[c.id]["challenged"]]

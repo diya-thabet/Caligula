@@ -68,5 +68,18 @@ def run_case(
     return build_verdict(store, allegation, edges, figures, params)
 
 
+def case_workspace(case_dir: Path, store: EvidenceStore):
+    """The recorded case as a workspace (for reports on offline runs)."""
+    from caligula.agent.workspace import Mode, Workspace
+
+    case = load_case(case_dir, store)
+    ws = Workspace(store=store, allegation=Allegation.model_validate(case["allegation"]), mode=Mode.INVESTIGATE)
+    for e in case["recorded_readings"]["edges"]:
+        ws.record(EvidenceEdge.model_validate(e), "recorded")
+    for f in case["recorded_readings"]["figures"]:
+        ws.record(FinancialFigure.model_validate(f), "recorded")
+    return ws
+
+
 def _dt(value: str | None) -> datetime | None:
     return datetime.fromisoformat(value) if value else None

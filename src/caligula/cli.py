@@ -18,6 +18,7 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--blobs", type=Path, default=Path("blobs"), help="content-addressed blob store")
     run.add_argument("--json", action="store_true", help="print the full verdict as JSON")
     run.add_argument("--db", help="PostgreSQL DSN; default is an in-memory store")
+    run.add_argument("--report", type=Path, help="write the Markdown case file here")
     cal = sub.add_parser("calibrate", help="score labelled cases and sweep thresholds")
     cal.add_argument("root", type=Path)
     cal.add_argument("--blobs", type=Path, default=Path("blobs"))
@@ -32,10 +33,14 @@ def main(argv: list[str] | None = None) -> int:
     inv.add_argument("--blobs", type=Path, default=Path("blobs"))
     inv.add_argument("--db", help="PostgreSQL DSN; default is an in-memory store")
     inv.add_argument("--team", action="store_true", help="parallel source specialists + reviewer")
-    inv.add_argument("--rounds", type=int, default=2, help="collection rounds in team mode")
+    inv.add_argument("--rounds", type=int, default=3, help="maximum collection rounds in team mode")
     inv.add_argument("--rubric", type=Path, help="expert review rubric (text file) for the reviewer")
     inv.add_argument("--ledger", type=Path, default=Path("ledger.jsonl"), help="evidence ledger file")
     inv.add_argument("--legal-approved", metavar="NAME", help="lawyer who approved the scope, when intake requires it")
+    inv.add_argument("--poc", action=argparse.BooleanOptionalAction, default=True,
+                     help="proof-of-concept mode: cases needing legal review proceed, outputs are marked "
+                          "internal and not for publication (default on)")
+    inv.add_argument("--report", type=Path, help="write the Markdown case file here (default out/<id>.md)")
     args = parser.parse_args(argv)
 
     if args.command == "investigate":
@@ -51,9 +56,22 @@ def main(argv: list[str] | None = None) -> int:
         from caligula.llm.claude import ClaudeInvestigator
 
         investigator = ClaudeInvestigator()
-    verdict = run_case(args.case_dir, open_store(args.db, BlobStore(args.blobs)), investigator)
+    store = open_store(args.db, BlobStore(args.blobs))
+    verdict = run_case(args.case_dir, store, investigator)
     print(verdict.model_dump_json(indent=2) if args.json else summarize(verdict))
+    if args.report:
+        from caligula.case import case_workspace
+        from caligula.report import build_report
+
+        ws = case_workspace(args.case_dir, store)
+        write_report(args.report, build_report(ws, ws.verdict()))
     return 0
+
+
+def write_report(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    print(f"\nCase file written to {path}")
 
 
 def investigate(args: argparse.Namespace) -> int:
@@ -81,10 +99,15 @@ def investigate(args: argparse.Namespace) -> int:
     if decision.decision == Decision.REFUSE:
         return 2
     if decision.decision == Decision.LEGAL_REVIEW:
-        if not args.legal_approved:
+        if args.legal_approved:
+            ledger.append("legal_approval", args.legal_approved, case_id=args.id, scope=args.claim)
+        elif args.poc:
+            ledger.append("poc_unreviewed", "caligula", case_id=args.id,
+                          note="legal review skipped in PoC mode; output is internal, not for publication")
+            print("  PoC mode: proceeding without legal review; output is internal only.")
+        else:
             print("Stopped: a lawyer must approve the scope first (re-run with --legal-approved NAME).")
             return 3
-        ledger.append("legal_approval", args.legal_approved, case_id=args.id, scope=args.claim)
 
     store = open_store(args.db, BlobStore(args.blobs))
     if args.case_dir:
@@ -96,10 +119,11 @@ def investigate(args: argparse.Namespace) -> int:
     ws = Workspace(store=store, allegation=allegation, mode=mode, connectors=connectors, ledger=ledger)
     if args.team:
         rubric = args.rubric.read_text(encoding="utf-8") if args.rubric else ""
-        result = InvestigationTeam(web_search=not args.no_web, rubric=rubric, max_rounds=args.rounds).run(ws)
+        team = InvestigationTeam(web_search=not args.no_web, rubric=rubric, max_rounds=args.rounds,
+                                 on_event=lambda phase, detail: print(f"[{phase}] {detail}", flush=True))
+        result = team.run(ws)
         narrative = result.review
-        for name, reports in result.reports.items():
-            print(f"\n[{name}] " + "\n  ".join(reports))
+        print(f"\nStopped after {len(result.rounds)} round(s): {result.stop_reason}")
     else:
         result = InvestigatorAgent(web_search=not args.no_web).run(ws)
         narrative = result.summary
@@ -109,6 +133,11 @@ def investigate(args: argparse.Namespace) -> int:
     if result.unknown_citations:
         print(f"\nWARNING: summary cites unknown documents: {result.unknown_citations}")
     print(f"\nPublic reply:\n{public_reply(result, mode, store, args.claim)}")
+    from caligula.report import build_report
+
+    write_report(args.report or Path("out") / f"{args.id}.md",
+                 build_report(ws, result.verdict, narrative, poc=args.poc,
+                              stop_reason=getattr(result, "stop_reason", None)))
     broken = ledger.verify()
     print(f"\nLedger: {len(ledger.entries)} entries, head {ledger.head[:16]}, "
           f"{'intact' if broken is None else f'BROKEN at entry {broken}'}")

@@ -1,15 +1,22 @@
-"""Parallel specialists + reviewer, with scripted stand-ins for Claude."""
+"""The investigation workflow with scripted stand-ins for Claude.
 
-import json
+Checks the orchestration (plan, tasks, parallel rounds, review, automatic
+challenges, stopping) and that code, not the model, decides what counts.
+"""
+
 import threading
 from types import SimpleNamespace
 
+from caligula.agent.plan import BudgetWeight, PlanDraft, PlannedTask, normalize_plan
 from caligula.agent.prompts import SPECIALIST_FOCUS
 from caligula.agent.reply import public_reply
 from caligula.agent.team import InvestigationTeam, Specialist
 from caligula.agent.workspace import Mode
+from caligula.report import build_report
 
 from test_agent import ScriptedRunner, workspace
+
+WS = {}
 
 
 def ev(doc, claim, quote, rel="supports"):
@@ -20,69 +27,81 @@ def amount(doc, role, value, quote):
     return ("record_amount", {"doc_id": doc, "role": role, "amount_tnd": value, "quote": quote})
 
 
+def close_all(agent, outcome="found", note="done"):
+    return ("__expand__", lambda: [("complete_task", {"task_id": t.id, "outcome": outcome, "note": note})
+                                   for t in WS["ws"].open_tasks(agent)])
+
+
+def review_all():
+    """Reviewer policy for the test: repeats of the leak are disputed, the rest accepted."""
+    return [
+        ("review_proposal", {"proposal_id": p.id, "note": "repeats the JORT leak" if p.item.doc_id.startswith("news_") else "ok",
+                             "decision": "dispute" if p.item.doc_id.startswith("news_") else "accept"})
+        for p in WS["ws"].proposals if p.status == "pending"
+    ]
+
+
 SCRIPTS = {
     ("official", 1): [
+        ("report", {"summary": "too early"}),  # refused: open tasks
         ("compare_versions", {"canonical_url": "https://jort.example.tn/2026/017"}),
         ev("jort_award_v1", "C3", "extension de 450 MW de la centrale de Rades-Fictive"),
         ev("jort_award_v1", "C5", "par procédure de gré à gré"),
         ev("tuneps_search", "C5", "Aucun avis d'appel d'offres publié"),
         amount("jort_award_v1", "allocated", 120e6, "120 000 000 TND"),
         amount("benchmark", "benchmark", 60e6, "60 000 000 TND"),
+        ("post_lead", {"to": "web_news", "note": "JORT award 2026-017 was rewritten 120M -> 80M"}),
+        ("post_lead", {"to": "reviewer", "note": "the operator invokes decree 2026-0412"}),
+        close_all("official"),
         ("report", {"summary": "JORT award rewritten between [jort_award_v1] and [jort_award_v2]."}),
     ],
     ("funders_audit", 1): [
         ev("worldbank", "C3", "extension de capacité, centrale de Rades-Fictive"),
         ev("audit", "C5", "n'est pas justifié par une situation d'urgence documentée"),
         amount("worldbank", "disbursed", 110e6, "110 000 000 TND"),
+        close_all("funders_audit"),
         ("report", {"summary": "Funder and audit records."}),
     ],
     ("web_news", 1): [
-        # Three articles repeating one leak: proposed, and the reviewer disputes the repeats.
+        ("list_tasks", {}),
         ev("news_jort_b", "C3", "le marché n° 2026-017 de 120 000 000 TND a été attribué"),
         ev("news_jort_c", "C3", "le marché n° 2026-017 de 120 000 000 TND a été attribué"),
+        close_all("web_news", "partial", "articles all cite the JORT leak"),
         ("report", {"summary": "Articles all cite the JORT leak."}),
     ],
     ("social", 1): [
         ev("site_report", "C4", "aucune fondation visible"),
         ev("sentinel", "C4", "aucun changement de surface bâtie détecté"),
+        close_all("social"),
         ("report", {"summary": "Site evidence."}),
     ],
-    ("telegram", 1): [("report", {"summary": "Nothing relevant in public channels."})],
+    ("telegram", 1): [close_all("telegram", "not_found", "no relevant public posts"),
+                      ("report", {"summary": "Nothing relevant in public channels."})],
     ("reviewer", 1): [
         ("list_proposals", {"status": "pending"}),
-        ("__expand__", lambda: review_all()),
-        ("complete_review", {"summary": "too early"}),  # refused: nothing challenged
-        *[("request_collection", {"specialist": "official", "instructions": "Look for an emergency decree",
-                                  "purpose": "challenge", "subclaim_id": c}) for c in ("C3", "C4", "C5", "C6")],
-        ("complete_review", {"summary": "Round 1 reviewed; challenges requested."}),
+        ("complete_review", {"summary": "too early"}),  # refused: proposals pending
+        ("__expand__", review_all),
+        ("request_collection", {"specialist": "funders_audit", "purpose": "support", "subclaim_ids": ["C7"],
+                                "instructions": "Find the contractor's managers in the business register"}),
+        ("complete_review", {"summary": "Round 1 reviewed."}),
     ],
     ("official", 2): [
-        *[("search_evidence", {"query": "décret 2026-0412 urgence", "purpose": "challenge", "subclaim_id": c})
-          for c in ("C3", "C4", "C5", "C6")],
         ev("steg_procedure", "C5", "conformément à la procédure d'urgence", "qualifies"),
+        close_all("official", "partial", "only the operator's own statement invokes urgency"),
         ("report", {"summary": "Only the operator's own statement invokes urgency [steg_procedure]."}),
     ],
+    ("web_news", 2): [close_all("web_news", "not_found", "no correction or explanation published"),
+                      ("report", {"summary": "No innocent explanation in the press."})],
+    ("funders_audit", 2): [close_all("funders_audit", "blocked", "business register unreachable"),
+                           ("report", {"summary": "Register blocked."})],
     ("reviewer", 2): [
-        ("__expand__", lambda: review_all()),
-        ("assess", {}),
+        ("__expand__", review_all),
         ("complete_review", {"summary": "Anomalies: rewritten award [jort_award_v1], no tender [tuneps_search]."}),
     ],
 }
 
 
-WS = {}
-
-
-def review_all():
-    """Reviewer policy for the test: repeats of the leak are disputed, the rest accepted."""
-    return [
-        ("review_proposal", {"proposal_id": p.id, "note": "r",
-                             "decision": "dispute" if p.item.doc_id.startswith("news_") else "accept"})
-        for p in WS["ws"].proposals if p.status == "pending"
-    ]
-
-
-def fake_team(record, briefs):
+def fake_client(record, briefs, scripts=SCRIPTS):
     rounds = {}
     lock = threading.Lock()
 
@@ -94,38 +113,89 @@ def fake_team(record, briefs):
             rounds[agent] = rounds.get(agent, 0) + 1
             n = rounds[agent]
             briefs[(agent, n)] = kwargs["messages"][0]["content"]
-        agent_record = record.setdefault((agent, n), [])
-        return ScriptedRunner(kwargs["tools"], SCRIPTS.get((agent, n), []), agent_record)
+        return ScriptedRunner(kwargs["tools"], scripts.get((agent, n), []), record.setdefault((agent, n), []))
 
-    client = SimpleNamespace(beta=SimpleNamespace(messages=SimpleNamespace(tool_runner=tool_runner)))
-    return InvestigationTeam(client=client, web_search=False, max_rounds=2)
+    return SimpleNamespace(beta=SimpleNamespace(messages=SimpleNamespace(tool_runner=tool_runner)))
 
 
-def test_team_collects_in_parallel_and_reviewer_decides(store):
+def draft():
+    t = lambda spec, claims, purpose="support": PlannedTask(specialist=spec, objective=f"{spec} on {claims}",
+                                                           subclaim_ids=claims, purpose=purpose, queries=[], urls=[])
+    return PlanDraft(
+        entities=[], window_start="2025-01-01", window_end=None,
+        tasks=[t("official", ["C3", "C5", "C6"]), t("funders_audit", ["C3", "C6", "C99"]), t("web_news", ["C3"]),
+               t("social", ["C4"]), t("telegram", ["C3"], "explore")],
+        budget_weights=[BudgetWeight(specialist="official", weight=3), BudgetWeight(specialist="telegram", weight=0.2)],
+    )
+
+
+def test_plan_normalization_guarantees_two_kinds_of_source(store):
+    ws = workspace(store)
+    plan = normalize_plan(draft(), ws.allegation, total_budget=100)
+    by_claim = {cid: {t.specialist for t in plan.tasks if cid in t.subclaim_ids and t.purpose == "support"}
+                for cid in ws.allegation.core_subclaims}
+    assert all(len(specs) >= 2 for specs in by_claim.values())
+    assert "added official task so C4 is covered by two kinds of source" in plan.fixes
+    assert any("unknown sub-claims" in f for f in plan.fixes)
+    assert plan.budgets["official"] == 40 and plan.budgets["telegram"] == 5  # clamped to [5, 40]
+
+
+def test_workflow_rounds_review_challenges_and_report(store):
     ws = WS["ws"] = workspace(store)
-    record, briefs = {}, {}
-    result = fake_team(record, briefs).run(ws)
+    record, briefs, events = {}, {}, []
+    team = InvestigationTeam(client=fake_client(record, briefs), web_search=False, max_rounds=3,
+                             on_event=lambda phase, detail: events.append(phase))
+    result = team.run(ws, plan=normalize_plan(draft(), ws.allegation, total_budget=100))
 
-    assert result.rounds == 2
-    # Round 2 ran only the specialist the reviewer asked for, with its instructions.
-    assert set(k for k in record if k[1] == 2) == {("official", 2), ("reviewer", 2)}
-    assert "Look for an emergency decree" in briefs[("official", 2)]
-    # The reviewer could not close round 1 before requesting challenges.
-    refused = [out for name, err, out in record[("reviewer", 1)] if err]
-    assert len(refused) == 1 and "not been challenged" in refused[0]
-    # Disputed repeats do not count; verdict computed from accepted evidence only.
+    # Two rounds, then nothing left to do.
+    assert [r.round for r in result.rounds] == [1, 2] and result.stop_reason == "no_open_tasks"
+    assert set(result.rounds[1].specialists) == {"official", "web_news", "funders_audit"}
+    # Code queued a challenge per supported core sub-claim, to official and web_news.
+    added = result.rounds[0].challenge_tasks_added
+    challenged = {sid for t in ws.tasks if t.id in added for sid in t.subclaim_ids}
+    assert challenged == {"C3", "C4", "C5", "C6"} and len(added) == 8
+    # Specialists see their tasks in the brief; the reviewer's request reached round 2.
+    assert "<your_tasks round=\"1\">" in briefs[("official", 1)]
+    assert "business register" in briefs[("funders_audit", 2)]
+    assert "the operator invokes decree 2026-0412" in briefs[("reviewer", 1)]
+    # Wrap-ups are refused until the work is done.
+    assert "Close your open tasks first" in record[("official", 1)][0][2]
+    assert "still pending" in next(out for name, err, out in record[("reviewer", 1)] if err)
+    # Leads posted in parallel are on the shared board.
+    assert [lead.to for lead in ws.leads] == ["web_news", "reviewer"]
+    # Verdict from accepted evidence only; disputed repeats do not count.
     assert [p.status for p in ws.proposals if p.item.doc_id.startswith("news_")] == ["disputed", "disputed"]
     assert result.verdict.verdict == "high_suspicion"
-    assert result.reports["official"][1].startswith("Only the operator's own statement")
-    assert result.unknown_citations == []
-    # Every capture, proposal and decision is in an intact ledger.
-    actions = {e.action for e in ws.ledger.entries}
-    assert {"proposal", "review"} <= actions and ws.ledger.verify() is None
+    assert ws.unchallenged() == []
+    assert events[0] == "collect" and events[-1] == "verdict"
+    # The case file records it all, including negative results.
+    report = build_report(ws, result.verdict, result.review, stop_reason=result.stop_reason)
+    assert "PROOF OF CONCEPT" in report and "| blocked | business register unreachable |" in report
+    assert "✗ supports · `news_jort_b`" in report and "reviewer: repeats the JORT leak" in report
+    assert "chain intact" in report
     assert public_reply(result, Mode.INVESTIGATE, store, "Le marché a été attribué").startswith("Caligula a ouvert")
 
 
+def test_no_progress_stops_early(store):
+    ws = WS["ws"] = workspace(store)
+    # Every round, the reviewer asks for more and nobody finds anything.
+    scripts = {("official", n): [close_all("official", "not_found"), ("report", {"summary": "nothing"})]
+               for n in range(1, 5)}
+    for n in range(1, 5):
+        scripts[("reviewer", n)] = [
+            ("request_collection", {"specialist": "official", "purpose": "support", "instructions": f"try again {n}"}),
+            ("complete_review", {"summary": "more"}),
+        ]
+    plan = normalize_plan(PlanDraft(entities=[], window_start=None, window_end=None, budget_weights=[], tasks=[]),
+                          ws.allegation, 50, ("official",))
+    team = InvestigationTeam(client=fake_client({}, {}, scripts), web_search=False, max_rounds=4,
+                             specialists=[Specialist("official", ["list_tasks", "complete_task", "report"], False)])
+    result = team.run(ws, plan=plan)
+    assert result.stop_reason == "no_progress" and len(result.rounds) == 2
+
+
 def test_specialists_only_get_their_tools(store):
-    ws = workspace(store)
+    ws = WS["ws"] = workspace(store)
     seen = {}
 
     def tool_runner(**kwargs):
@@ -135,7 +205,8 @@ def test_specialists_only_get_their_tools(store):
     client = SimpleNamespace(beta=SimpleNamespace(messages=SimpleNamespace(tool_runner=tool_runner)))
     team = InvestigationTeam(client=client, web_search=False, max_rounds=1,
                              specialists=[Specialist("telegram", ["fetch_telegram_channel", "report"], False)])
-    team.run(ws)
+    plan = normalize_plan(draft(), ws.allegation, 50, ("telegram",))
+    team.run(ws, plan=plan)
     toolsets = list(seen.values())
     assert ["fetch_telegram_channel", "report"] in toolsets
     reviewer = next(t for t in toolsets if "review_proposal" in t)

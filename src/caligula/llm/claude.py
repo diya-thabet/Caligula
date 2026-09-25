@@ -6,7 +6,7 @@ proposes goes through `validate.py` before it can affect a score.
 
 from __future__ import annotations
 
-from typing import Literal, TypeVar
+from typing import TYPE_CHECKING, Literal, TypeVar
 
 import anthropic
 from pydantic import BaseModel
@@ -22,6 +22,9 @@ from caligula.models import (
     SubClaim,
 )
 from caligula.policy import Intake
+
+if TYPE_CHECKING:
+    from caligula.agent.plan import PlanDraft
 
 MODEL = "claude-opus-5"
 # Route policy declines to Anthropic's recommended fallback model instead of failing the call.
@@ -138,6 +141,33 @@ Write sub-claims, hypotheses and questions in the language of the allegation \
 (French or English)."""
 
 
+PLAN_SYSTEM = """\
+You are the lead investigator of a Caligula case. Sub-claims and hypotheses \
+are settled; now plan the evidence collection for a team of source \
+specialists who work in parallel:
+
+- official: Journal Officiel (JORT), TUNEPS procurement notices, ministry and \
+state-company sites, and archived versions of all of these
+- funders_audit: World Bank and other lenders' records, audit reports, statistics
+- web_news: news articles and investigative reports (French and English)
+- social: public posts by officials, institutions and companies
+- telegram: public Telegram channels (leads and first appearances only)
+
+Produce:
+- entities: every company, public body, project, document reference and \
+person central to the claim, with the spellings and aliases to search under \
+(French and English forms, acronyms, reference numbers). Persons only in \
+their public role or documented link.
+- window_start / window_end: ISO dates bounding the relevant period.
+- tasks: concrete, checkable assignments. Each task names its sub-claims, \
+says exactly what to find, and gives search queries and known URLs. Cover \
+every core sub-claim from at least two different kinds of source. Include \
+at least one task that looks for the innocent explanation (purpose \
+"challenge") of the central allegation. Prefer sources the accused cannot \
+edit for amounts and dates.
+- budget_weights: relative effort per specialist for this kind of case."""
+
+
 class ClaudeInvestigator:
     def __init__(self, client: anthropic.Anthropic | None = None, model: str = MODEL):
         self.client = client or anthropic.Anthropic()
@@ -161,6 +191,19 @@ class ClaudeInvestigator:
 
     def classify(self, text: str) -> Intake:
         return self._parse(CLASSIFY_SYSTEM, f"<request>\n{text}\n</request>", Intake)
+
+    def plan(self, allegation: Allegation) -> PlanDraft:
+        from caligula.agent.plan import PlanDraft
+
+        claims = "\n".join(
+            f"{c.id}{' (core)' if c.id in allegation.core_subclaims else ''}: {c.statement} "
+            f"| questions: {'; '.join(c.verification_questions)}"
+            for c in allegation.subclaims
+        )
+        hyps = "\n".join(f"{h.id}: {h.statement} predicts {h.predicts}" for h in allegation.hypotheses)
+        prompt = (f"<claim>\n{allegation.text}\n</claim>\n\n<subclaims>\n{claims}\n</subclaims>\n\n"
+                  f"<hypotheses>\n{hyps}\n</hypotheses>")
+        return self._parse(PLAN_SYSTEM, prompt, PlanDraft)
 
     def decompose(self, allegation_id: str, text: str) -> Allegation:
         d = self._parse(DECOMPOSE_SYSTEM + DECOMPOSE_LANGUAGE, f"<allegation>\n{text}\n</allegation>", _Decomposition)

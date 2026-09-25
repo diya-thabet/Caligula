@@ -17,7 +17,8 @@ from typing import Literal
 from anthropic import beta_tool
 from anthropic.lib.tools import ToolError
 
-from caligula.agent.workspace import AgentContext, CollectionRequest, ProposalStatus, Purpose, Workspace
+from caligula.agent.plan import Outcome
+from caligula.agent.workspace import AgentContext, ProposalStatus, Purpose, Workspace
 from caligula.entities import EntityKind, match
 from caligula.hashing import sha256_bytes
 from caligula.ingest.telegram import PrivateSourceError
@@ -377,23 +378,79 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
             "financial": v.financial.model_dump(exclude={"figures"}) if v.financial else None,
             "missing_evidence": v.missing_evidence,
             "not_yet_challenged": ws.unchallenged(v),
+            "coverage": ws.coverage(),
+            "open_tasks": [f"{t.id} {t.specialist}: {t.objective[:80]}" for t in ws.open_tasks()],
             "pending_proposals": sum(p.status == ProposalStatus.PENDING for p in ws.proposals),
             "budget_left": ctx.budget,
         }
         ws.log(ctx.name, "assess", {}, f"{v.verdict} {v.confidence}")
         return json.dumps(out, ensure_ascii=False, default=str)
 
-    # --- collector wrap-up -------------------------------------------------
+    # --- collector tasks and wrap-up -------------------------------------------
+
+    @beta_tool
+    def list_tasks() -> str:
+        """Your open tasks for this round, and leads other agents left for you. Work the
+        tasks in order of importance; close each one with complete_task."""
+        tasks = [t.model_dump(include={"id", "objective", "subclaim_ids", "purpose", "queries", "urls", "created_by"})
+                 for t in ws.open_tasks(ctx.name)]
+        leads = [{"from": lead.by, "note": lead.note} for lead in ws.leads_for(ctx.name)]
+        return json.dumps({"tasks": tasks, "leads": leads}, ensure_ascii=False)
+
+    @beta_tool
+    @metered
+    def complete_task(
+        task_id: str,
+        outcome: Literal["found", "partial", "not_found", "blocked"],
+        note: str,
+        doc_ids: list[str] | None = None,
+    ) -> str:
+        """Close one of your tasks. "not_found" means you searched properly and the
+        thing does not exist in reach (absence is information: say where you looked).
+        "blocked" means the source was unreachable or needs access we do not have.
+
+        Args:
+            task_id: Task id (T1, T2, ...).
+            outcome: found / partial / not_found / blocked.
+            note: What you did and what it showed, in one to three sentences.
+            doc_ids: Stored documents that answer the task.
+        """
+        try:
+            t = ws.close_task(task_id, ctx.name, Outcome(outcome), note, doc_ids or [])
+        except (KeyError, ValueError) as exc:
+            raise ToolError(str(exc)) from exc
+        left = len(ws.open_tasks(ctx.name))
+        return f"{t.id} closed ({t.outcome}). {left} open task(s) left."
+
+    @beta_tool
+    @metered
+    def post_lead(
+        to: Literal["official", "funders_audit", "web_news", "social", "telegram", "reviewer", "all"],
+        note: str,
+    ) -> str:
+        """Leave a lead for another agent working in parallel: a URL, a name spelling,
+        a decree number, a date. They see it the next time they list their tasks.
+
+        Args:
+            to: Recipient agent, or "all".
+            note: The lead, specific enough to act on.
+        """
+        ws.post_lead(ctx.name, to, note)
+        return "Lead posted."
 
     @beta_tool
     def report(summary: str) -> str:
-        """Finish your collection round. Summarise what you stored and proposed, what
-        you looked for and did not find, and leads other specialists should follow.
-        Cite documents as [doc_id].
+        """Finish your collection round. Refused while you have open tasks, unless your
+        budget is spent. Summarise what you stored and proposed, what you looked for
+        and did not find, and leads other specialists should follow. Cite [doc_id].
 
         Args:
             summary: Your report to the reviewer.
         """
+        still_open = [t.id for t in ws.open_tasks(ctx.name)]
+        if still_open and ctx.budget > 0:
+            raise ToolError(f"Close your open tasks first: {still_open} (use complete_task, outcome "
+                            "'not_found' or 'blocked' if you could not answer them).")
         ctx.done, ctx.report = True, summary
         ws.log(ctx.name, "report", {}, summary[:300])
         return "Report filed. Reply with a one-line acknowledgement only."
@@ -444,28 +501,35 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         specialist: SpecialistName,
         instructions: str,
         purpose: Literal["support", "challenge", "explore"],
-        subclaim_id: str | None = None,
+        subclaim_ids: list[str] | None = None,
+        queries: list[str] | None = None,
+        urls: list[str] | None = None,
     ) -> str:
-        """Ask a source specialist to collect more in the next round: a gap to fill, a
+        """Create a task for a source specialist in the next round: a gap to fill, a
         lead to follow, or an innocent explanation to look for (purpose "challenge").
 
         Args:
             specialist: official (JORT, TUNEPS, ministries, archives of their pages),
                 funders_audit (World Bank, audit and statistics), web_news (articles),
                 social (public posts of officials and institutions), telegram (public channels).
-            instructions: What to look for and where.
+            instructions: What to look for and where, precise enough to act on.
             purpose: support, challenge or explore.
-            subclaim_id: The sub-claim concerned, if any.
+            subclaim_ids: The sub-claims concerned.
+            queries: Suggested search queries.
+            urls: Specific URLs to fetch or check in the archive.
         """
-        with ws.lock:
-            ws.requests.append(CollectionRequest(specialist, instructions, subclaim_id, Purpose(purpose)))
-        return "Queued for the next collection round."
+        known = {c.id for c in ws.allegation.subclaims}
+        t = ws.add_task(specialist=specialist, objective=instructions, purpose=purpose,
+                        subclaim_ids=[i for i in subclaim_ids or [] if i in known], queries=queries or [],
+                        urls=urls or [], round=ws.round + 1, created_by=ctx.name)
+        return f"Task {t.id} queued for {specialist} in the next round."
 
     @beta_tool
     def complete_review(summary: str) -> str:
-        """Close the review. Refused while proposals are pending, or while a supported
-        sub-claim has not been challenged (request a challenge collection or search
-        yourself) unless your budget is spent. The summary is for a human editor: the
+        """Close this round's review. Refused while proposals are pending (unless your
+        budget is spent). Challenge tasks for supported sub-claims are queued
+        automatically; add your own with request_collection when you see a specific
+        innocent explanation worth checking. The summary is for a human editor: the
         anomalies, the evidence for each, contradictions, and what is still needed.
         Cite documents as [doc_id]; do not name or accuse individuals.
 
@@ -475,12 +539,6 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         pending = [p.id for p in ws.proposals if p.status == ProposalStatus.PENDING]
         if pending and ctx.budget > 0:
             raise ToolError(f"Not finished: proposals {pending} are still pending.")
-        unchallenged = ws.unchallenged()
-        queued = {r.subclaim_id for r in ws.requests if r.purpose == Purpose.CHALLENGE}
-        missing = [c for c in unchallenged if c not in queued]
-        if missing and ctx.budget > 0:
-            raise ToolError(f"Not finished: supported sub-claims {missing} have not been challenged. "
-                            "Search with purpose 'challenge' or request a challenge collection.")
         ctx.done, ctx.report = True, summary
         ws.log(ctx.name, "complete_review", {}, summary[:300])
         return "Review closed. Reply with a one-line acknowledgement only."
@@ -510,7 +568,8 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
     everything = {t.name: t for t in [
         search_evidence, read_document, compare_versions, find_archived_captures, ingest_archived_capture,
         ingest_url, search_funder_records, fetch_telegram_channel, record_evidence, record_amount, compare_names,
-        assess, report, list_proposals, review_proposal, request_collection, complete_review, finish,
+        assess, list_tasks, complete_task, post_lead, report, list_proposals, review_proposal, request_collection,
+        complete_review, finish,
     ]}
     if names is None:
         names = SINGLE_AGENT_TOOLS
