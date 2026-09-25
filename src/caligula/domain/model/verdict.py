@@ -29,9 +29,10 @@ class RetconFlag(BaseModel):
 class WeighedEvidence(BaseModel):
     """A validated evidence item as the scoring counted it."""
 
-    doc_id: str
+    doc_id: str  # for an absence without a stored capture: "absence:<register>"
     subclaim_id: str
     relation: Relation
+    kind: str = "edge"  # edge (a quote) | absence (a search that found nothing)
     cluster: str  # origin cluster: items sharing one count once
     weight: float
     interest: str = "none"  # see domain.services.interest.Interest

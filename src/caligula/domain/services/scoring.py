@@ -12,6 +12,7 @@ from dataclasses import dataclass, field, replace
 from caligula.domain.model.claims import Allegation
 from caligula.domain.model.documents import Document, SourceKind
 from caligula.domain.model.evidence import AmountRole, EvidenceEdge, FinancialFigure, Relation
+from caligula.domain.model.registers import REGISTERS
 from caligula.domain.model.verdict import (
     FinancialAnomaly,
     HypothesisResult,
@@ -52,6 +53,10 @@ class Params:
     against_interest_floor: float = 0.8
     # A party asserting a point that serves it: its weight is multiplied by this.
     self_serving_factor: float = 0.5
+    # Absence of a record: weight = the register's completeness, times this
+    # factor when no capture of the empty search result was stored.
+    completeness: dict[str, float] = field(default_factory=lambda: {k: r.completeness for k, r in REGISTERS.items()})
+    absence_uncaptured_factor: float = 0.5
 
     def with_(self, **changes) -> Params:
         return replace(self, **changes)

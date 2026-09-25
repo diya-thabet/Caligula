@@ -11,8 +11,9 @@ from __future__ import annotations
 
 from caligula.domain.model.claims import Allegation
 from caligula.domain.model.documents import Corpus
-from caligula.domain.model.evidence import EvidenceEdge, FinancialFigure, RejectedEvidence
+from caligula.domain.model.evidence import AbsenceFinding, EvidenceEdge, FinancialFigure, RejectedEvidence
 from caligula.domain.model.verdict import SubClaimResult, Verdict
+from caligula.domain.services.absence import validate_absences, weigh_absences
 from caligula.domain.services.provenance import group_by_cluster, origin_clusters
 from caligula.domain.services.retcon import detect_retcons
 from caligula.domain.services.scoring import (
@@ -40,14 +41,17 @@ def build_verdict(
     edges: list[EvidenceEdge],
     figures: list[FinancialFigure],
     params: Params = DEFAULT_PARAMS,
+    absences: list[AbsenceFinding] | None = None,
 ) -> Verdict:
     edges, rejected_edges = validate_edges(corpus, allegation, edges)
     figures, rejected_figures = validate_figures(corpus, figures)
-    rejected: list[RejectedEvidence] = rejected_edges + rejected_figures
+    absences, rejected_absences = validate_absences(corpus, allegation, absences or [])
+    rejected: list[RejectedEvidence] = rejected_edges + rejected_figures + rejected_absences
 
     retcons = detect_retcons(corpus.documents.values())
     clusters = origin_clusters(corpus.documents)
     weighed = weigh_edges(allegation, edges, dict(corpus.documents), retcons, clusters, params)
+    weighed += weigh_absences(absences, clusters, params)
     subclaims = score_subclaims(allegation, weighed, params)
 
     financial = detect_financial_anomaly(figures, retcons, clusters, params)

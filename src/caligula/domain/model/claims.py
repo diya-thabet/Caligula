@@ -7,6 +7,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
+from caligula.domain.model.evidence import Relation
+
 
 class Bearing(StrEnum):
     """What a sub-claim being true means for the party whose conduct is at issue."""
@@ -30,6 +32,16 @@ class Party(BaseModel):
     aliases: list[str] = Field(default_factory=list)
 
 
+class ExpectedRecord(BaseModel):
+    """An observable implication: a record that should exist in a register if
+    the sub-claim were false (or true). Searching for it is a test; not finding
+    it after a proper search is scored evidence (`domain.services.absence`)."""
+
+    description: str  # "TUNEPS tender notice for market 2026-017, before the award"
+    register_id: str  # key of `domain.model.registers.REGISTERS`
+    absence_means: Relation  # what finding nothing means for the sub-claim
+
+
 class SubClaim(BaseModel):
     id: str
     statement: str
@@ -41,6 +53,7 @@ class SubClaim(BaseModel):
     attested_before: datetime | None = None
     # None: core sub-claims are incriminating, the others neutral.
     bearing: Bearing | None = None
+    expected_records: list[ExpectedRecord] = Field(default_factory=list)
 
 
 class Hypothesis(BaseModel):
