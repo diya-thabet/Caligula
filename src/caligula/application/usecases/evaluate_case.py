@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from caligula.application.evidence_store import EvidenceStore
 from caligula.application.ports.llm import ClaimAnalyst
+from caligula.application.usecases.decompose import decompose_case
 from caligula.domain.model.claims import Allegation
 from caligula.domain.model.evidence import EvidenceEdge, FinancialFigure
 from caligula.domain.model.verdict import Verdict
@@ -32,7 +33,7 @@ def evaluate_with_analyst(
     params: Params = DEFAULT_PARAMS,
 ) -> Verdict:
     """Decompose the claim and have the analyst read every stored document."""
-    allegation = analyst.decompose(allegation_id, text)
+    allegation, _ = decompose_case(analyst, allegation_id, text)
     edges: list[EvidenceEdge] = []
     figures: list[FinancialFigure] = []
     for doc in store.documents.values():

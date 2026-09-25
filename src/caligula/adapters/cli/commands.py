@@ -35,6 +35,7 @@ def investigate(args: argparse.Namespace) -> int:
     from caligula.application.investigation.single_agent import InvestigatorAgent
     from caligula.application.investigation.team import InvestigationTeam
     from caligula.application.investigation.workspace import Mode, Workspace
+    from caligula.application.usecases.decompose import decompose_case
     from caligula.application.usecases.intake import admit
     from caligula.domain.model.intake import Decision
 
@@ -52,7 +53,9 @@ def investigate(args: argparse.Namespace) -> int:
     if args.case_dir:
         load_case(args.case_dir, store)
     mode = Mode(args.mode)
-    allegation = llm.decompose(args.id, args.claim)
+    allegation, added = decompose_case(llm, args.id, args.claim)
+    for note in added:
+        print(f"  + {note}")
     ws = Workspace(store=store, allegation=allegation, mode=mode, connectors=live_connectors(), ledger=ledger)
     if args.team:
         rubric = args.rubric.read_text(encoding="utf-8") if args.rubric else ""

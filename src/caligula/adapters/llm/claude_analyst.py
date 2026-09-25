@@ -11,11 +11,12 @@ from typing import TYPE_CHECKING, Literal, TypeVar
 import anthropic
 from pydantic import BaseModel
 
-from caligula.domain.model.claims import Allegation, Hypothesis, Party, SubClaim
+from caligula.domain.model.claims import Allegation, Hypothesis, HypothesisKind, Party, RuledOut, SubClaim
 from caligula.domain.model.documents import Document
 from caligula.domain.model.evidence import AmountRole, EvidenceEdge, FinancialFigure, Relation
-from caligula.domain.model.intake import Intake
+from caligula.domain.model.intake import ClaimType, Intake
 from caligula.domain.model.registers import REGISTERS
+from caligula.domain.services.innocent import CATALOGUE
 
 if TYPE_CHECKING:
     from caligula.application.investigation.plan import PlanDraft
@@ -42,16 +43,19 @@ class _Hypothesis(BaseModel):
     id: str
     statement: str
     predictions: list[_Prediction]
+    kind: Literal["allegation", "innocent", "alternative"]
+    explains: str | None  # standard innocent explanation id, for kind "innocent"
 
 
 class _Decomposition(BaseModel):
     subject: str
-    claim_type: str
+    claim_type: ClaimType
     subclaims: list[SubClaim]
     hypotheses: list[_Hypothesis]
     core_subclaims: list[str]
     financial_subclaim: str | None
     parties: list[Party]
+    ruled_out: list[RuledOut]
 
 
 class _Edge(BaseModel):
@@ -85,9 +89,15 @@ Rules:
 - For each sub-claim, write verification questions that name concrete record \
 types (JORT issue, TUNEPS notice, funder disbursement record, audit report, \
 statistics series, satellite imagery, field photo).
-- Propose competing hypotheses, including innocent explanations, and for each \
-one say which sub-claims it predicts true or false. A good hypothesis set lets \
-evidence falsify some of them.
+- Propose competing hypotheses and for each one say which sub-claims it \
+predicts true or false. A good hypothesis set lets evidence falsify some of \
+them. kind: "allegation" for the wrongdoing as alleged, "innocent" for a \
+lawful or benign explanation of the same facts, "alternative" for other \
+explanations of a fact (such as the cause of an outage).
+- Standard innocent explanations for the claim type (listed below) are \
+mandatory: cover each one with an innocent hypothesis (explains = its id) \
+tested by a sub-claim that is true when the explanation holds, or rule it \
+out in ruled_out with a concrete reason. Code adds any you skip.
 - core_subclaims: the factual sub-claims that must all hold for the allegation \
 to warrant further scrutiny. Exclude the causal inference.
 - financial_subclaim: the sub-claim about an amount being inflated or \
@@ -104,8 +114,13 @@ explanation), "neutral" for context.
 - parties: the bodies, companies or offices whose conduct is at issue (role \
 accused) and whoever makes the allegation, if known (role complainant), with \
 every name they publish under (acronyms, French and English forms). What they \
-publish is weighed as an interested statement.""".replace(
-    "{registers}", ", ".join(f"{k} ({r.name})" for k, r in REGISTERS.items()))
+publish is weighed as an interested statement.
+
+Standard innocent explanations (claim type: id: explanation):
+{innocent}""".replace(
+    "{registers}", ", ".join(f"{k} ({r.name})" for k, r in REGISTERS.items())
+).replace(
+    "{innocent}", "\n".join(f"- {t}: {e.id}: {e.test}" for t, exps in CATALOGUE.items() for e in exps))
 
 READ_SYSTEM = """\
 You read one document for an investigation. For each listed sub-claim, decide \
@@ -231,19 +246,22 @@ class ClaudeAnalyst:
             id=allegation_id,
             text=text,
             subject=d.subject,
-            claim_type=d.claim_type,
+            claim_type=d.claim_type.value,
             subclaims=d.subclaims,
             hypotheses=[
                 Hypothesis(
                     id=h.id,
                     statement=h.statement,
                     predicts={p.subclaim_id: p.predicted_true for p in h.predictions if p.subclaim_id in known},
+                    kind=HypothesisKind(h.kind),
+                    explains=h.explains if h.kind == "innocent" else None,
                 )
                 for h in d.hypotheses
             ],
             core_subclaims=[i for i in d.core_subclaims if i in known],
             financial_subclaim=d.financial_subclaim if d.financial_subclaim in known else None,
             parties=d.parties,
+            ruled_out=d.ruled_out,
         )
 
     def read(self, allegation: Allegation, doc: Document) -> tuple[list[EvidenceEdge], list[FinancialFigure]]:

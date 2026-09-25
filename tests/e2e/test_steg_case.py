@@ -50,11 +50,12 @@ class FakeMessages:
 def test_live_mode_output_goes_through_same_validation(store):
     load_case(FIXTURE, store)
     decomposition = _Decomposition(
-        subject="s", claim_type="corruption_procurement",
+        subject="s", claim_type="procurement",
         subclaims=[SubClaim(id="C1", statement="outage happened")],
-        hypotheses=[_Hypothesis(id="H1", statement="h", predictions=[_Prediction(subclaim_id="C1", predicted_true=True),
-                                                                   _Prediction(subclaim_id="C99", predicted_true=True)])],
-        core_subclaims=["C1", "C99"], financial_subclaim="C98", parties=[],
+        hypotheses=[_Hypothesis(id="H1", statement="h", kind="allegation", explains=None,
+                                predictions=[_Prediction(subclaim_id="C1", predicted_true=True),
+                                             _Prediction(subclaim_id="C99", predicted_true=True)])],
+        core_subclaims=["C1", "C99"], financial_subclaim="C98", parties=[], ruled_out=[],
     )
     readings = []
     for doc in store.documents.values():
@@ -72,6 +73,9 @@ def test_live_mode_output_goes_through_same_validation(store):
 
     assert v.by_subclaim[0].supporting_clusters == [["nightlights"]]
     assert len(v.rejected_evidence) == 2
-    assert v.hypotheses[0].status == "consistent"
+    # Code added the five standard innocent explanations for procurement; until
+    # they are tested, the allegation hypothesis stays open.
+    assert len(v.hypotheses) == 6 and v.hypotheses[0].status == "open"
+    assert v.hypotheses[0].reasons[:2] == ["C1=True as predicted", "C2 is unverified"]
     first = messages.calls[0]
     assert first["model"] == "claude-opus-5" and first["fallbacks"] == "default"
