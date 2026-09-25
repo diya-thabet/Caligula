@@ -6,6 +6,7 @@ challenges, stopping) and that code, not the model, decides what counts.
 
 import threading
 
+from caligula.adapters.presenters.markdown_report import build_report
 from caligula.adapters.presenters.public_reply import public_reply
 from caligula.application.investigation.plan import (
     BudgetWeight,
@@ -16,7 +17,6 @@ from caligula.application.investigation.plan import (
 from caligula.application.investigation.prompts import SPECIALIST_FOCUS
 from caligula.application.investigation.team import InvestigationTeam, Specialist
 from caligula.application.investigation.workspace import Mode
-from caligula.report import build_report
 from test_agent import ScriptedAgentRunner, workspace
 
 WS = {}
