@@ -8,7 +8,7 @@ from caligula.domain.model.claims import (
     SubClaim,
 )
 from caligula.domain.model.documents import SourceKind
-from caligula.domain.model.evidence import EvidenceEdge, Relation
+from caligula.domain.model.evidence import AmountRole, EvidenceEdge, FinancialFigure, Relation
 from caligula.domain.services.innocent import ensure_innocent_explanations, explanations_for
 from caligula.domain.services.verdict import build_verdict
 from conftest import add_doc
@@ -76,3 +76,23 @@ def test_refuted_innocent_explanation_is_falsified(store):
     # Once the operator is known to be the accused, its justification is self-serving (0.25).
     a.parties.append(Party(name="STEG", role=PartyRole.ACCUSED))
     assert h2_status(a) == "falsified"
+
+
+def test_confirmed_innocent_explanation_caps_the_verdict(store):
+    a, _ = ensure_innocent_explanations(_case())  # H2 / C2: lawful emergency
+    a.financial_subclaim = "C3"
+    add_doc(store, "notice", "attribué sans appel d'offres pour 120 000 000 TND", kind=SourceKind.ARCHIVE)
+    add_doc(store, "bench", "ouvrage comparable : 60 000 000 TND", kind=SourceKind.FOREIGN_MIRROR)
+    add_doc(store, "decree", "Décret déclarant l'état d'urgence énergétique", kind=SourceKind.ARCHIVE)
+    add_doc(store, "audit", "Le gré à gré était justifié par l'urgence.", kind=SourceKind.AUDIT)
+    edges = [EvidenceEdge(doc_id="notice", subclaim_id="C1", relation=Relation.SUPPORTS, quote="sans appel d'offres"),
+             EvidenceEdge(doc_id="audit", subclaim_id="C1", relation=Relation.SUPPORTS, quote="Le gré à gré")]
+    figures = [FinancialFigure(doc_id="notice", role=AmountRole.ALLOCATED, amount_tnd=120e6, quote="120 000 000 TND"),
+               FinancialFigure(doc_id="bench", role=AmountRole.BENCHMARK, amount_tnd=60e6, quote="60 000 000 TND")]
+    assert build_verdict(store.corpus(), a, edges, figures).verdict == "high_suspicion"
+
+    edges += [EvidenceEdge(doc_id="decree", subclaim_id="C2", relation=Relation.SUPPORTS, quote="état d'urgence"),
+              EvidenceEdge(doc_id="audit", subclaim_id="C2", relation=Relation.SUPPORTS, quote="justifié par l'urgence")]
+    v = build_verdict(store.corpus(), a, edges, figures)
+    assert next(h.status for h in v.hypotheses if h.id == "H2") == "consistent"
+    assert v.verdict == "partially_supported"  # the facts hold, and so does a lawful explanation

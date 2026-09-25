@@ -1,15 +1,15 @@
 """Assemble the structured verdict from validated evidence.
 
 The engine never outputs "corruption proven". The strongest verdict is
-`high_suspicion`: every core sub-claim is supported by independent evidence and
-a deterministic signal (financial anomaly or rewritten official record) is
-present. Attributing it to a person is out of scope for the engine and requires
+`high_suspicion`: every core sub-claim is supported by independent evidence, a
+deterministic signal (financial anomaly or rewritten official record) is
+present, and no innocent explanation is confirmed by the evidence. Attributing it to a person is out of scope for the engine and requires
 human review with a right of reply.
 """
 
 from __future__ import annotations
 
-from caligula.domain.model.claims import Allegation
+from caligula.domain.model.claims import Allegation, HypothesisKind
 from caligula.domain.model.documents import Corpus
 from caligula.domain.model.evidence import AbsenceFinding, EvidenceEdge, FinancialFigure, RejectedEvidence, Relation
 from caligula.domain.model.verdict import SubClaimResult, Verdict, WeighedEvidence
@@ -100,6 +100,10 @@ def _assess(
 
     hypotheses = evaluate_hypotheses(allegation, subclaims)
     verdict, confidence = _overall(allegation, subclaims, bool(financial and financial.flagged), bool(retcons))
+    innocent = {h.id for h in allegation.hypotheses if h.kind == HypothesisKind.INNOCENT}
+    if verdict == "high_suspicion" and any(h.status == "consistent" for h in hypotheses if h.id in innocent):
+        # The facts hold, but a lawful explanation of them does too.
+        verdict = "partially_supported"
 
     # Ask for more wherever a sub-claim is unsettled or rests on a single origin.
     missing = [
