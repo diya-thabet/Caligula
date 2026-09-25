@@ -1,8 +1,16 @@
 from types import SimpleNamespace
 
+from caligula.adapters.llm.claude_analyst import (
+    ClaudeAnalyst,
+    _Amount,
+    _Decomposition,
+    _Edge,
+    _Hypothesis,
+    _Prediction,
+    _Reading,
+)
 from caligula.case import load_case, run_case
 from caligula.domain.model.claims import SubClaim
-from caligula.llm.claude import ClaudeInvestigator, _Amount, _Decomposition, _Edge, _Hypothesis, _Prediction, _Reading
 from conftest import FIXTURE
 
 
@@ -58,7 +66,7 @@ def test_live_mode_output_goes_through_same_validation(store):
         else:
             readings.append(_Reading(edges=[], amounts=[]))
     messages = FakeMessages([decomposition, *readings])
-    investigator = ClaudeInvestigator(client=SimpleNamespace(beta=SimpleNamespace(messages=messages)))
+    investigator = ClaudeAnalyst(client=SimpleNamespace(beta=SimpleNamespace(messages=messages)))
 
     v = run_case(FIXTURE, store, investigator)
 

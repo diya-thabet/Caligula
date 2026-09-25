@@ -13,13 +13,13 @@ from pathlib import Path
 
 from caligula.adapters.media.text_extraction import extract_text
 from caligula.application.evidence_store import EvidenceStore
+from caligula.application.ports.llm import ClaimAnalyst
 from caligula.domain.model.claims import Allegation
 from caligula.domain.model.documents import SourceKind
 from caligula.domain.model.evidence import EvidenceEdge, FinancialFigure
 from caligula.domain.model.verdict import Verdict
 from caligula.domain.services.scoring import DEFAULT_PARAMS, Params
 from caligula.domain.services.verdict import build_verdict
-from caligula.llm.claude import ClaudeInvestigator
 
 
 def load_case(case_dir: Path, store: EvidenceStore) -> dict:
@@ -52,7 +52,7 @@ def load_case(case_dir: Path, store: EvidenceStore) -> dict:
 def run_case(
     case_dir: Path,
     store: EvidenceStore,
-    investigator: ClaudeInvestigator | None = None,
+    investigator: ClaimAnalyst | None = None,
     params: Params = DEFAULT_PARAMS,
 ) -> Verdict:
     case = load_case(case_dir, store)

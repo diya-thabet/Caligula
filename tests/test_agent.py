@@ -2,7 +2,6 @@
 that code, not the model, decides what counts."""
 
 import json
-from types import SimpleNamespace
 
 import httpx
 
@@ -11,44 +10,44 @@ from caligula.adapters.sources.worldbank import WorldBankClient
 from caligula.agent.reply import public_reply
 from caligula.agent.runner import InvestigatorAgent
 from caligula.agent.workspace import Connectors, Mode, Workspace
+from caligula.application.ports.llm import ToolRefusal
 from caligula.case import load_case
 from caligula.domain.model.claims import Allegation
 from conftest import FIXTURE
 
 
-class ScriptedRunner:
-    """Plays a fixed sequence of tool calls through the real tool objects."""
+def play(tools, script, record):
+    """Plays scripted tool calls through the real tool functions, as a model would."""
+    by_name = {t.__name__: t for t in tools}
+    script = list(script)
+    while script:
+        name, args = script.pop(0)
+        if name == "__expand__":  # decide the next calls from the live workspace state
+            script[:0] = args()
+            continue
+        try:
+            out, err = by_name[name](**args), False
+        except ToolRefusal as exc:  # returned to the model as a tool error
+            out, err = str(exc), True
+        record.append((name, err, out))
 
-    def __init__(self, tools, script, record):
-        self.tools = {t.name: t for t in tools if hasattr(t, "name")}
-        self.script, self.record = script, record
 
-    def __iter__(self):
-        script = list(self.script)
-        while script:
-            name, args = script.pop(0)
-            if name == "__expand__":  # decide the next calls from the live workspace state
-                script[:0] = args()
-                continue
-            try:
-                out, err = self.tools[name].call(args), False
-            except Exception as exc:  # ToolError -> is_error result, as in the SDK runner
-                out, err = str(exc), True
-            self.record.append((name, err, out))
-            yield SimpleNamespace(content=[], stop_reason="tool_use")
-        yield SimpleNamespace(content=[], stop_reason="end_turn")
+class ScriptedAgentRunner:
+    """Fake `AgentRunner`: `script_for(system, brief)` returns (script, record) for each agent run."""
 
-    def generate_tool_call_response(self):
-        return None
+    def __init__(self, script_for, calls=None):
+        self.script_for = script_for
+        self.calls = [] if calls is None else calls
+
+    def run(self, system, tools, brief, max_iterations, done, web_search=False):
+        self.calls.append({"system": system, "tools": tools, "brief": brief, "web_search": web_search})
+        script, record = self.script_for(system, brief)
+        play(tools, script, record)
+        return "end_turn"
 
 
 def agent_for(script, record, calls):
-    def tool_runner(**kwargs):
-        calls.append(kwargs)
-        return ScriptedRunner(kwargs["tools"], script, record)
-
-    client = SimpleNamespace(beta=SimpleNamespace(messages=SimpleNamespace(tool_runner=tool_runner)))
-    return InvestigatorAgent(client=client, web_search=False)
+    return InvestigatorAgent(ScriptedAgentRunner(lambda system, brief: (script, record), calls), web_search=False)
 
 
 def workspace(store, mode=Mode.INVESTIGATE, **kw):
@@ -92,7 +91,7 @@ def test_agent_builds_case_and_must_challenge_before_finishing(store):
     assert result.unknown_citations == ["nowhere"]
     assessed = json.loads(next(out for name, _, out in record if name == "assess"))
     assert assessed["not_yet_challenged"] == [] and assessed["financial"]["flagged"]
-    assert calls[0]["fallbacks"] == "default" and calls[0]["model"] == "claude-opus-5"
+    assert calls[0]["web_search"] is False
     assert "investigation" in calls[0]["system"]
     assert public_reply(result, Mode.INVESTIGATE, store).startswith("Caligula opened case")
 

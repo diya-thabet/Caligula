@@ -1,4 +1,4 @@
-"""Claude as investigator: it decomposes allegations and reads documents.
+"""Claude as analyst: classifies requests, decomposes allegations, plans, reads documents.
 
 It is never asked whether an allegation is true. Every edge and amount it
 proposes goes through `validate.py` before it can affect a score.
@@ -161,7 +161,9 @@ edit for amounts and dates.
 - budget_weights: relative effort per specialist for this kind of case."""
 
 
-class ClaudeInvestigator:
+class ClaudeAnalyst:
+    """`ClaimAnalyst` adapter on the Claude API (structured outputs)."""
+
     def __init__(self, client: anthropic.Anthropic | None = None, model: str = MODEL):
         self.client = client or anthropic.Anthropic()
         self.model = model

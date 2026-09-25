@@ -17,15 +17,12 @@ import json
 import re
 from dataclasses import dataclass
 
-import anthropic
-
-from caligula.agent.loop import WEB_SEARCH, run_loop
 from caligula.agent.prompts import SYSTEM
 from caligula.agent.tools import build_tools
 from caligula.agent.workspace import TraceEntry, Workspace
 from caligula.application.evidence_store import EvidenceStore
+from caligula.application.ports.llm import AgentRunner
 from caligula.domain.model.verdict import Verdict
-from caligula.llm.claude import MODEL
 
 
 @dataclass
@@ -60,17 +57,14 @@ def unknown_citations(text: str | None, store: EvidenceStore) -> list[str]:
 
 
 class InvestigatorAgent:
-    def __init__(self, client: anthropic.Anthropic | None = None, model: str = MODEL, web_search: bool = True):
-        self.client = client or anthropic.Anthropic()
-        self.model = model
+    def __init__(self, runner: AgentRunner, web_search: bool = True):
+        self.runner = runner
         self.web_search = web_search
 
     def run(self, ws: Workspace) -> InvestigationResult:
-        tools: list = build_tools(ws)
-        if self.web_search:
-            tools.append(WEB_SEARCH)
-        stop_reason = run_loop(self.client, self.model, SYSTEM[ws.mode], tools, case_brief(ws, ws.budget),
-                               max_iterations=ws.budget + 20, done=lambda: ws.finished)
+        stop_reason = self.runner.run(SYSTEM[ws.mode], build_tools(ws), case_brief(ws, ws.budget),
+                                      max_iterations=ws.budget + 20, done=lambda: ws.finished,
+                                      web_search=self.web_search)
         return InvestigationResult(
             verdict=ws.verdict(), summary=ws.summary, unknown_citations=unknown_citations(ws.summary, ws.store),
             trace=ws.trace, stop_reason=stop_reason,

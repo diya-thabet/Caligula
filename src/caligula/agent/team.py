@@ -25,16 +25,13 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
-import anthropic
-
-from caligula.agent.loop import WEB_SEARCH, run_loop
 from caligula.agent.plan import MIN_BUDGET, Plan, TaskStatus, normalize_plan
 from caligula.agent.prompts import _COLLECTOR, REVIEWER, SPECIALIST_FOCUS
 from caligula.agent.runner import case_brief, unknown_citations
 from caligula.agent.tools import build_tools
 from caligula.agent.workspace import AgentContext, ProposalStatus, TraceEntry, Workspace
+from caligula.application.ports.llm import AgentRunner, ClaimAnalyst
 from caligula.domain.model.verdict import Verdict
-from caligula.llm.claude import MODEL, ClaudeInvestigator
 
 READ = ["search_evidence", "read_document", "compare_versions", "compare_names", "assess"]
 WORK = ["list_tasks", "complete_task", "post_lead", "record_evidence", "record_amount", "report"]
@@ -88,8 +85,8 @@ class TeamResult:
 class InvestigationTeam:
     def __init__(
         self,
-        client: anthropic.Anthropic | None = None,
-        model: str = MODEL,
+        runner: AgentRunner,
+        analyst: ClaimAnalyst | None = None,
         specialists: list[Specialist] | None = None,
         max_rounds: int = 3,
         total_budget: int = 100,
@@ -99,8 +96,8 @@ class InvestigationTeam:
         parallel: int = 5,
         on_event: Callable[[str, str], None] | None = None,
     ):
-        self.client = client or anthropic.Anthropic()
-        self.model = model
+        self.runner = runner
+        self.analyst = analyst
         self.specialists = {s.name: s for s in (specialists or SPECIALISTS)}
         self.max_rounds = max_rounds
         self.total_budget = total_budget
@@ -146,7 +143,9 @@ class InvestigationTeam:
                           stop_reason=stop, plan_fixes=plan.fixes, trace=ws.trace)
 
     def plan(self, ws: Workspace) -> Plan:
-        draft = ClaudeInvestigator(self.client, self.model).plan(ws.allegation)
+        if self.analyst is None:
+            raise ValueError("planning needs a ClaimAnalyst; pass one or pass a plan")
+        draft = self.analyst.plan(ws.allegation)
         plan = normalize_plan(draft, ws.allegation, self.total_budget, tuple(self.specialists))
         self.emit("plan", f"{len(plan.tasks)} tasks, budgets {plan.budgets}, fixes {plan.fixes}")
         return plan
@@ -219,9 +218,7 @@ class InvestigationTeam:
 
     def _collect(self, ws: Workspace, spec: Specialist, budget: int) -> str:
         ctx = AgentContext(name=spec.name, budget=budget)
-        tools: list = build_tools(ws, ctx, spec.tools)
-        if spec.web_search and self.web_search:
-            tools.append(WEB_SEARCH)
+        tools = build_tools(ws, ctx, spec.tools)
         system = f"{_COLLECTOR}\n\n{SPECIALIST_FOCUS[spec.name]}"
         tasks = [t.model_dump(include={"id", "objective", "subclaim_ids", "purpose", "queries", "urls"})
                  for t in ws.open_tasks(spec.name)]
@@ -230,7 +227,7 @@ class InvestigationTeam:
                  + f"\n\n<entities>\n{json.dumps(entities, ensure_ascii=False)}\n</entities>"
                  + f"\n\n<your_tasks round=\"{ws.round}\">\n{json.dumps(tasks, ensure_ascii=False, indent=1)}\n</your_tasks>"
                  + "\n\nWork your tasks, close each with complete_task, check list_tasks for leads, then report.")
-        run_loop(self.client, self.model, system, tools, brief, budget + 15, lambda: ctx.done)
+        self.runner.run(system, tools, brief, budget + 15, lambda: ctx.done, web_search=spec.web_search and self.web_search)
         return ctx.report or f"({spec.name} ended without a report)"
 
     def _review(self, ws: Workspace, n: int, reports: dict[str, list[str]]) -> str | None:
@@ -254,5 +251,5 @@ class InvestigationTeam:
             + f"\n\n<leads_for_you>\n{json.dumps(leads, ensure_ascii=False)}\n</leads_for_you>"
             + f"\n\n<specialist_reports>\n{json.dumps(latest, ensure_ascii=False, indent=1)}\n</specialist_reports>"
         )
-        run_loop(self.client, self.model, system, tools, brief, self.reviewer_budget + 10, lambda: ctx.done)
+        self.runner.run(system, tools, brief, self.reviewer_budget + 10, lambda: ctx.done)
         return ctx.report

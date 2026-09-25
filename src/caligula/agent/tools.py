@@ -1,7 +1,8 @@
-"""Tools the agents can call.
+"""Tools the agents can call, as plain functions.
 
 Tool docstrings are the model's instructions for each tool, so they say when
-to use it and what comes back. `build_tools` hands each agent only the tools
+to use it and what comes back. A tool refuses a call by raising `ToolRefusal`;
+the LLM adapter turns that into a tool error for the model. `build_tools` hands each agent only the tools
 of its role; every call is charged to that agent's budget except the ones
 needed to wrap up (`assess`, `report`, `finish`, `complete_review`).
 """
@@ -14,11 +15,9 @@ from datetime import UTC, datetime
 from functools import wraps
 from typing import Literal
 
-from anthropic import beta_tool
-from anthropic.lib.tools import ToolError
-
 from caligula.agent.plan import Outcome
 from caligula.agent.workspace import AgentContext, ProposalStatus, Purpose, Workspace
+from caligula.application.ports.llm import Tool, ToolRefusal
 from caligula.application.ports.sources import ExtractedText, PrivateSourceError
 from caligula.domain.model.documents import SourceKind
 from caligula.domain.model.evidence import AmountRole, EvidenceEdge, FinancialFigure, Relation
@@ -41,7 +40,7 @@ def _date(value: str | None) -> datetime | None:
     return d if d.tzinfo else d.replace(tzinfo=UTC)
 
 
-def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[str] | None = None) -> list:
+def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[str] | None = None) -> list[Tool]:
     """Tools bound to one agent. `ctx` defaults to a single agent using the workspace budget."""
     single = ctx is None
     ctx = ctx or AgentContext(name="investigator", budget=ws.budget)
@@ -57,18 +56,18 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         @wraps(fn)
         def wrapper(**kwargs):
             if ws.finished or ctx.done:
-                raise ToolError("Your part of the investigation is finished; no further tool calls.")
+                raise ToolRefusal("Your part of the investigation is finished; no further tool calls.")
             if ctx.budget <= 0:
-                raise ToolError("Tool budget exhausted. Wrap up now (report, finish or complete_review).")
+                raise ToolRefusal("Tool budget exhausted. Wrap up now (report, finish or complete_review).")
             spend()
             try:
                 out = fn(**kwargs)
-            except ToolError as exc:
+            except ToolRefusal as exc:
                 ws.log(ctx.name, fn.__name__, kwargs, f"error: {exc}")
                 raise
             except Exception as exc:  # connector failures are information, not crashes
                 ws.log(ctx.name, fn.__name__, kwargs, f"error: {exc}")
-                raise ToolError(f"{type(exc).__name__}: {exc}") from exc
+                raise ToolRefusal(f"{type(exc).__name__}: {exc}") from exc
             ws.log(ctx.name, fn.__name__, kwargs, out[:300])
             return out
 
@@ -97,7 +96,6 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
                              observed_at=observed_at.isoformat(), masked=masked)
         return doc_id
 
-    @beta_tool
     @metered
     def search_evidence(
         query: str,
@@ -134,7 +132,6 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
                          "observed_at": d.observed_at.date().isoformat(), "url": d.canonical_url, "snippet": h.snippet})
         return json.dumps(rows, ensure_ascii=False) if rows else "No matching documents in the store."
 
-    @beta_tool
     @metered
     def read_document(doc_id: str, offset: int = 0) -> str:
         """Read a stored document's text and metadata. Long documents are returned in
@@ -147,7 +144,7 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         """
         d = ws.store.get(doc_id)
         if d is None:
-            raise ToolError(f"No document {doc_id}.")
+            raise ToolRefusal(f"No document {doc_id}.")
         chunk = d.text[offset : offset + MAX_READ]
         end = offset + len(chunk)
         meta = {"doc_id": d.id, "kind": d.source_kind, "publisher": d.publisher, "url": d.url,
@@ -157,7 +154,6 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
                 "next_offset": end if end < len(d.text) else None}
         return json.dumps(meta, ensure_ascii=False) + "\n---\n" + chunk
 
-    @beta_tool
     @metered
     def compare_versions(canonical_url: str) -> str:
         """List every stored version of one logical document (live page, archive
@@ -169,14 +165,13 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         """
         versions = ws.store.versions(canonical_url)
         if not versions:
-            raise ToolError(f"No stored versions for {canonical_url}.")
+            raise ToolRefusal(f"No stored versions for {canonical_url}.")
         out = [{"doc_id": v.id, "kind": v.source_kind, "observed_at": v.observed_at.isoformat()} for v in versions]
         for a, b in zip(versions, versions[1:]):
             changes = [c.model_dump() for c in diff_fields(a, b)] if a.text_sha256 != b.text_sha256 else []
             out.append({"from": a.id, "to": b.id, "changes": changes})
         return json.dumps(out, ensure_ascii=False)
 
-    @beta_tool
     @metered
     def find_archived_captures(url: str, since: str | None = None, until: str | None = None) -> str:
         """List Wayback Machine captures of a URL (one per distinct content). Use this
@@ -188,12 +183,11 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
             until: Optional year or yyyymmdd upper bound.
         """
         if ws.connectors.wayback is None:
-            raise ToolError("Archive connector not configured.")
+            raise ToolRefusal("Archive connector not configured.")
         caps = ws.connectors.wayback.captures(url, since=since, until=until)
         return json.dumps([{"timestamp": c.timestamp, "original": c.original, "mimetype": c.mimetype} for c in caps]) \
             if caps else "No captures."
 
-    @beta_tool
     @metered
     def ingest_archived_capture(url: str, timestamp: str, publisher: str) -> str:
         """Fetch one Wayback capture in raw form, hash it, and store it as an archive
@@ -205,13 +199,12 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
             publisher: Who originally published the page (e.g. "JORT", "TUNEPS").
         """
         if ws.connectors.wayback is None:
-            raise ToolError("Archive connector not configured.")
+            raise ToolRefusal("Archive connector not configured.")
         copy = ws.connectors.wayback.fetch(url, timestamp)
         doc_id = store_document(copy.content, kind=SourceKind.ARCHIVE, url=copy.url, canonical_url=url,
                                 publisher=publisher, observed_at=copy.captured_at, filename=url)
         return f"Stored as {doc_id}."
 
-    @beta_tool
     @metered
     def ingest_url(url: str, source_kind: KindName, publisher: str, canonical_url: str | None = None) -> str:
         """Fetch a publicly accessible URL now, hash it, and store it exactly as served:
@@ -226,14 +219,13 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
             canonical_url: Stable identity of the document if different from url.
         """
         if ws.connectors.live is None:
-            raise ToolError("Live fetching not configured.")
+            raise ToolRefusal("Live fetching not configured.")
         fetched = ws.connectors.live.fetch(url)
         doc_id = store_document(fetched.content, kind=SourceKind(source_kind), url=fetched.url,
                                 canonical_url=canonical_url or url, publisher=publisher,
                                 observed_at=datetime.now(UTC), filename=url)
         return f"Stored as {doc_id}."
 
-    @beta_tool
     @metered
     def search_funder_records(query: str, country_code: str = "TN") -> str:
         """Search World Bank project records (commitments, dates, implementing agency).
@@ -245,7 +237,7 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
             country_code: ISO-2 country code.
         """
         if ws.connectors.funders is None:
-            raise ToolError("Funder connector not configured.")
+            raise ToolRefusal("Funder connector not configured.")
         request_url, raw, projects = ws.connectors.funders.search(query, country_code)
         doc_id = store_document(raw, kind=SourceKind.FOREIGN_MIRROR, url=request_url, canonical_url=request_url,
                                 publisher="World Bank", observed_at=datetime.now(UTC), filename="projects.json")
@@ -253,7 +245,6 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
                  for p in projects]
         return json.dumps({"doc_id": doc_id, "projects": brief}, ensure_ascii=False)
 
-    @beta_tool
     @metered
     def fetch_telegram_channel(channel: str, keywords: list[str] | None = None, before: int | None = None) -> str:
         """Read recent posts of a PUBLIC Telegram channel (e.g. "@channel" or
@@ -267,11 +258,11 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
             before: Post id to page back from.
         """
         if ws.connectors.telegram is None:
-            raise ToolError("Telegram connector not configured.")
+            raise ToolRefusal("Telegram connector not configured.")
         try:
             page_url, raw_page, posts = ws.connectors.telegram.fetch(channel, before=before)
         except PrivateSourceError as exc:
-            raise ToolError(str(exc)) from exc
+            raise ToolRefusal(str(exc)) from exc
         ws.ledger.append("capture", ctx.name, url=page_url, raw_sha256=sha256_bytes(raw_page), posts=len(posts))
         terms = [k.lower() for k in keywords or []]
         stored = []
@@ -294,13 +285,12 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
     def _record(item: EvidenceEdge | FinancialFigure) -> str:
         reason, proposal_id = ws.record(item, ctx.name)
         if reason:
-            raise ToolError(f"Rejected: {reason}")
+            raise ToolRefusal(f"Rejected: {reason}")
         if proposal_id and ctx.name == "reviewer":
             ws.review(proposal_id, True, "recorded by reviewer", ctx.name)
             return "Accepted."
         return f"Proposed as {proposal_id}; the reviewer decides whether it counts." if proposal_id else "Accepted."
 
-    @beta_tool
     @metered
     def record_evidence(
         doc_id: str,
@@ -323,7 +313,6 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         return _record(EvidenceEdge(doc_id=doc_id, subclaim_id=subclaim_id, relation=Relation(relation),
                                     quote=quote, rationale=rationale))
 
-    @beta_tool
     @metered
     def record_amount(
         doc_id: str,
@@ -343,7 +332,6 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         """
         return _record(FinancialFigure(doc_id=doc_id, role=AmountRole(role), amount_tnd=amount_tnd, quote=quote))
 
-    @beta_tool
     @metered
     def compare_names(names: list[str], kind: Literal["person", "company"]) -> str:
         """Check whether names in different spellings may refer to the same company or
@@ -362,7 +350,6 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
                     pairs.append({"a": a, "b": b, "score": m.score, "same": m.same, "needs_review": m.needs_review})
         return json.dumps(pairs, ensure_ascii=False) if pairs else "No likely matches."
 
-    @beta_tool
     def assess() -> str:
         """Score the evidence that currently counts. Returns each sub-claim's status,
         hypotheses, retcon flags, the financial check, missing evidence, supported
@@ -388,7 +375,6 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
 
     # --- collector tasks and wrap-up -------------------------------------------
 
-    @beta_tool
     def list_tasks() -> str:
         """Your open tasks for this round, and leads other agents left for you. Work the
         tasks in order of importance; close each one with complete_task."""
@@ -397,7 +383,6 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         leads = [{"from": lead.by, "note": lead.note} for lead in ws.leads_for(ctx.name)]
         return json.dumps({"tasks": tasks, "leads": leads}, ensure_ascii=False)
 
-    @beta_tool
     @metered
     def complete_task(
         task_id: str,
@@ -418,11 +403,10 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         try:
             t = ws.close_task(task_id, ctx.name, Outcome(outcome), note, doc_ids or [])
         except (KeyError, ValueError) as exc:
-            raise ToolError(str(exc)) from exc
+            raise ToolRefusal(str(exc)) from exc
         left = len(ws.open_tasks(ctx.name))
         return f"{t.id} closed ({t.outcome}). {left} open task(s) left."
 
-    @beta_tool
     @metered
     def post_lead(
         to: Literal["official", "funders_audit", "web_news", "social", "telegram", "reviewer", "all"],
@@ -438,7 +422,6 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         ws.post_lead(ctx.name, to, note)
         return "Lead posted."
 
-    @beta_tool
     def report(summary: str) -> str:
         """Finish your collection round. Refused while you have open tasks, unless your
         budget is spent. Summarise what you stored and proposed, what you looked for
@@ -449,7 +432,7 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         """
         still_open = [t.id for t in ws.open_tasks(ctx.name)]
         if still_open and ctx.budget > 0:
-            raise ToolError(f"Close your open tasks first: {still_open} (use complete_task, outcome "
+            raise ToolRefusal(f"Close your open tasks first: {still_open} (use complete_task, outcome "
                             "'not_found' or 'blocked' if you could not answer them).")
         ctx.done, ctx.report = True, summary
         ws.log(ctx.name, "report", {}, summary[:300])
@@ -457,7 +440,6 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
 
     # --- reviewer ------------------------------------------------------------
 
-    @beta_tool
     @metered
     def list_proposals(status: Literal["pending", "accepted", "disputed"] = "pending") -> str:
         """List evidence proposed by the collectors, with the quoted text and the
@@ -476,7 +458,6 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
                          "note": p.note})
         return json.dumps(rows, ensure_ascii=False) if rows else f"No {status} proposals."
 
-    @beta_tool
     @metered
     def review_proposal(proposal_id: str, decision: Literal["accept", "dispute"], note: str) -> str:
         """Accept a proposal (it then counts in the scoring) or dispute it (it does not).
@@ -492,10 +473,9 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         try:
             p = ws.review(proposal_id, decision == "accept", note, ctx.name)
         except KeyError as exc:
-            raise ToolError(f"No proposal {proposal_id}.") from exc
+            raise ToolRefusal(f"No proposal {proposal_id}.") from exc
         return f"{p.id} {p.status}."
 
-    @beta_tool
     @metered
     def request_collection(
         specialist: SpecialistName,
@@ -524,7 +504,6 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
                         urls=urls or [], round=ws.round + 1, created_by=ctx.name)
         return f"Task {t.id} queued for {specialist} in the next round."
 
-    @beta_tool
     def complete_review(summary: str) -> str:
         """Close this round's review. Refused while proposals are pending (unless your
         budget is spent). Challenge tasks for supported sub-claims are queued
@@ -538,14 +517,13 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         """
         pending = [p.id for p in ws.proposals if p.status == ProposalStatus.PENDING]
         if pending and ctx.budget > 0:
-            raise ToolError(f"Not finished: proposals {pending} are still pending.")
+            raise ToolRefusal(f"Not finished: proposals {pending} are still pending.")
         ctx.done, ctx.report = True, summary
         ws.log(ctx.name, "complete_review", {}, summary[:300])
         return "Review closed. Reply with a one-line acknowledgement only."
 
     # --- single-agent wrap-up ------------------------------------------------
 
-    @beta_tool
     def finish(summary: str) -> str:
         """End the investigation. Refused while any supported sub-claim has not been
         challenged by at least one search with purpose "challenge" (unless the budget
@@ -557,7 +535,7 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         """
         pending = ws.unchallenged()
         if pending and ctx.budget > 0:
-            raise ToolError(
+            raise ToolRefusal(
                 f"Not finished: sub-claims {pending} are supported but no challenge search has "
                 "looked for evidence against them (emergency decrees, force majeure, price shocks, corrections)."
             )
@@ -565,7 +543,7 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         ws.log(ctx.name, "finish", {}, "done")
         return "Investigation closed. Reply with a one-line acknowledgement only."
 
-    everything = {t.name: t for t in [
+    everything = {t.__name__: t for t in [
         search_evidence, read_document, compare_versions, find_archived_captures, ingest_archived_capture,
         ingest_url, search_funder_records, fetch_telegram_channel, record_evidence, record_amount, compare_names,
         assess, list_tasks, complete_task, post_lead, report, list_proposals, review_proposal, request_collection,

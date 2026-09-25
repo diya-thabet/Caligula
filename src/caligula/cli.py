@@ -55,9 +55,9 @@ def main(argv: list[str] | None = None) -> int:
 
     investigator = None
     if args.live:
-        from caligula.llm.claude import ClaudeInvestigator
+        from caligula.adapters.llm.claude_analyst import ClaudeAnalyst
 
-        investigator = ClaudeInvestigator()
+        investigator = ClaudeAnalyst()
     store = open_store(args.db, FileBlobStorage(args.blobs))
     verdict = run_case(args.case_dir, store, investigator)
     print(verdict.model_dump_json(indent=2) if args.json else summarize(verdict))
@@ -77,6 +77,8 @@ def write_report(path: Path, text: str) -> None:
 
 
 def investigate(args: argparse.Namespace) -> int:
+    from caligula.adapters.llm.claude_analyst import ClaudeAnalyst
+    from caligula.adapters.llm.claude_runner import ClaudeAgentRunner
     from caligula.adapters.media.text_extraction import PopplerTesseractExtractor
     from caligula.adapters.persistence.ledger_jsonl import JsonlLedger
     from caligula.adapters.sources.telegram import TelegramClient
@@ -90,10 +92,9 @@ def investigate(args: argparse.Namespace) -> int:
     from caligula.case import load_case
     from caligula.domain.model.intake import Decision
     from caligula.domain.services.intake_policy import decide
-    from caligula.llm.claude import ClaudeInvestigator
 
     ledger = JsonlLedger(args.ledger)
-    llm = ClaudeInvestigator()
+    llm = ClaudeAnalyst()
     intake = llm.classify(args.claim)
     decision = decide(intake)
     ledger.append("intake", "caligula", case_id=args.id, decision=decision.decision.value,
@@ -124,13 +125,14 @@ def investigate(args: argparse.Namespace) -> int:
     ws = Workspace(store=store, allegation=allegation, mode=mode, connectors=connectors, ledger=ledger)
     if args.team:
         rubric = args.rubric.read_text(encoding="utf-8") if args.rubric else ""
-        team = InvestigationTeam(web_search=not args.no_web, rubric=rubric, max_rounds=args.rounds,
+        team = InvestigationTeam(runner=ClaudeAgentRunner(), analyst=llm, web_search=not args.no_web,
+                                 rubric=rubric, max_rounds=args.rounds,
                                  on_event=lambda phase, detail: print(f"[{phase}] {detail}", flush=True))
         result = team.run(ws)
         narrative = result.review
         print(f"\nStopped after {len(result.rounds)} round(s): {result.stop_reason}")
     else:
-        result = InvestigatorAgent(web_search=not args.no_web).run(ws)
+        result = InvestigatorAgent(ClaudeAgentRunner(), web_search=not args.no_web).run(ws)
         narrative = result.summary
 
     print("\n" + summarize(result.verdict))

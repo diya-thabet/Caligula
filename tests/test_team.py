@@ -5,7 +5,6 @@ challenges, stopping) and that code, not the model, decides what counts.
 """
 
 import threading
-from types import SimpleNamespace
 
 from caligula.agent.plan import BudgetWeight, PlanDraft, PlannedTask, normalize_plan
 from caligula.agent.prompts import SPECIALIST_FOCUS
@@ -13,7 +12,7 @@ from caligula.agent.reply import public_reply
 from caligula.agent.team import InvestigationTeam, Specialist
 from caligula.agent.workspace import Mode
 from caligula.report import build_report
-from test_agent import ScriptedRunner, workspace
+from test_agent import ScriptedAgentRunner, workspace
 
 WS = {}
 
@@ -100,21 +99,20 @@ SCRIPTS = {
 }
 
 
-def fake_client(record, briefs, scripts=SCRIPTS):
+def fake_runner(record, briefs, scripts=SCRIPTS):
     rounds = {}
     lock = threading.Lock()
 
-    def tool_runner(**kwargs):
-        system = kwargs["system"]
+    def script_for(system, brief):
         agent = "reviewer" if system.startswith("You are the reviewer") else next(
             name for name, focus in SPECIALIST_FOCUS.items() if focus in system)
         with lock:
             rounds[agent] = rounds.get(agent, 0) + 1
             n = rounds[agent]
-            briefs[(agent, n)] = kwargs["messages"][0]["content"]
-        return ScriptedRunner(kwargs["tools"], scripts.get((agent, n), []), record.setdefault((agent, n), []))
+            briefs[(agent, n)] = brief
+        return scripts.get((agent, n), []), record.setdefault((agent, n), [])
 
-    return SimpleNamespace(beta=SimpleNamespace(messages=SimpleNamespace(tool_runner=tool_runner)))
+    return ScriptedAgentRunner(script_for)
 
 
 def draft():
@@ -142,7 +140,7 @@ def test_plan_normalization_guarantees_two_kinds_of_source(store):
 def test_workflow_rounds_review_challenges_and_report(store):
     ws = WS["ws"] = workspace(store)
     record, briefs, events = {}, {}, []
-    team = InvestigationTeam(client=fake_client(record, briefs), web_search=False, max_rounds=3,
+    team = InvestigationTeam(runner=fake_runner(record, briefs), web_search=False, max_rounds=3,
                              on_event=lambda phase, detail: events.append(phase))
     result = team.run(ws, plan=normalize_plan(draft(), ws.allegation, total_budget=100))
 
@@ -187,7 +185,7 @@ def test_no_progress_stops_early(store):
         ]
     plan = normalize_plan(PlanDraft(entities=[], window_start=None, window_end=None, budget_weights=[], tasks=[]),
                           ws.allegation, 50, ("official",))
-    team = InvestigationTeam(client=fake_client({}, {}, scripts), web_search=False, max_rounds=4,
+    team = InvestigationTeam(runner=fake_runner({}, {}, scripts), web_search=False, max_rounds=4,
                              specialists=[Specialist("official", ["list_tasks", "complete_task", "report"], False)])
     result = team.run(ws, plan=plan)
     assert result.stop_reason == "no_progress" and len(result.rounds) == 2
@@ -195,18 +193,12 @@ def test_no_progress_stops_early(store):
 
 def test_specialists_only_get_their_tools(store):
     ws = WS["ws"] = workspace(store)
-    seen = {}
-
-    def tool_runner(**kwargs):
-        seen[kwargs["system"][-60:]] = sorted(t.name for t in kwargs["tools"] if hasattr(t, "name"))
-        return ScriptedRunner(kwargs["tools"], [], [])
-
-    client = SimpleNamespace(beta=SimpleNamespace(messages=SimpleNamespace(tool_runner=tool_runner)))
-    team = InvestigationTeam(client=client, web_search=False, max_rounds=1,
+    runner = ScriptedAgentRunner(lambda system, brief: ([], []))
+    team = InvestigationTeam(runner=runner, web_search=False, max_rounds=1,
                              specialists=[Specialist("telegram", ["fetch_telegram_channel", "report"], False)])
     plan = normalize_plan(draft(), ws.allegation, 50, ("telegram",))
     team.run(ws, plan=plan)
-    toolsets = list(seen.values())
+    toolsets = [sorted(t.__name__ for t in call["tools"]) for call in runner.calls]
     assert ["fetch_telegram_channel", "report"] in toolsets
     reviewer = next(t for t in toolsets if "review_proposal" in t)
     assert "ingest_url" not in reviewer and "fetch_telegram_channel" not in reviewer
@@ -226,7 +218,7 @@ def test_unfinished_tasks_carry_over(store):
                        tasks=[PlannedTask(specialist="official", objective=f"task {i}", subclaim_ids=[], purpose="explore",
                                           queries=[], urls=[]) for i in range(8)])
     plan = normalize_plan(draft_, ws.allegation, 40, ("official",))  # 8 planned + 4 coverage tasks
-    team = InvestigationTeam(client=fake_client({}, {}, scripts), web_search=False, max_rounds=3,
+    team = InvestigationTeam(runner=fake_runner({}, {}, scripts), web_search=False, max_rounds=3,
                              specialists=[Specialist("official", ["list_tasks", "complete_task", "report"], False)])
     result = team.run(ws, plan=plan)
     assert [r.round for r in result.rounds] == [1, 2]
