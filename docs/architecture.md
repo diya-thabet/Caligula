@@ -66,6 +66,66 @@ scenario). This document records what we kept, what we changed, and why.
    Arabic/French OCR is needed early (V2). TUNEPS and RNE access must be
    confirmed before we depend on them.
 
+## Code structure
+
+Hexagonal (ports and adapters). The rule: **dependencies point inwards**.
+
+```
+             ┌──────────────────────── adapters ────────────────────────┐
+             │  cli · presenters · fixtures · llm (Claude) · sources     │
+             │  persistence (memory, Postgres, blobs, ledger) · media    │
+             │        ┌──────────── application ────────────┐            │
+             │        │  use cases · investigation workflow  │            │
+             │        │  ports (interfaces the core needs)   │            │
+             │        │      ┌────────── domain ─────────┐   │            │
+             │        │      │  model · pure services     │   │            │
+             │        │      └────────────────────────────┘   │            │
+             │        └───────────────────────────────────────┘            │
+             └────────────────────────────────────────────────────────────┘
+```
+
+```
+src/caligula/
+├── domain/                     pure: no I/O, no SDK, no clock
+│   ├── model/                  documents, claims, evidence, verdict, intake, procurement
+│   └── services/               text, extraction, retcon, provenance, validation,
+│                               scoring, verdict, names, privacy, intake_policy,
+│                               red_flags, ledger_chain
+├── application/
+│   ├── ports/                  repository, blobs, ledger, sources, extraction, llm
+│   ├── usecases/               ingest, evaluate_case, calibrate, publication
+│   └── investigation/          workspace, plan, toolkit, prompts, brief,
+│                               single_agent, team
+└── adapters/
+    ├── persistence/            memory, postgres (+ schema.sql), blob_fs, ledger_jsonl, search
+    ├── sources/                wayback, worldbank, web, telegram
+    ├── media/                  text_extraction (PDF, OCR), image_sanitizer
+    ├── llm/                    claude_analyst, claude_runner, claude_tools
+    ├── presenters/             markdown_report, public_reply, cli_summary
+    ├── fixtures/               case_directory
+    └── cli/                    main (argument parsing), bootstrap (composition root)
+```
+
+| Layer | May import | Must not import |
+|---|---|---|
+| `domain` | standard library, pydantic | `application`, `adapters`, SDKs, I/O libraries |
+| `application` | `domain`, its own ports | `adapters`, `anthropic`, `httpx`, `psycopg`, `PIL` |
+| `adapters` | anything | nothing is off limits, but each adapter implements one port |
+
+How the pieces meet:
+
+- **Ports** are `typing.Protocol` classes in `application/ports`. The
+  investigation workflow asks for an `AgentRunner` and a `ClaimAnalyst`; it
+  never sees the Anthropic SDK.
+- **The toolkit** (`application/investigation/toolkit.py`) implements what each
+  agent tool *does* to the workspace, in plain Python. The Claude adapter only
+  binds those methods as tools and translates refusals into tool errors.
+- **The composition root** (`adapters/cli/bootstrap.py`) is the only place
+  that chooses concrete adapters (memory or Postgres, Claude, live sources).
+- **Domain services take data, not repositories**: validation and scoring
+  receive the documents and an integrity check, so they are testable with
+  plain objects.
+
 ## Pipeline (V1)
 
 ```
