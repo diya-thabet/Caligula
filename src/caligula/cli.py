@@ -90,30 +90,18 @@ def investigate(args: argparse.Namespace) -> int:
     from caligula.application.investigation.single_agent import InvestigatorAgent
     from caligula.application.investigation.team import InvestigationTeam
     from caligula.application.investigation.workspace import Connectors, Mode, Workspace
+    from caligula.application.usecases.intake import admit
     from caligula.domain.model.intake import Decision
-    from caligula.domain.services.intake_policy import decide
 
     ledger = JsonlLedger(args.ledger)
     llm = ClaudeAnalyst()
-    intake = llm.classify(args.claim)
-    decision = decide(intake)
-    ledger.append("intake", "caligula", case_id=args.id, decision=decision.decision.value,
-                  reasons=decision.reasons, intake=intake.model_dump(mode="json"))
+    admission = admit(llm, ledger, args.id, args.claim, args.legal_approved, args.poc)
+    intake, decision = admission.intake, admission.decision
     print(f"Intake: {decision.decision} ({intake.claim_type}; subjects {[str(s) for s in intake.subject_types]})")
-    for reason in decision.reasons:
+    for reason in decision.reasons + ([admission.note] if admission.note else []):
         print(f"  - {reason}")
-    if decision.decision == Decision.REFUSE:
-        return 2
-    if decision.decision == Decision.LEGAL_REVIEW:
-        if args.legal_approved:
-            ledger.append("legal_approval", args.legal_approved, case_id=args.id, scope=args.claim)
-        elif args.poc:
-            ledger.append("poc_unreviewed", "caligula", case_id=args.id,
-                          note="legal review skipped in PoC mode; output is internal, not for publication")
-            print("  PoC mode: proceeding without legal review; output is internal only.")
-        else:
-            print("Stopped: a lawyer must approve the scope first (re-run with --legal-approved NAME).")
-            return 3
+    if not admission.proceed:
+        return 2 if decision.decision == Decision.REFUSE else 3
 
     store = open_store(args.db, FileBlobStorage(args.blobs))
     if args.case_dir:
