@@ -24,15 +24,13 @@ from dataclasses import dataclass
 from caligula.domain.model.verdict import Verdict
 from caligula.domain.services.scoring import DEFAULT_PARAMS, Params
 
-SUSPICIOUS = {"high_suspicion", "partially_supported"}
-
 
 @dataclass(frozen=True)
 class Metrics:
     cases: int
     verdict_accuracy: float
     subclaim_accuracy: float
-    brier: float  # mean (p - outcome)^2, p = confidence if the verdict leans suspicious, else 1 - confidence
+    brier: float  # mean (p - outcome)^2, p = likelihood that the core facts hold (0.5 when not assessable)
 
 
 @dataclass(frozen=True)
@@ -53,7 +51,7 @@ def evaluate(cases: list[LabelledCase], params: Params = DEFAULT_PARAMS) -> Metr
         for claim_id, expected in labels.get("subclaims", {}).items():
             claim_total += 1
             claim_hits += status.get(claim_id) == expected
-        p = v.confidence if v.verdict in SUSPICIOUS else 1 - v.confidence
+        p = v.likelihood if v.likelihood is not None else 0.5
         brier += (p - float(labels["substantiated"])) ** 2
     n = len(cases)
     return Metrics(

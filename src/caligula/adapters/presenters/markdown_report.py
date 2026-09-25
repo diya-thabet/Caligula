@@ -46,6 +46,10 @@ def _absence_line(a: AbsenceFinding) -> str:
             f"({capture})")
 
 
+def _likelihood(v: Verdict) -> str:
+    return f"{v.likelihood_term} ({v.likelihood:.0%})" if v.likelihood is not None else v.likelihood_term
+
+
 def _cell(text: str) -> str:
     return text.replace("|", "\\|").replace("\n", " ")
 
@@ -58,7 +62,8 @@ def build_report(ws: Workspace, verdict: Verdict, review: str | None = None, poc
         out += [POC_BANNER, ""]
     out += [
         f"Generated {datetime.now(UTC):%Y-%m-%d %H:%M} UTC · verdict **{verdict.verdict}** · "
-        f"confidence {verdict.confidence:.2f}" + (f" · stopped: {stop_reason}" if stop_reason else ""),
+        f"core facts: {_likelihood(verdict)} · confidence: {verdict.confidence}"
+        + (f" · stopped: {stop_reason}" if stop_reason else ""),
         "", "## Claim", "", a.text, "",
     ]
     if a.parties:

@@ -142,7 +142,7 @@ class InvestigationTeam:
                 break
             stop = "round_limit"
         verdict = ws.verdict()
-        self.emit("verdict", f"{verdict.verdict} ({verdict.confidence})")
+        self.emit("verdict", f"{verdict.verdict} ({verdict.likelihood_term}, {verdict.confidence} confidence)")
         return TeamResult(verdict=verdict, review=review, reports=dict(reports),
                           unknown_citations=unknown_citations(review, ws.store), rounds=rounds,
                           stop_reason=stop, plan_fixes=plan.fixes, trace=ws.trace)

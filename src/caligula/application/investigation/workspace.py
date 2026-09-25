@@ -24,6 +24,7 @@ from caligula.domain.model.claims import Allegation, Party
 from caligula.domain.model.evidence import AbsenceFinding, EvidenceEdge, FinancialFigure, RejectedEvidence
 from caligula.domain.model.verdict import Verdict
 from caligula.domain.services.absence import validate_absences
+from caligula.domain.services.judgment import confidence
 from caligula.domain.services.scoring import DEFAULT_PARAMS, SUPPORTED, Params
 from caligula.domain.services.validation import validate_edges, validate_figures
 from caligula.domain.services.verdict import build_verdict
@@ -269,6 +270,9 @@ class Workspace:
         with self.lock:
             v = build_verdict(self.store.corpus(), self.allegation, list(self.edges), list(self.figures), self.params,
                               absences=list(self.absences), sensitivity=sensitivity)
+            # Only the workspace knows which sub-claims someone tried to refute.
+            level, reasons = confidence(v, self.allegation, self.params, self.unchallenged(v))
+            v.confidence, v.confidence_reasons = level.value, reasons
             v.rejected_evidence = self.rejected + v.rejected_evidence
             return v
 

@@ -401,7 +401,10 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         v = ws.verdict()
         out = {
             "verdict": v.verdict,
+            "likelihood_core_facts": f"{v.likelihood_term} ({v.likelihood})" if v.likelihood is not None
+            else v.likelihood_term,
             "confidence": v.confidence,
+            "confidence_capped_by": v.confidence_reasons,
             "subclaims": {c.id: {"status": c.status, "support": c.support, "contradiction": c.contradiction,
                                  "independent_supporting_sources": len(c.supporting_clusters)} for c in v.by_subclaim},
             "hypotheses": {h.id: h.status for h in v.hypotheses},
@@ -414,7 +417,7 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
             "pending_proposals": sum(p.status == ProposalStatus.PENDING for p in ws.proposals),
             "budget_left": ctx.budget,
         }
-        ws.log(ctx.name, "assess", {}, f"{v.verdict} {v.confidence}")
+        ws.log(ctx.name, "assess", {}, f"{v.verdict}, {v.likelihood_term}, {v.confidence} confidence")
         return json.dumps(out, ensure_ascii=False, default=str)
 
     # --- collector tasks and wrap-up -------------------------------------------

@@ -103,7 +103,12 @@ class FinancialAnomaly(BaseModel):
 class Verdict(BaseModel):
     allegation_id: str
     verdict: str
-    confidence: float
+    # Probability that every core sub-claim is true, in ICD 203 words; None when it cannot be assessed.
+    likelihood: float | None
+    likelihood_term: str
+    # How solid the basis is (low / moderate / high), and every weakness that capped it.
+    confidence: str
+    confidence_reasons: list[str]
     by_subclaim: list[SubClaimResult]
     hypotheses: list[HypothesisResult]
     ach: list[AchMatrix]

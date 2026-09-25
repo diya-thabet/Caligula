@@ -133,3 +133,26 @@ def test_temporal_checks(store):
         "backdated was observed before its stated publication date",
     ]
     assert v.by_subclaim[2].supporting_clusters == [["mirror_late"]]
+
+
+def test_likelihood_and_confidence_are_separate_statements(store):
+    from caligula.domain.services.judgment import estimative_term
+
+    assert [estimative_term(p) for p in (0.03, 0.5, 0.7, 0.9, 0.99)] == [
+        "almost no chance", "roughly even chance", "likely", "very likely", "almost certain"]
+    add_doc(store, "mirror", "the award happened", kind=SourceKind.FOREIGN_MIRROR)
+    add_doc(store, "audit", "audit: the award happened", kind=SourceKind.AUDIT)
+    add_doc(store, "blog", "the price was inflated", kind=SourceKind.SOCIAL)
+    # Nothing at all on a core sub-claim: we do not guess.
+    v = build_verdict(store.corpus(), allegation(core=["C1", "C3"]), [edge("mirror", "C1", "award happened")], [])
+    assert (v.likelihood, v.likelihood_term, v.confidence) == (None, "cannot be assessed", "low")
+    assert v.confidence_reasons[0] == "C3 has no evidence"
+    # Two strong independent origins: very likely, and nothing caps the confidence.
+    edges = [edge("mirror", "C1", "award happened"), edge("audit", "C1", "award happened")]
+    v = build_verdict(store.corpus(), allegation(), edges, [])
+    assert (v.likelihood, v.likelihood_term, v.confidence) == (0.985, "almost certain", "high")
+    # A weak source on a second core sub-claim: the likelihood drops and the reasons say why.
+    v = build_verdict(store.corpus(), allegation(core=["C1", "C3"]),
+                      [*edges, edge("blog", "C3", "price was inflated")], [])
+    assert (v.likelihood, v.likelihood_term, v.confidence) == (0.566, "likely", "low")
+    assert v.confidence_reasons == ["C3: evidence too weak to settle it"]

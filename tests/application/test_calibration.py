@@ -12,6 +12,6 @@ def test_calibration_harness_on_synthetic_case(blobs):
     assert [c.name for c in cases] == ["steg_synthetic"]
     m = evaluate(cases)
     assert (m.verdict_accuracy, m.subclaim_accuracy) == (1.0, 1.0)
-    assert m.brier < 0.01
+    assert m.brier < 0.02  # core facts judged 87% likely on a substantiated case
     best_params, best = sweep(cases)[0]
     assert best.subclaim_accuracy == 1.0

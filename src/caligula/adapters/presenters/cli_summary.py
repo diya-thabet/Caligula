@@ -6,7 +6,10 @@ from caligula.domain.model.verdict import Verdict
 
 
 def summarize(v: Verdict) -> str:
-    lines = [f"Allegation {v.allegation_id}: {v.verdict.upper()} (confidence {v.confidence:.2f})", ""]
+    likelihood = f"{v.likelihood_term} ({v.likelihood:.0%})" if v.likelihood is not None else v.likelihood_term
+    lines = [f"Allegation {v.allegation_id}: {v.verdict.upper()}",
+             f"  Core facts: {likelihood}. Confidence: {v.confidence}.",
+             *[f"    - {r}" for r in v.confidence_reasons], ""]
     lines.append("Sub-claims:")
     for c in v.by_subclaim:
         clusters = f"{len(c.supporting_clusters)} supporting / {len(c.contradicting_clusters)} contradicting clusters"

@@ -47,6 +47,8 @@ class Params:
     retconned_penalty: float = 0.3
     strong: float = 0.7
     weak: float = 0.3
+    # Below this item weight a source is weak (news, social, self-serving statements).
+    weak_source: float = 0.5
     anomaly_ratio: float = 0.20
     anomaly_min_clusters: int = 2
     # Support given to the financial sub-claim when the deterministic check flags it.

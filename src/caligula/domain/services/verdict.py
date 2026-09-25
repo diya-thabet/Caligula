@@ -15,6 +15,7 @@ from caligula.domain.model.evidence import AbsenceFinding, EvidenceEdge, Financi
 from caligula.domain.model.verdict import SubClaimResult, Verdict, WeighedEvidence
 from caligula.domain.services.absence import validate_absences, weigh_absences
 from caligula.domain.services.ach import build_matrices
+from caligula.domain.services.judgment import confidence, likelihood
 from caligula.domain.services.provenance import group_by_cluster, origin_clusters
 from caligula.domain.services.retcon import detect_retcons
 from caligula.domain.services.scoring import (
@@ -66,6 +67,8 @@ def build_verdict(
             params)
 
     verdict.depends_on = dependencies(verdict, ((c, sorted(m)) for c, m in origins.items()), without)
+    level, reasons = confidence(verdict, allegation, params)
+    verdict.confidence, verdict.confidence_reasons = level.value, reasons
     return verdict
 
 
@@ -99,7 +102,7 @@ def _assess(
                 cluster="financial-check", weight=params.financial_check_weight))
 
     hypotheses = evaluate_hypotheses(allegation, subclaims)
-    verdict, confidence = _overall(allegation, subclaims, bool(financial and financial.flagged), bool(retcons))
+    verdict = _overall(allegation, subclaims, bool(financial and financial.flagged), bool(retcons))
     innocent = {h.id for h in allegation.hypotheses if h.kind == HypothesisKind.INNOCENT}
     if verdict == "high_suspicion" and any(h.status == "consistent" for h in hypotheses if h.id in innocent):
         # The facts hold, but a lawful explanation of them does too.
@@ -112,10 +115,14 @@ def _assess(
         if _independent_origins(subclaims[c.id]) < 2
         for q in c.verification_questions
     ]
-    return Verdict(
+    p, term = likelihood(allegation, subclaims)
+    v = Verdict(
         allegation_id=allegation.id,
         verdict=verdict,
-        confidence=confidence,
+        likelihood=p,
+        likelihood_term=term,
+        confidence="",
+        confidence_reasons=[],
         by_subclaim=list(subclaims.values()),
         hypotheses=hypotheses,
         ach=build_matrices(allegation, matrix_items),
@@ -126,6 +133,9 @@ def _assess(
         missing_evidence=missing,
         disclaimer=DISCLAIMER,
     )
+    level, reasons = confidence(v, allegation, params)
+    v.confidence, v.confidence_reasons = level.value, reasons
+    return v
 
 
 def _independent_origins(result: SubClaimResult) -> int:
@@ -152,16 +162,15 @@ def _overall(
     subclaims: dict[str, SubClaimResult],
     anomaly: bool,
     retcon: bool,
-) -> tuple[str, float]:
+) -> str:
     core = [subclaims[i] for i in allegation.core_subclaims if i in subclaims]
     if not core:
-        return "unverified", 0.0
-    confidence = round(sum(abs(c.support - c.contradiction) for c in core) / len(core), 3)
+        return "unverified"
     if any(c.status == CONTRADICTED for c in core):
-        return "contradicted", confidence
+        return "contradicted"
     supported = sum(c.status == SUPPORTED for c in core)
     if supported == len(core) and (anomaly or retcon):
-        return "high_suspicion", confidence
+        return "high_suspicion"
     if supported:
-        return "partially_supported", confidence
-    return "unverified", confidence
+        return "partially_supported"
+    return "unverified"

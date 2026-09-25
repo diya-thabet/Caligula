@@ -52,6 +52,14 @@ def test_synthetic_steg_case_offline(store):
     assert len(v.rejected_evidence) == 4
     assert any("jort_award_v2 is an editable source" in r.reason for r in v.rejected_evidence)
     assert v.verdict == "high_suspicion"
+    # Likelihood and confidence are two statements: the facts are very likely, but the
+    # basis is only moderate, and the reasons say what would raise it.
+    assert (v.likelihood, v.likelihood_term, v.confidence) == (0.867, "very likely", "moderate")
+    assert v.confidence_reasons == [
+        "the verdict would change without benchmark", "the verdict would change without sentinel",
+        "innocent explanation H5 not yet tested", "innocent explanation H6 not yet tested",
+        "innocent explanation H7 not yet tested",
+    ]
     # Three news articles citing the archived JORT page add no independent support.
     c3 = next(c for c in v.by_subclaim if c.id == "C3")
     assert len(c3.supporting_clusters) == 2
