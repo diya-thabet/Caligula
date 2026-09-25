@@ -25,8 +25,10 @@ from caligula.application.investigation.workspace import (
 )
 from caligula.application.ports.llm import Tool, ToolRefusal
 from caligula.application.ports.sources import ExtractedText, PrivateSourceError
+from caligula.domain.model.claims import Party, PartyRole
 from caligula.domain.model.documents import SourceKind
 from caligula.domain.model.evidence import AmountRole, EvidenceEdge, FinancialFigure, Relation
+from caligula.domain.services.interest import interest, role_of
 from caligula.domain.services.names import EntityKind, match
 from caligula.domain.services.privacy import MINIMISED_KINDS, minimise
 from caligula.domain.services.retcon import diff_fields
@@ -459,9 +461,12 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
             if p.status != status:
                 continue
             d = ws.store.get(p.item.doc_id)
-            rows.append({"id": p.id, "by": p.by, **p.item.model_dump(mode="json"), "doc_kind": d.source_kind,
-                         "doc_publisher": d.publisher, "doc_observed_at": d.observed_at.date().isoformat(),
-                         "note": p.note})
+            row = {"id": p.id, "by": p.by, **p.item.model_dump(mode="json"), "doc_kind": d.source_kind,
+                   "doc_publisher": d.publisher, "doc_observed_at": d.observed_at.date().isoformat(), "note": p.note}
+            if isinstance(p.item, EvidenceEdge):
+                row["publisher_interest"] = interest(role_of(d.publisher, ws.allegation.parties),
+                                                     ws.allegation.bearing_of(p.item.subclaim_id), p.item.relation)
+            rows.append(row)
         return json.dumps(rows, ensure_ascii=False) if rows else f"No {status} proposals."
 
     @metered
@@ -481,6 +486,23 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         except KeyError as exc:
             raise ToolRefusal(f"No proposal {proposal_id}.") from exc
         return f"{p.id} {p.status}."
+
+    @metered
+    def register_party(name: str, role: Literal["accused", "complainant"], aliases: list[str] | None = None) -> str:
+        """Declare a publisher as a party with a stake in the case: the body, company
+        or office whose conduct is at issue (accused), or whoever makes the allegation
+        (complainant). Evidence it publishes is then weighed as self-serving or as
+        against its own interest. Use it for other names of a known party (a ministry's
+        directorate, a company's trade name) and for complainants' outlets; never for
+        a neutral source you merely distrust.
+
+        Args:
+            name: The party's name as it publishes.
+            role: accused or complainant.
+            aliases: Other names, acronyms and spellings it publishes under.
+        """
+        party = ws.add_party(Party(name=name, role=PartyRole(role), aliases=aliases or []), ctx.name)
+        return f"{party.name} registered as {party.role.value} (aliases: {', '.join(party.aliases) or 'none'})."
 
     @metered
     def request_collection(
@@ -552,8 +574,8 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
     everything = {t.__name__: t for t in [
         search_evidence, read_document, compare_versions, find_archived_captures, ingest_archived_capture,
         ingest_url, search_funder_records, fetch_telegram_channel, record_evidence, record_amount, compare_names,
-        assess, list_tasks, complete_task, post_lead, report, list_proposals, review_proposal, request_collection,
-        complete_review, finish,
+        assess, list_tasks, complete_task, post_lead, report, list_proposals, review_proposal, register_party,
+        request_collection, complete_review, finish,
     ]}
     if names is None:
         names = SINGLE_AGENT_TOOLS
@@ -563,5 +585,5 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
 SINGLE_AGENT_TOOLS = [
     "search_evidence", "read_document", "compare_versions", "find_archived_captures", "ingest_archived_capture",
     "ingest_url", "search_funder_records", "fetch_telegram_channel", "record_evidence", "record_amount",
-    "compare_names", "assess", "finish",
+    "compare_names", "register_party", "assess", "finish",
 ]

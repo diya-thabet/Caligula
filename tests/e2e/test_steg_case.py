@@ -54,7 +54,7 @@ def test_live_mode_output_goes_through_same_validation(store):
         subclaims=[SubClaim(id="C1", statement="outage happened")],
         hypotheses=[_Hypothesis(id="H1", statement="h", predictions=[_Prediction(subclaim_id="C1", predicted_true=True),
                                                                    _Prediction(subclaim_id="C99", predicted_true=True)])],
-        core_subclaims=["C1", "C99"], financial_subclaim="C98",
+        core_subclaims=["C1", "C99"], financial_subclaim="C98", parties=[],
     )
     readings = []
     for doc in store.documents.values():

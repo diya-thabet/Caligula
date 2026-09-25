@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Literal, TypeVar
 import anthropic
 from pydantic import BaseModel
 
-from caligula.domain.model.claims import Allegation, Hypothesis, SubClaim
+from caligula.domain.model.claims import Allegation, Hypothesis, Party, SubClaim
 from caligula.domain.model.documents import Document
 from caligula.domain.model.evidence import AmountRole, EvidenceEdge, FinancialFigure, Relation
 from caligula.domain.model.intake import Intake
@@ -50,6 +50,7 @@ class _Decomposition(BaseModel):
     hypotheses: list[_Hypothesis]
     core_subclaims: list[str]
     financial_subclaim: str | None
+    parties: list[Party]
 
 
 class _Edge(BaseModel):
@@ -89,7 +90,14 @@ evidence falsify some of them.
 - core_subclaims: the factual sub-claims that must all hold for the allegation \
 to warrant further scrutiny. Exclude the causal inference.
 - financial_subclaim: the sub-claim about an amount being inflated or \
-unaccounted for, or null if there is none."""
+unaccounted for, or null if there is none.
+- bearing of each sub-claim: "against" if its truth incriminates the party \
+whose conduct is at issue, "for" if it would clear them (an innocent \
+explanation), "neutral" for context.
+- parties: the bodies, companies or offices whose conduct is at issue (role \
+accused) and whoever makes the allegation, if known (role complainant), with \
+every name they publish under (acronyms, French and English forms). What they \
+publish is weighed as an interested statement."""
 
 READ_SYSTEM = """\
 You read one document for an investigation. For each listed sub-claim, decide \
@@ -220,6 +228,7 @@ class ClaudeAnalyst:
             ],
             core_subclaims=[i for i in d.core_subclaims if i in known],
             financial_subclaim=d.financial_subclaim if d.financial_subclaim in known else None,
+            parties=d.parties,
         )
 
     def read(self, allegation: Allegation, doc: Document) -> tuple[list[EvidenceEdge], list[FinancialFigure]]:

@@ -12,6 +12,7 @@ from caligula.application.investigation.plan import TaskStatus
 from caligula.application.investigation.workspace import ProposalStatus, Workspace
 from caligula.domain.model.evidence import EvidenceEdge
 from caligula.domain.model.verdict import Verdict
+from caligula.domain.services.interest import Interest, interest, role_of
 from caligula.domain.services.provenance import origin_clusters
 
 POC_BANNER = (
@@ -24,6 +25,18 @@ def _doc_line(ws: Workspace, doc_id: str) -> str:
     d = ws.store.get(doc_id)
     date = (d.published_at or d.observed_at).date().isoformat()
     return f"`{d.id}` {d.publisher} ({d.source_kind}, {date})"
+
+
+_STAKE = {
+    Interest.SELF_SERVING: " · *self-serving: the publisher is a party and this helps it*",
+    Interest.AGAINST_INTEREST: " · *against the publisher's own interest*",
+}
+
+
+def _stake_note(ws: Workspace, e: EvidenceEdge) -> str:
+    d = ws.store.get(e.doc_id)
+    stake = interest(role_of(d.publisher, ws.allegation.parties), ws.allegation.bearing_of(e.subclaim_id), e.relation)
+    return _STAKE.get(stake, "")
 
 
 def _cell(text: str) -> str:
@@ -40,6 +53,10 @@ def build_report(ws: Workspace, verdict: Verdict, review: str | None = None, poc
         f"Generated {datetime.now(UTC):%Y-%m-%d %H:%M} UTC · verdict **{verdict.verdict}** · "
         f"confidence {verdict.confidence:.2f}" + (f" · stopped: {stop_reason}" if stop_reason else ""),
         "", "## Claim", "", a.text, "",
+    ]
+    if a.parties:
+        out += ["Parties: " + "; ".join(f"{p.name} ({p.role.value})" for p in a.parties), ""]
+    out += [
         "## Sub-claims", "",
         "| | Statement | Status | Support | Against | Independent sources (for / against) |",
         "|---|---|---|---|---|---|",
@@ -85,9 +102,10 @@ def build_report(ws: Workspace, verdict: Verdict, review: str | None = None, poc
             mark = {"accepted": "✓", "disputed": "✗", "pending": "?"}[p.status]
             note = f" — reviewer: {p.note}" if p.note and p.status != ProposalStatus.PENDING else ""
             out.append(f"- {mark} {e.relation} · {_doc_line(ws, e.doc_id)} · proposed by {p.by}: "
-                       f"« {e.quote} »{origin_note(e.doc_id, siblings)}{note}")
+                       f"« {e.quote} »{_stake_note(ws, e)}{origin_note(e.doc_id, siblings)}{note}")
         for e in direct:
-            out.append(f"- ✓ {e.relation} · {_doc_line(ws, e.doc_id)}: « {e.quote} »{origin_note(e.doc_id, siblings)}")
+            out.append(f"- ✓ {e.relation} · {_doc_line(ws, e.doc_id)}: « {e.quote} »"
+                       f"{_stake_note(ws, e)}{origin_note(e.doc_id, siblings)}")
         out.append("")
 
     out += ["## Timeline", ""]

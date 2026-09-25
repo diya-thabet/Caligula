@@ -19,7 +19,7 @@ from caligula.application.evidence_store import EvidenceStore
 from caligula.application.investigation.plan import EntityHint, Outcome, Task, TaskStatus
 from caligula.application.ports.sources import ArchiveSource, FunderRecords, TelegramChannels, TextExtractor, WebFetcher
 from caligula.application.ports.storage import Ledger
-from caligula.domain.model.claims import Allegation
+from caligula.domain.model.claims import Allegation, Party
 from caligula.domain.model.evidence import EvidenceEdge, FinancialFigure, RejectedEvidence
 from caligula.domain.model.verdict import Verdict
 from caligula.domain.services.scoring import DEFAULT_PARAMS, SUPPORTED, Params
@@ -129,6 +129,18 @@ class Workspace:
     def log(self, agent: str, tool: str, args: dict, outcome: str) -> None:
         with self.lock:
             self.trace.append(TraceEntry(len(self.trace) + 1, agent, tool, args, outcome))
+
+    def add_party(self, party: Party, by: str) -> Party:
+        """Declare a party with a stake in the case, or add aliases to a known one."""
+        with self.lock:
+            known = next((p for p in self.allegation.parties if p.name.casefold() == party.name.casefold()), None)
+            if known is None:
+                self.allegation.parties.append(party)
+                known = party
+            else:
+                known.aliases += [a for a in party.aliases if a not in known.aliases]
+            self.ledger.append("party", by, name=known.name, role=known.role.value, aliases=known.aliases)
+            return known
 
     # --- tasks and leads ---------------------------------------------------
 

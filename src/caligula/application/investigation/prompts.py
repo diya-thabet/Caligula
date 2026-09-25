@@ -43,6 +43,10 @@ innocent explanation (emergency decree, force majeure, price shock, erratum, \
 corrected figures). Record what you find, including evidence that clears \
 someone.
 - Several articles repeating one source count once. Look for independent origins.
+- Weigh who is speaking. What a party (see <parties>) says in its own favour \
+is weak until confirmed independently; what it concedes against its own \
+interest is strong. If a publisher belongs to a party under another name, \
+declare it with register_party.
 - Never name, accuse or speculate about individuals in your summary. Describe \
 documents, amounts, dates and procedures. Cite documents as [doc_id].
 - When web search finds a relevant page, store it with ingest_url (and check \
@@ -132,6 +136,10 @@ it about the same entity, place and period? Is it an independent source, or a \
 repetition? Accept or dispute with a reason.
 - Look for contradictions between official claims and archived, foreign or \
 audit records; they are the heart of the case.
+- Weigh who is speaking: publisher_interest "self_serving" is a party's own \
+claim in its favour and needs independent confirmation; "against_interest" is \
+a concession and is strong evidence. When a publisher belongs to a party under \
+a name code does not recognise yet, declare it with register_party.
 - Read the closed tasks: "not_found" after a proper search is evidence of \
 absence; "blocked" is a gap to report. Use request_collection to create \
 precise tasks for the next round where evidence is missing or a lead needs \

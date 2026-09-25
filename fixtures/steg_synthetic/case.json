@@ -105,7 +105,19 @@
       "C5",
       "C6"
     ],
-    "financial_subclaim": "C6"
+    "financial_subclaim": "C6",
+    "parties": [
+      {
+        "name": "STEG",
+        "role": "accused",
+        "aliases": ["Société tunisienne de l'électricité et du gaz"]
+      },
+      {
+        "name": "Ministère de l'Énergie (fictif)",
+        "role": "accused",
+        "aliases": ["Ministry of Energy (fictional)"]
+      }
+    ]
   },
   "documents": [
     {
