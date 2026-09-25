@@ -109,6 +109,19 @@ capture ──► verification pipeline (code, per document, in parallel) ──
 | F3 | WhatsApp intake for contributors (hash on receipt, metadata split) | Uploads land in the store with custody records |
 | F4 | X bot through the official API | Replies follow the public-reply policy |
 
+## R. Reasoning quality (from [research.md](research.md))
+
+| Id | Task | Status |
+|---|---|---|
+| R7 | Interest of the source: parties, bearing of each sub-claim, self-serving and against-interest weights | Done |
+| R5 | Expected records per sub-claim; searches planned; absence scored by register completeness | Done |
+| R4 | Mandatory innocent explanations per claim type, planned tests, verdict cap when one fits | Done |
+| R2 | Competing hypotheses matrix computed from predictions; diagnostic evidence; untested apart | Done |
+| R3 | Sensitivity: what the conclusion depends on | Done |
+| R8 | Likelihood (estimative words) and confidence (with reasons) reported separately | Done |
+| R21, R23 | Case file in the analytic format; sentence-level citation check | Next |
+| R10, R11, R13 | Entities (FollowTheMoney), cross-referencing, timeline anomalies | Later, with C1-C3 |
+
 ## Suggested order
 
 A1 → A2 → A3 → A4 (this refactor), then B0 → B2 → B5 → B4 → B6 → B1 → B3 → B8,

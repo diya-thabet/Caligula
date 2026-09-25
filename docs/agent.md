@@ -43,16 +43,17 @@ flowchart TD
     LR -- "PoC mode" --> POC["Ledger: poc_unreviewed<br/>case file marked internal"]
     POC --> DEC
     LR -- neither --> HALT(["Stopped until a lawyer approves"])
-    GATE -- accept --> DEC[/"Decomposer<br/>sub-claims, hypotheses, core set"/]
-    DEC --> MODE{"Team mode?"}
+    GATE -- accept --> DEC[/"Decomposer<br/>sub-claims, hypotheses, core set,<br/>parties, expected records"/]
+    DEC --> INNO["Code completes the case<br/>every innocent explanation of the claim type<br/>covered, ruled out with a reason, or added"]
+    INNO --> MODE{"Team mode?"}
     MODE -- no --> SINGLE[["Single investigator<br/>budget 25 fact-check / 80 investigation<br/>(graph 3)"]]
     MODE -- yes --> PLAN[/"Planner<br/>entities, window, tasks, budget weights"/]
-    PLAN --> NORM["normalize_plan<br/>2 kinds of source per core sub-claim<br/>budgets clamped to 5-40"]
+    PLAN --> NORM["normalize_plan<br/>2 kinds of source per core sub-claim<br/>a search per expected record<br/>a test per innocent explanation<br/>budgets clamped to 5-40"]
     NORM --> ROUND[["Collection round n<br/>(graph 2)"]]
     ROUND --> STOP{"Stop rule"}
     STOP -- "continue with n + 1" --> ROUND
     STOP -- "no_open_tasks, no_progress, round_limit" --> VER
-    SINGLE --> VER["Verdict<br/>code, from accepted evidence only"]
+    SINGLE --> VER["Verdict, code, from accepted evidence only<br/>competing hypotheses, sensitivity,<br/>likelihood and confidence"]
     VER --> REP["Case file out/CASE.md<br/>presenters/markdown_report.py"]
     REP --> REPLY{"Public reply policy"}
     REPLY -- "fact-check, not accusatory" --> PUB(["Short reply with sources"])
@@ -162,15 +163,20 @@ stateDiagram-v2
 ```
 
 Who creates tasks: the **planner** (round 1); **code** in `normalize_plan`
-(coverage by two kinds of source) and around each review (challenge tasks);
+(coverage by two kinds of source, a search for every expected record, a test
+for every innocent explanation) and around each review (challenge tasks);
 the **reviewer** through `request_collection` (next round).
+
+A task that searches for an expected record (`expectation_id`) and closes
+`not_found` becomes an **absence finding**, proposed to the reviewer like any
+evidence and weighed by the register's completeness.
 
 ### 5. Evidence lifecycle
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Validation: record_evidence or record_amount
-    Validation --> Rejected: quote not found, dates incompatible, unknown sub-claim, blob changed
+    [*] --> Validation: record_evidence, record_amount, record_absence, not_found on an expected record
+    Validation --> Rejected: quote not found, dates incompatible, unknown sub-claim or register, blob changed
     Validation --> Accepted: single-agent mode
     Validation --> Pending: team mode
     Pending --> Accepted: reviewer accepts
@@ -184,7 +190,9 @@ stateDiagram-v2
 
 Scoring counts each independent origin once (citation chains, copies and
 versions of one document collapse), weights it by how hard the source is to
-falsify, and applies the verdict rules in [architecture.md](architecture.md).
+falsify and by the publisher's interest in the point, weighs absences by the
+register's completeness, and applies the verdict rules in
+[architecture.md](architecture.md#judgment).
 
 ## What code enforces
 
@@ -200,6 +208,19 @@ Whatever the models do:
 - **Challenge phase.** Supported sub-claims get challenge tasks (team) or
   block `finish` (single agent) until someone has looked for the innocent
   explanation.
+- **Innocent explanations are mandatory.** Each claim type has standard
+  lawful explanations (emergency procedure, erratum, price shock...). The case
+  covers each one, rules it out with a reason shown in the case file, or code
+  adds it as a hypothesis to test, with its own task. A confirmed one caps the
+  verdict below `high_suspicion`.
+- **Interested sources weigh accordingly.** What a party says in its own
+  favour is halved; what it concedes against its interest counts as strong.
+- **Absence counts only when it can be checked:** a known register, a stated
+  query, a window the search could cover, ideally a capture of the empty result.
+- **Judgment is computed.** Ratings of evidence against hypotheses, the
+  ranking of hypotheses, what the conclusion depends on, the likelihood and
+  the confidence all come from code; models only change them by adding or
+  disputing evidence.
 - **Budgets.** Each tool call spends the agent's budget; at zero only the
   wrap-up tools work.
 - **Citations.** `[doc_id]` citations in summaries are checked against the
@@ -213,10 +234,10 @@ Whatever the models do:
 | Component | Kind | Decides | Cannot |
 |---|---|---|---|
 | Intake classifier | 1 model call | how to describe the request | accept or refuse it (code does) |
-| Decomposer | 1 model call | sub-claims, hypotheses, core set | invent ids later used by code (filtered) |
+| Decomposer | 1 model call | sub-claims, hypotheses, core set, parties, bearing, expected records | invent ids or registers later used by code (filtered); skip an innocent explanation (code adds it) |
 | Planner | 1 model call | entities, window, tasks, budget weights | leave a core sub-claim on one kind of source |
 | Specialists (x5) | tool loops, parallel | what to search, fetch, propose; task outcomes | make evidence count; use other specialists' tools |
-| Reviewer | tool loop | accept / dispute; new tasks | collect; close with pending proposals |
+| Reviewer | tool loop | accept / dispute; new tasks; declare parties | collect; close with pending proposals; rate evidence against hypotheses (code does) |
 | Orchestrator | code | rounds, budgets, challenge tasks, stopping | be overridden by any model |
 | Validator / scorer | code | what is valid, statuses, verdict | be skipped |
 | Report | code | the case file | include anything not traceable |
@@ -225,11 +246,12 @@ Whatever the models do:
 
 A task is the unit of work: `{specialist, objective, sub-claims, purpose
 (support | challenge | explore), queries, urls, round, created_by (planner |
-code | reviewer)}`. Closing it requires an outcome:
+code | reviewer), expectation_id}`. Closing it requires an outcome:
 
 - `found` / `partial`: with the documents that answer it
 - `not_found`: searched properly, nothing in reach. **Absence is evidence**
-  (no tender notice on TUNEPS) and appears in the case file.
+  (no tender notice on TUNEPS) and appears in the case file; on a task with
+  an `expectation_id` it is scored.
 - `blocked`: source unreachable or access we do not have; a gap to report.
 
 Unfinished tasks carry over to the next round; tasks still open at the end

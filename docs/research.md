@@ -74,6 +74,11 @@ hypotheses only predict sub-claim truth values. So:
 > confirming the ratings. Compute diagnosticity in code, rank hypotheses by
 > weighted inconsistency, and show the matrix in the case file.
 >
+> *Implemented (`domain/services/ach.py`) with one change: ratings are not
+> confirmed by the reviewer but derived from each hypothesis's predictions and
+> the evidence relation, so no model rates anything. Hypotheses with no
+> evidence on what they predict are listed as untested, not ranked first.*
+>
 > **R3. Sensitivity analysis.** For the verdict and each hypothesis, remove
 > each evidence cluster in turn and recompute. Report "the conclusion depends
 > on X": this tells the editor what to double-check and the accused what to
@@ -91,6 +96,12 @@ hypotheses only predict sub-claim truth values. So:
 > proper `not_found` then becomes scored evidence, weighted by how complete the
 > searched source is. A missing tender notice on a register that lists every
 > tender weighs heavily; a missing news article weighs little.
+>
+> *Implemented: R3 `domain/services/sensitivity.py`; R4
+> `domain/services/innocent.py` (a confirmed innocent explanation also caps the
+> verdict below high_suspicion); R5 as expected records on sub-claims and
+> `domain/services/absence.py`, with completeness priors in
+> `domain/model/registers.py`.*
 
 ---
 
@@ -132,6 +143,9 @@ whether it admits something or defends itself.
 > very likely, almost certain) *and* a confidence level (low, moderate, high)
 > based on source quality, independence, gaps and sensitivity. Two different
 > statements.
+>
+> *Implemented: R7 `domain/services/interest.py`; R8
+> `domain/services/judgment.py`. R6 waits for publisher track records (B7).*
 >
 > **R9. Likelihood ratios instead of noisy-OR** (after D1 exists). Each graded
 > item contributes a likelihood ratio per hypothesis, combined across
@@ -403,8 +417,8 @@ unit of effort, given what already exists.
 
 | Order | Proposals | Why first |
 |---|---|---|
-| 1 | R4, R5, R7 | Small changes, big effect on fairness and reasoning: mandatory innocent hypotheses, expected-evidence searches (absence as scored evidence), interest of the source |
-| 2 | R2, R3, R8 | ACH matrix, sensitivity, likelihood versus confidence: the core of "concluding" properly |
+| 1 | R4, R5, R7 (**done**) | Small changes, big effect on fairness and reasoning: mandatory innocent hypotheses, expected-evidence searches (absence as scored evidence), interest of the source |
+| 2 | R2, R3, R8 (**done**) | ACH matrix, sensitivity, likelihood versus confidence: the core of "concluding" properly |
 | 3 | R21, R23 | The case file an editor, a lawyer or a court can rely on |
 | 4 | R10, R11, R13 | Connecting the dots: FollowTheMoney entities, cross-referencing, timeline anomalies |
 | 5 | R1 (with D1) | Measure all of the above, and the comparison with Grok |

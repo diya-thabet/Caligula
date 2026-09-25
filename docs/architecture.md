@@ -87,13 +87,14 @@ Hexagonal (ports and adapters). The rule: **dependencies point inwards**.
 ```
 src/caligula/
 ├── domain/                     pure: no I/O, no SDK, no clock
-│   ├── model/                  documents, claims, evidence, verdict, intake, procurement
+│   ├── model/                  documents, claims, evidence, registers, verdict, intake, procurement
 │   └── services/               text, extraction, retcon, provenance, validation,
-│                               scoring, verdict, names, privacy, intake_policy,
-│                               red_flags, ledger_chain
+│                               interest, absence, scoring, innocent, ach,
+│                               sensitivity, judgment, verdict, names, privacy,
+│                               intake_policy, red_flags, ledger_chain
 ├── application/
 │   ├── ports/                  repository, blobs, ledger, sources, extraction, llm
-│   ├── usecases/               ingest, evaluate_case, calibrate, publication
+│   ├── usecases/               intake, decompose, evaluate_case, calibration, publication
 │   └── investigation/          workspace, plan, toolkit, prompts, brief,
 │                               single_agent, team
 └── adapters/
@@ -101,7 +102,7 @@ src/caligula/
     ├── sources/                wayback, worldbank, web, telegram
     ├── media/                  text_extraction (PDF, OCR), image_sanitizer
     ├── llm/                    claude_analyst, claude_runner, claude_tools
-    ├── presenters/             markdown_report, public_reply, cli_summary
+    ├── presenters/             markdown_report, analysis, public_reply, cli_summary
     ├── fixtures/               case_directory
     └── cli/                    main (argument parsing), bootstrap (composition root)
 ```
@@ -135,28 +136,41 @@ case.json + documents
 EvidenceStore ── BlobStore (content-addressed, write-once, raw SHA-256)
       │           text SHA-256 over normalized text
       ▼
-Allegation ── sub-claims C1..Cn, hypotheses H1..Hm with predictions
-      │        (recorded, or Claude `decompose`)
+Allegation ── sub-claims C1..Cn, hypotheses H1..Hm with predictions,
+      │        parties, expected records (recorded, or Claude `decompose`)
+      │        + code adds every missing standard innocent explanation
       ▼
 Readings ── edges {doc, sub-claim, supports|contradicts|qualifies, quote}
       │      figures {doc, allocated|disbursed|benchmark|proven_spend, amount, quote}
-      │      (recorded, or Claude `read` per document)
+      │      absences {sub-claim, register, query, window, capture?}
+      │      (recorded, or Claude `read` per document, or agents)
       ▼
-validation ── doc exists, blob hash intact, quote verbatim, amount in quote
+validation ── doc exists, blob hash intact, quote verbatim, amount in quote,
+      │         known register and a window the search could cover
       │         rejected items are reported, never silently dropped
       ▼
 retcon ── versions per canonical URL, field diffs
 provenance ── union-find over cites / derived_from / same document / same text
       ▼
-scoring ── per sub-claim: noisy-OR over independent clusters,
-      │        each cluster counted once at its best document's weight;
-      │        rewritten versions penalized
+scoring ── item weight: source kind, then the publisher's interest
+      │        (self-serving x0.5, against interest >= 0.8), then the
+      │        penalty for a rewritten version; absence = register completeness
+      │        per sub-claim: noisy-OR over independent clusters,
+      │        each cluster counted once at its best item's weight
       │        hypotheses: falsified if any prediction is contradicted
       │        financial: committed amount (from the attested version) vs
       │        proven spend / benchmark; flagged if > 20% with >= 2 origins
       ▼
+ACH ── every item rated against every competing hypothesis (from predictions);
+      │   diagnostic items; ranking by weight of evidence against; untested apart
+      ▼
 verdict ── contradicted | unverified | partially_supported | high_suspicion
-               confidence, missing evidence, retcon flags, rejected proposals
+      │     missing evidence, retcon flags, rejected proposals
+      ▼
+sensitivity ── remove each origin, recompute: what the conclusion depends on
+      ▼
+judgment ── likelihood of the core facts (estimative words) and
+              confidence (low | moderate | high) with every reason that capped it
 ```
 
 ### Source weights (priors)
@@ -174,16 +188,44 @@ Inverse to how easily the accused can silently change the source:
 | news | 0.35 |
 | social | 0.15 |
 
+Then the publisher's interest in the point (`domain/services/interest.py`):
+what a party to the case (accused or complainant) says in its own favour is
+halved; what it concedes against its own interest weighs at least 0.8.
+An absence weighs the completeness of the searched register
+(`domain/model/registers.py`: TUNEPS 0.8, JORT 0.85, web search 0.05), halved
+without a stored capture of the empty result.
+
 ### Verdict rule
 
 - Any core sub-claim contradicted: `contradicted`.
 - All core sub-claims supported **and** a deterministic signal (financial
-  anomaly or retcon): `high_suspicion`.
+  anomaly or retcon) **and** no innocent explanation consistent with the
+  evidence: `high_suspicion`.
 - Some core sub-claims supported: `partially_supported`.
 - Otherwise: `unverified`.
 
 The causal inference ("funds were misappropriated") is never a core
 sub-claim; it is what the verdict is about, and it is never marked proven.
+
+### Judgment
+
+Following US intelligence analytic standards (ICD 203), how likely a
+conclusion is and how solid its basis is are two statements
+(`domain/services/judgment.py`):
+
+- **Likelihood** that every core sub-claim is true, in estimative words
+  (unlikely, likely, very likely...), or "cannot be assessed" when a core
+  sub-claim has no evidence at all.
+- **Confidence** low, moderate or high, capped by each weakness, all listed:
+  a core sub-claim unsettled, contested, resting on one origin or on weak
+  sources; a verdict that one origin could overturn (sensitivity analysis);
+  an innocent explanation untested, open or fitting the evidence; a
+  supported sub-claim nobody tried to refute.
+
+Competing hypotheses (`domain/services/ach.py`) are compared as Heuer's ACH
+does: evidence that fits every hypothesis is not diagnostic, and the leading
+hypothesis is the least contradicted, not the most supported. Ratings follow
+from predictions, never from a model. See [research.md](research.md) R2-R8.
 
 ## Roadmap
 
@@ -215,6 +257,10 @@ What has been built so far. The forward-looking backlog, with task ids, is in
   tasks, stopping rules, Markdown case file, PoC mode.
 - **A1-A4 (done):** hexagonal layout, dependency-rule test, tests by layer,
   CI (see [Code structure](#code-structure)).
+- **Reasoning, research R2-R5, R7, R8 (done):** interest of the source,
+  expected records and scored absence, mandatory innocent explanations,
+  competing hypotheses, sensitivity, likelihood and confidence
+  (see [Judgment](#judgment)).
   Next: see [roadmap.md](roadmap.md). Earlier notes: retcon and stance monitors, triage queue, access-to-information
   request tracking, RFC 3161 anchoring of the ledger, Sentinel-2 and
   night-lights tools.
