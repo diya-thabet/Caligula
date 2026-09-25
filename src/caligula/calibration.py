@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from caligula.case import run_case
-from caligula.scoring import DEFAULT_PARAMS, Params
+from caligula.domain.services.scoring import DEFAULT_PARAMS, Params
 from caligula.store import BlobStore, MemoryEvidenceStore
 
 SUSPICIOUS = {"high_suspicion", "partially_supported"}

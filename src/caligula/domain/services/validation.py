@@ -12,11 +12,10 @@ import math
 from datetime import timedelta
 
 from caligula.domain.model.claims import Allegation, SubClaim
-from caligula.domain.model.documents import Document, SourceKind
+from caligula.domain.model.documents import Corpus, Document, SourceKind
 from caligula.domain.model.evidence import EvidenceEdge, FinancialFigure, RejectedEvidence, Relation
 from caligula.domain.services.extraction import extract_amounts
 from caligula.domain.services.text import normalize_text
-from caligula.store import EvidenceStore
 
 # Sources the accused party can silently edit or backdate.
 MUTABLE_KINDS = {SourceKind.OFFICIAL_LIVE, SourceKind.SOCIAL}
@@ -24,11 +23,11 @@ MUTABLE_KINDS = {SourceKind.OFFICIAL_LIVE, SourceKind.SOCIAL}
 CLOCK_SLACK = timedelta(days=1)
 
 
-def _check_quote(store: EvidenceStore, doc_id: str, quote: str) -> str | None:
-    doc = store.get(doc_id)
+def _check_quote(corpus: Corpus, doc_id: str, quote: str) -> str | None:
+    doc = corpus.get(doc_id)
     if doc is None:
         return f"document {doc_id} not in store"
-    if not store.blobs.verify(doc.raw_sha256):
+    if not corpus.intact(doc):
         return f"stored bytes for {doc_id} no longer match {doc.raw_sha256[:12]}"
     if not quote.strip() or normalize_text(quote) not in normalize_text(doc.text):
         return f"quote not found verbatim in {doc_id}"
@@ -48,7 +47,7 @@ def _check_time(doc: Document, claim: SubClaim, relation: Relation) -> str | Non
 
 
 def validate_edges(
-    store: EvidenceStore, allegation: Allegation, edges: list[EvidenceEdge]
+    corpus: Corpus, allegation: Allegation, edges: list[EvidenceEdge]
 ) -> tuple[list[EvidenceEdge], list[RejectedEvidence]]:
     claims = {c.id: c for c in allegation.subclaims}
     kept, rejected = [], []
@@ -57,8 +56,8 @@ def validate_edges(
         if edge.subclaim_id not in claims:
             reason = f"unknown sub-claim {edge.subclaim_id}"
         else:
-            reason = _check_quote(store, edge.doc_id, edge.quote) or _check_time(
-                store.get(edge.doc_id), claims[edge.subclaim_id], edge.relation
+            reason = _check_quote(corpus, edge.doc_id, edge.quote) or _check_time(
+                corpus.get(edge.doc_id), claims[edge.subclaim_id], edge.relation
             )
         if reason:
             rejected.append(RejectedEvidence(item=label, reason=reason))
@@ -68,12 +67,12 @@ def validate_edges(
 
 
 def validate_figures(
-    store: EvidenceStore, figures: list[FinancialFigure]
+    corpus: Corpus, figures: list[FinancialFigure]
 ) -> tuple[list[FinancialFigure], list[RejectedEvidence]]:
     kept, rejected = [], []
     for fig in figures:
         label = f"figure {fig.doc_id} {fig.role}={fig.amount_tnd:,.0f} TND"
-        reason = _check_quote(store, fig.doc_id, fig.quote)
+        reason = _check_quote(corpus, fig.doc_id, fig.quote)
         if reason is None and not any(
             math.isclose(a, fig.amount_tnd, rel_tol=1e-6) for a in extract_amounts(fig.quote)
         ):

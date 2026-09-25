@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 
@@ -42,3 +44,19 @@ class Document(BaseModel):
     extraction: str = "plain"  # plain | pdf_text | ocr
     cites: list[str] = Field(default_factory=list)  # document ids this one cites
     derived_from: list[str] = Field(default_factory=list)  # document ids this one copies/rewrites
+
+
+def _always_intact(_: Document) -> bool:
+    return True
+
+
+@dataclass(frozen=True)
+class Corpus:
+    """The documents a verdict is computed from, plus a check that the bytes we
+    hold for a document still match its recorded hash (chain of custody)."""
+
+    documents: Mapping[str, Document]
+    intact: Callable[[Document], bool] = field(default=_always_intact)
+
+    def get(self, doc_id: str) -> Document | None:
+        return self.documents.get(doc_id)

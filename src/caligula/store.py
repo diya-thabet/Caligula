@@ -14,7 +14,7 @@ from collections.abc import Mapping
 from datetime import datetime
 from pathlib import Path
 
-from caligula.domain.model.documents import Document, SourceKind
+from caligula.domain.model.documents import Corpus, Document, SourceKind
 from caligula.domain.services.text import sha256_bytes, text_sha256
 from caligula.retrieval import BM25, Embedder, HashingEmbedder, SearchHit, cosine, rrf, snippet
 
@@ -102,6 +102,10 @@ class EvidenceStore(ABC):
 
     @abstractmethod
     def canonical_urls(self) -> list[str]: ...
+
+    def corpus(self) -> Corpus:
+        """Snapshot of the stored documents, with a blob-integrity check."""
+        return Corpus(dict(self.documents), lambda d: self.blobs.verify(d.raw_sha256))
 
     @abstractmethod
     def search(

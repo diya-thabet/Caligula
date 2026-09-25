@@ -12,7 +12,7 @@ from caligula.agent.plan import TaskStatus
 from caligula.agent.workspace import ProposalStatus, Workspace
 from caligula.domain.model.evidence import EvidenceEdge
 from caligula.domain.model.verdict import Verdict
-from caligula.provenance import origin_clusters
+from caligula.domain.services.provenance import origin_clusters
 
 POC_BANNER = (
     "> **PROOF OF CONCEPT — internal working document.** Not reviewed by a lawyer or an editor. "
@@ -67,7 +67,7 @@ def build_report(ws: Workspace, verdict: Verdict, review: str | None = None, poc
                    f"{fin.independent_clusters} independent origins")
 
     out += ["", "## Evidence by sub-claim", ""]
-    clusters = origin_clusters(ws.store)
+    clusters = origin_clusters(ws.store.documents)
 
     def origin_note(doc_id: str, siblings: list[str]) -> str:
         same = sorted(d for d in siblings if d != doc_id and clusters[d] == clusters[doc_id])

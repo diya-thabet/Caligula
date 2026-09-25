@@ -19,14 +19,14 @@ from caligula.agent.plan import EntityHint, Outcome, Task, TaskStatus
 from caligula.domain.model.claims import Allegation
 from caligula.domain.model.evidence import EvidenceEdge, FinancialFigure, RejectedEvidence
 from caligula.domain.model.verdict import Verdict
+from caligula.domain.services.scoring import DEFAULT_PARAMS, SUPPORTED, Params
+from caligula.domain.services.validation import validate_edges, validate_figures
+from caligula.domain.services.verdict import build_verdict
 from caligula.ingest.sources import LiveFetcher, WorldBankClient
 from caligula.ingest.telegram import TelegramClient
 from caligula.ingest.wayback import WaybackClient
 from caligula.ledger import Ledger
-from caligula.scoring import DEFAULT_PARAMS, SUPPORTED, Params
 from caligula.store import EvidenceStore
-from caligula.validate import validate_edges, validate_figures
-from caligula.verdict import build_verdict
 
 
 class Mode(StrEnum):
@@ -189,9 +189,9 @@ class Workspace:
         """Validate and record. Returns (rejection reason, proposal id)."""
         with self.lock:
             if isinstance(item, EvidenceEdge):
-                kept, rejected = validate_edges(self.store, self.allegation, [item])
+                kept, rejected = validate_edges(self.store.corpus(), self.allegation, [item])
             else:
-                kept, rejected = validate_figures(self.store, [item])
+                kept, rejected = validate_figures(self.store.corpus(), [item])
             self.rejected += rejected
             if rejected:
                 self.ledger.append("rejection", by, item=item.model_dump(mode="json"), reason=rejected[0].reason)
@@ -229,7 +229,7 @@ class Workspace:
 
     def verdict(self) -> Verdict:
         with self.lock:
-            v = build_verdict(self.store, self.allegation, list(self.edges), list(self.figures), self.params)
+            v = build_verdict(self.store.corpus(), self.allegation, list(self.edges), list(self.figures), self.params)
             v.rejected_evidence = self.rejected + v.rejected_evidence
             return v
 

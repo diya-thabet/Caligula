@@ -8,9 +8,9 @@ identical (copy-paste republication).
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 
-from caligula.store import EvidenceStore
+from caligula.domain.model.documents import Document
 
 
 class _UnionFind:
@@ -28,21 +28,21 @@ class _UnionFind:
         self.parent[self.find(a)] = self.find(b)
 
 
-def origin_clusters(store: EvidenceStore) -> dict[str, str]:
+def origin_clusters(documents: Mapping[str, Document]) -> dict[str, str]:
     """Map every document id to the id of its cluster representative."""
     uf = _UnionFind()
     by_text: dict[str, str] = {}
     by_url: dict[str, str] = {}
-    for doc in store.documents.values():
+    for doc in documents.values():
         uf.find(doc.id)
         for other in doc.cites + doc.derived_from:
-            if other in store.documents:
+            if other in documents:
                 uf.union(doc.id, other)
         for key, seen in ((doc.text_sha256, by_text), (doc.canonical_url, by_url)):
             if key in seen:
                 uf.union(doc.id, seen[key])
             seen.setdefault(key, doc.id)
-    return {doc_id: uf.find(doc_id) for doc_id in store.documents}
+    return {doc_id: uf.find(doc_id) for doc_id in documents}
 
 
 def group_by_cluster(doc_ids: Iterable[str], clusters: dict[str, str]) -> list[list[str]]:

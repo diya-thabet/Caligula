@@ -15,11 +15,11 @@ from caligula.domain.model.claims import Allegation
 from caligula.domain.model.documents import SourceKind
 from caligula.domain.model.evidence import EvidenceEdge, FinancialFigure
 from caligula.domain.model.verdict import Verdict
+from caligula.domain.services.scoring import DEFAULT_PARAMS, Params
+from caligula.domain.services.verdict import build_verdict
 from caligula.ingest.text import extract_text
 from caligula.llm.claude import ClaudeInvestigator
-from caligula.scoring import DEFAULT_PARAMS, Params
 from caligula.store import EvidenceStore
-from caligula.verdict import build_verdict
 
 
 def load_case(case_dir: Path, store: EvidenceStore) -> dict:
@@ -68,7 +68,7 @@ def run_case(
             doc_edges, doc_figures = investigator.read(allegation, doc)
             edges += doc_edges
             figures += doc_figures
-    return build_verdict(store, allegation, edges, figures, params)
+    return build_verdict(store.corpus(), allegation, edges, figures, params)
 
 
 def case_workspace(case_dir: Path, store: EvidenceStore):

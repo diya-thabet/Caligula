@@ -10,11 +10,12 @@ human review with a right of reply.
 from __future__ import annotations
 
 from caligula.domain.model.claims import Allegation
+from caligula.domain.model.documents import Corpus
 from caligula.domain.model.evidence import EvidenceEdge, FinancialFigure, RejectedEvidence
 from caligula.domain.model.verdict import SubClaimResult, Verdict
-from caligula.provenance import group_by_cluster, origin_clusters
-from caligula.retcon import detect_retcons
-from caligula.scoring import (
+from caligula.domain.services.provenance import group_by_cluster, origin_clusters
+from caligula.domain.services.retcon import detect_retcons
+from caligula.domain.services.scoring import (
     CONTRADICTED,
     DEFAULT_PARAMS,
     SUPPORTED,
@@ -24,8 +25,7 @@ from caligula.scoring import (
     evaluate_hypotheses,
     score_subclaims,
 )
-from caligula.store import EvidenceStore
-from caligula.validate import validate_edges, validate_figures
+from caligula.domain.services.validation import validate_edges, validate_figures
 
 DISCLAIMER = (
     "Evidence assessment, not a finding of guilt. Scores use uncalibrated priors. "
@@ -35,19 +35,19 @@ DISCLAIMER = (
 
 
 def build_verdict(
-    store: EvidenceStore,
+    corpus: Corpus,
     allegation: Allegation,
     edges: list[EvidenceEdge],
     figures: list[FinancialFigure],
     params: Params = DEFAULT_PARAMS,
 ) -> Verdict:
-    edges, rejected_edges = validate_edges(store, allegation, edges)
-    figures, rejected_figures = validate_figures(store, figures)
+    edges, rejected_edges = validate_edges(corpus, allegation, edges)
+    figures, rejected_figures = validate_figures(corpus, figures)
     rejected: list[RejectedEvidence] = rejected_edges + rejected_figures
 
-    retcons = detect_retcons(store)
-    clusters = origin_clusters(store)
-    subclaims = score_subclaims(allegation, edges, doc_weights(store, retcons, params), clusters, params)
+    retcons = detect_retcons(corpus.documents.values())
+    clusters = origin_clusters(corpus.documents)
+    subclaims = score_subclaims(allegation, edges, doc_weights(corpus.documents.values(), retcons, params), clusters, params)
 
     financial = detect_financial_anomaly(figures, retcons, clusters, params)
     if financial and allegation.financial_subclaim:

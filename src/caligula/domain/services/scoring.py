@@ -7,10 +7,11 @@ labelled set of past cases before any score is published (see docs/architecture.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field, replace
 
 from caligula.domain.model.claims import Allegation
-from caligula.domain.model.documents import SourceKind
+from caligula.domain.model.documents import Document, SourceKind
 from caligula.domain.model.evidence import AmountRole, EvidenceEdge, FinancialFigure, Relation
 from caligula.domain.model.verdict import (
     FinancialAnomaly,
@@ -18,8 +19,7 @@ from caligula.domain.model.verdict import (
     RetconFlag,
     SubClaimResult,
 )
-from caligula.provenance import group_by_cluster
-from caligula.store import EvidenceStore
+from caligula.domain.services.provenance import group_by_cluster
 
 # Inverse to how easily the accused party can silently change the source.
 SOURCE_WEIGHTS: dict[SourceKind, float] = {
@@ -56,11 +56,13 @@ class Params:
 DEFAULT_PARAMS = Params()
 
 
-def doc_weights(store: EvidenceStore, retcons: list[RetconFlag], params: Params = DEFAULT_PARAMS) -> dict[str, float]:
+def doc_weights(
+    documents: Iterable[Document], retcons: list[RetconFlag], params: Params = DEFAULT_PARAMS
+) -> dict[str, float]:
     retconned = {f.later_doc_id for f in retcons}
     return {
         doc.id: params.weights[doc.source_kind] * (params.retconned_penalty if doc.id in retconned else 1.0)
-        for doc in store.documents.values()
+        for doc in documents
     }
 
 

@@ -1,7 +1,7 @@
 from caligula.domain.model.claims import Allegation, Hypothesis, SubClaim
 from caligula.domain.model.documents import SourceKind
 from caligula.domain.model.evidence import AmountRole, EvidenceEdge, FinancialFigure, Relation
-from caligula.verdict import build_verdict
+from caligula.domain.services.verdict import build_verdict
 from conftest import add_doc
 
 
@@ -30,7 +30,7 @@ def test_echo_chamber_does_not_add_confidence(store):
     edges = [edge("src", "C1", "the award happened")] + [
         edge(f"echo{i}", "C1", "the award happened") for i in range(5)
     ]
-    [c1, *_] = build_verdict(store, allegation(), edges, []).by_subclaim
+    [c1, *_] = build_verdict(store.corpus(), allegation(), edges, []).by_subclaim
     assert len(c1.supporting_clusters) == 1
     assert c1.support == 0.35  # one news origin, not six
     assert c1.status == "partially_supported"
@@ -39,14 +39,14 @@ def test_echo_chamber_does_not_add_confidence(store):
 def test_independent_sources_combine(store):
     add_doc(store, "mirror", "the award happened", kind=SourceKind.FOREIGN_MIRROR)
     add_doc(store, "audit", "audit: the award happened", kind=SourceKind.AUDIT)
-    v = build_verdict(store, allegation(), [edge("mirror", "C1", "award happened"), edge("audit", "C1", "award happened")], [])
+    v = build_verdict(store.corpus(), allegation(), [edge("mirror", "C1", "award happened"), edge("audit", "C1", "award happened")], [])
     assert v.by_subclaim[0].status == "supported"
     assert v.by_subclaim[0].support == 0.97
 
 
 def test_hallucinated_quote_and_unknown_claim_are_rejected(store):
     add_doc(store, "doc", "the award happened")
-    v = build_verdict(store, allegation(), [edge("doc", "C1", "the minister confessed"), edge("doc", "C9", "award")], [])
+    v = build_verdict(store.corpus(), allegation(), [edge("doc", "C1", "the minister confessed"), edge("doc", "C9", "award")], [])
     assert [r.reason for r in v.rejected_evidence] == ["quote not found verbatim in doc", "unknown sub-claim C9"]
     assert v.by_subclaim[0].status == "unverified"
 
@@ -54,7 +54,7 @@ def test_hallucinated_quote_and_unknown_claim_are_rejected(store):
 def test_tampered_blob_is_rejected(store):
     doc = add_doc(store, "doc", "the award happened")
     store.blobs._path(doc.raw_sha256).write_bytes(b"edited later")
-    v = build_verdict(store, allegation(), [edge("doc", "C1", "award happened")], [])
+    v = build_verdict(store.corpus(), allegation(), [edge("doc", "C1", "award happened")], [])
     assert "no longer match" in v.rejected_evidence[0].reason
 
 
@@ -63,7 +63,7 @@ def test_contradicted_prediction_falsifies_hypothesis(store):
     add_doc(store, "wx", "no exceptional heat", kind=SourceKind.OSINT)
     edges = [edge("ins", "C2", "2026: 4 870 MW", Relation.CONTRADICTS),
              edge("wx", "C2", "no exceptional heat", Relation.CONTRADICTS)]
-    [h] = build_verdict(store, allegation(), edges, []).hypotheses
+    [h] = build_verdict(store.corpus(), allegation(), edges, []).hypotheses
     assert h.status == "falsified"
 
 
@@ -78,7 +78,7 @@ def test_financial_anomaly_uses_attested_version_not_retcon(store):
         FinancialFigure(doc_id="bench", role=AmountRole.BENCHMARK, amount_tnd=60e6, quote="60 000 000 TND"),
         FinancialFigure(doc_id="bench", role=AmountRole.BENCHMARK, amount_tnd=99e6, quote="60 000 000 TND"),
     ]
-    v = build_verdict(store, allegation(core=["C3"], financial_subclaim="C3"), [], figures)
+    v = build_verdict(store.corpus(), allegation(core=["C3"], financial_subclaim="C3"), [], figures)
     assert v.rejected_evidence[0].reason == "amount not present in quoted text"
     assert v.financial.reference_amount_tnd == 120e6
     assert v.financial.discrepancy_ratio == 0.5
@@ -93,7 +93,7 @@ def test_single_origin_anomaly_is_not_flagged(store):
         FinancialFigure(doc_id="doc", role=AmountRole.ALLOCATED, amount_tnd=120e6, quote="alloué 120 000 000 TND"),
         FinancialFigure(doc_id="doc", role=AmountRole.BENCHMARK, amount_tnd=60e6, quote="comparable 60 000 000 TND"),
     ]
-    v = build_verdict(store, allegation(core=["C3"], financial_subclaim="C3"), [], figures)
+    v = build_verdict(store.corpus(), allegation(core=["C3"], financial_subclaim="C3"), [], figures)
     assert not v.financial.flagged
     assert v.verdict == "unverified"
 
@@ -107,7 +107,7 @@ def test_exonerating_document_blocks_computed_anomaly(store):
         FinancialFigure(doc_id="bench", role=AmountRole.BENCHMARK, amount_tnd=60e6, quote="60 000 000 TND"),
     ]
     edges = [edge("audit", "C3", "documented 2026 turbine shortage", Relation.CONTRADICTS)]
-    v = build_verdict(store, allegation(core=["C3"], financial_subclaim="C3"), edges, figures)
+    v = build_verdict(store.corpus(), allegation(core=["C3"], financial_subclaim="C3"), edges, figures)
     assert v.financial.flagged
     assert v.by_subclaim[2].status == "contradicted"
     assert v.verdict == "contradicted"
@@ -125,7 +125,7 @@ def test_temporal_checks(store):
     add_doc(store, "backdated", "outage reported", day=12, published_at=datetime(2026, 1, 20, tzinfo=UTC))
     edges = [edge("early", "C1", "outage reported"), edge("live_late", "C3", "project existed"),
              edge("mirror_late", "C3", "project existed"), edge("backdated", "C1", "outage reported")]
-    v = build_verdict(store, claims, edges, [])
+    v = build_verdict(store.corpus(), claims, edges, [])
     reasons = [r.reason for r in v.rejected_evidence]
     assert reasons == [
         "early was observed before the event it would report",

@@ -23,11 +23,11 @@ from caligula.domain.model.documents import SourceKind
 from caligula.domain.model.evidence import AmountRole, EvidenceEdge, FinancialFigure, Relation
 from caligula.domain.services.names import EntityKind, match
 from caligula.domain.services.privacy import MINIMISED_KINDS, minimise
+from caligula.domain.services.retcon import diff_fields
 from caligula.domain.services.text import sha256_bytes
 from caligula.ingest.telegram import PrivateSourceError
 from caligula.ingest.text import extract_text
 from caligula.ingest.wayback import Capture
-from caligula.retcon import diff_fields
 
 MAX_READ = 8000
 KindName = Literal[

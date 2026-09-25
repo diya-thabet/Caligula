@@ -7,12 +7,12 @@ decree number) differs, so the flag says *what* was rewritten.
 
 from __future__ import annotations
 
-from collections import Counter
+from collections import Counter, defaultdict
+from collections.abc import Iterable
 
 from caligula.domain.model.documents import Document
 from caligula.domain.model.verdict import FieldChange, RetconFlag
 from caligula.domain.services.extraction import extract_fields
-from caligula.store import EvidenceStore
 
 
 def diff_fields(earlier: Document, later: Document) -> list[FieldChange]:
@@ -26,10 +26,13 @@ def diff_fields(earlier: Document, later: Document) -> list[FieldChange]:
     return changes
 
 
-def detect_retcons(store: EvidenceStore) -> list[RetconFlag]:
+def detect_retcons(documents: Iterable[Document]) -> list[RetconFlag]:
+    by_url: dict[str, list[Document]] = defaultdict(list)
+    for doc in documents:
+        by_url[doc.canonical_url].append(doc)
     flags = []
-    for url in store.canonical_urls():
-        versions = store.versions(url)
+    for url, docs in by_url.items():
+        versions = sorted(docs, key=lambda d: d.observed_at)
         for earlier, later in zip(versions, versions[1:]):
             if earlier.text_sha256 == later.text_sha256:
                 continue
