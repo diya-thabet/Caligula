@@ -49,6 +49,8 @@ class Params:
     weak: float = 0.3
     anomaly_ratio: float = 0.20
     anomaly_min_clusters: int = 2
+    # Support given to the financial sub-claim when the deterministic check flags it.
+    financial_check_weight: float = 0.9
     # A party conceding a point against its own interest: at least this weight.
     against_interest_floor: float = 0.8
     # A party asserting a point that serves it: its weight is multiplied by this.

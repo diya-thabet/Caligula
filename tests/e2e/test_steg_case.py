@@ -29,6 +29,13 @@ def test_synthetic_steg_case_offline(store):
         "H1": "consistent", "H2": "falsified", "H3": "open", "H4": "falsified",
         "H5": "open", "H6": "open", "H7": "open",
     }
+    # ACH: the missing tender (C5) fits a rigged award and a lawful emergency alike;
+    # only the emergency evidence (C9) tells them apart, and it goes against H4.
+    outage, award = v.ach
+    assert outage.ranking == ["H1", "H2"]
+    assert award.ranking == ["H3", "H4"] and award.untested == ["H5", "H6", "H7"]
+    assert {r.subclaim_id for r in award.rows if r.diagnostic} == {"C9"}
+    assert award.inconsistency["H3"] == 0.25 and award.inconsistency["H4"] == 1.275
     c9 = {w.doc_id: (w.weight, w.interest) for w in v.weighed if w.subclaim_id == "C9"}
     assert c9 == {"steg_procedure": (0.25, "self_serving"), "audit": (0.85, "none"), "absence:jort": (0.425, "none")}
     [flag] = v.retcon_flags

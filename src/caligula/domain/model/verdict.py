@@ -56,6 +56,31 @@ class HypothesisResult(BaseModel):
     reasons: list[str]
 
 
+class AchRow(BaseModel):
+    """One independent origin's evidence on one sub-claim, rated against every
+    competing hypothesis: C consistent, I inconsistent, N no prediction."""
+
+    subclaim_id: str
+    relation: Relation
+    kind: str  # edge | absence | financial
+    doc_ids: list[str]
+    weight: float
+    ratings: dict[str, str]
+    # At least two hypotheses predict this sub-claim and disagree: the row helps tell them apart.
+    diagnostic: bool
+
+
+class AchMatrix(BaseModel):
+    """Analysis of competing hypotheses for one set of hypotheses that make
+    predictions about the same sub-claims."""
+
+    hypotheses: list[str]
+    rows: list[AchRow]
+    inconsistency: dict[str, float]  # weight of the evidence against each hypothesis
+    ranking: list[str]  # tested hypotheses, least evidence against first
+    untested: list[str]  # no evidence yet on anything they predict: neither likely nor unlikely
+
+
 class FinancialAnomaly(BaseModel):
     reference_role: AmountRole
     reference_amount_tnd: float
@@ -73,6 +98,7 @@ class Verdict(BaseModel):
     confidence: float
     by_subclaim: list[SubClaimResult]
     hypotheses: list[HypothesisResult]
+    ach: list[AchMatrix]
     financial: FinancialAnomaly | None
     retcon_flags: list[RetconFlag]
     rejected_evidence: list[RejectedEvidence]

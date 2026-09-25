@@ -11,9 +11,10 @@ from __future__ import annotations
 
 from caligula.domain.model.claims import Allegation
 from caligula.domain.model.documents import Corpus
-from caligula.domain.model.evidence import AbsenceFinding, EvidenceEdge, FinancialFigure, RejectedEvidence
-from caligula.domain.model.verdict import SubClaimResult, Verdict
+from caligula.domain.model.evidence import AbsenceFinding, EvidenceEdge, FinancialFigure, RejectedEvidence, Relation
+from caligula.domain.model.verdict import SubClaimResult, Verdict, WeighedEvidence
 from caligula.domain.services.absence import validate_absences, weigh_absences
+from caligula.domain.services.ach import build_matrices
 from caligula.domain.services.provenance import group_by_cluster, origin_clusters
 from caligula.domain.services.retcon import detect_retcons
 from caligula.domain.services.scoring import (
@@ -55,9 +56,14 @@ def build_verdict(
     subclaims = score_subclaims(allegation, weighed, params)
 
     financial = detect_financial_anomaly(figures, retcons, clusters, params)
+    matrix_items = list(weighed)
     if financial and allegation.financial_subclaim:
         figure_clusters = group_by_cluster({f.doc_id for f in financial.figures}, clusters)
-        _apply_financial(subclaims[allegation.financial_subclaim], financial.flagged, figure_clusters)
+        result = subclaims[allegation.financial_subclaim]
+        if _apply_financial(result, financial.flagged, figure_clusters, params.financial_check_weight):
+            matrix_items.append(WeighedEvidence(
+                doc_id="financial-check", subclaim_id=result.id, relation=Relation.SUPPORTS, kind="financial",
+                cluster="financial-check", weight=params.financial_check_weight))
 
     hypotheses = evaluate_hypotheses(allegation, subclaims)
     verdict, confidence = _overall(allegation, subclaims, bool(financial and financial.flagged), bool(retcons))
@@ -75,6 +81,7 @@ def build_verdict(
         confidence=confidence,
         by_subclaim=list(subclaims.values()),
         hypotheses=hypotheses,
+        ach=build_matrices(allegation, matrix_items),
         financial=financial,
         retcon_flags=retcons,
         rejected_evidence=rejected,
@@ -92,12 +99,15 @@ def _independent_origins(result: SubClaimResult) -> int:
     return 0
 
 
-def _apply_financial(result: SubClaimResult, flagged: bool, figure_clusters: list[list[str]]) -> None:
+def _apply_financial(result: SubClaimResult, flagged: bool, figure_clusters: list[list[str]], weight: float) -> bool:
+    """Settle the financial sub-claim from the deterministic check. Returns whether it did."""
     # An exonerating document (contradicting edge) still blocks the computed result.
     if flagged and result.status != CONTRADICTED and not result.contradicting_clusters:
         result.status = SUPPORTED
-        result.support = max(result.support, 0.9)
+        result.support = max(result.support, weight)
         result.supporting_clusters = figure_clusters
+        return True
+    return False
 
 
 def _overall(
