@@ -1,9 +1,10 @@
 import json
 from pathlib import Path
 
+from caligula.adapters.fixtures.case_directory import labelled_cases
 from caligula.adapters.persistence.memory import MemoryDocumentRepository
 from caligula.application.evidence_store import EvidenceStore
-from caligula.calibration import evaluate, labelled_cases, sweep
+from caligula.application.usecases.calibration import evaluate, sweep
 from caligula.domain.model.procurement import Award
 from caligula.domain.services.red_flags import screen
 
@@ -29,11 +30,11 @@ def test_screening_ranks_and_explains():
 
 
 def test_calibration_harness_on_synthetic_case(blobs):
-    cases = labelled_cases(Path(__file__).parent.parent / "fixtures")
-    assert [c.name for c in cases] == ["steg_synthetic"]
     new_store = lambda: EvidenceStore(MemoryDocumentRepository(), blobs)  # noqa: E731
-    m = evaluate(cases, new_store)
+    cases = labelled_cases(Path(__file__).parent.parent / "fixtures", new_store)
+    assert [c.name for c in cases] == ["steg_synthetic"]
+    m = evaluate(cases)
     assert (m.verdict_accuracy, m.subclaim_accuracy) == (1.0, 1.0)
     assert m.brier < 0.01
-    best_params, best = sweep(cases, new_store)[0]
+    best_params, best = sweep(cases)[0]
     assert best.subclaim_accuracy == 1.0

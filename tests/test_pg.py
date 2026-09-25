@@ -5,8 +5,8 @@ import os
 import psycopg
 import pytest
 
+from caligula.adapters.fixtures.case_directory import run_case
 from caligula.application.evidence_store import EvidenceStore
-from caligula.case import run_case
 from caligula.domain.model.documents import SourceKind
 from conftest import FIXTURE, add_doc
 

@@ -4,10 +4,10 @@ import argparse
 import sys
 from pathlib import Path
 
+from caligula.adapters.fixtures.case_directory import run_case
 from caligula.adapters.persistence.blob_fs import FileBlobStorage
 from caligula.adapters.persistence.memory import MemoryDocumentRepository
 from caligula.application.evidence_store import EvidenceStore
-from caligula.case import run_case
 from caligula.domain.model.verdict import Verdict
 
 
@@ -62,7 +62,7 @@ def main(argv: list[str] | None = None) -> int:
     verdict = run_case(args.case_dir, store, investigator)
     print(verdict.model_dump_json(indent=2) if args.json else summarize(verdict))
     if args.report:
-        from caligula.case import case_workspace
+        from caligula.adapters.fixtures.case_directory import case_workspace
         from caligula.report import build_report
 
         ws = case_workspace(args.case_dir, store)
@@ -77,6 +77,7 @@ def write_report(path: Path, text: str) -> None:
 
 
 def investigate(args: argparse.Namespace) -> int:
+    from caligula.adapters.fixtures.case_directory import load_case
     from caligula.adapters.llm.claude_analyst import ClaudeAnalyst
     from caligula.adapters.llm.claude_runner import ClaudeAgentRunner
     from caligula.adapters.media.text_extraction import PopplerTesseractExtractor
@@ -89,7 +90,6 @@ def investigate(args: argparse.Namespace) -> int:
     from caligula.application.investigation.single_agent import InvestigatorAgent
     from caligula.application.investigation.team import InvestigationTeam
     from caligula.application.investigation.workspace import Connectors, Mode, Workspace
-    from caligula.case import load_case
     from caligula.domain.model.intake import Decision
     from caligula.domain.services.intake_policy import decide
 
@@ -157,17 +157,18 @@ def investigate(args: argparse.Namespace) -> int:
 
 
 def calibrate(root: Path, blobs: FileBlobStorage) -> int:
-    from caligula.calibration import evaluate, labelled_cases, sweep
+    from caligula.adapters.fixtures.case_directory import labelled_cases
+    from caligula.application.usecases.calibration import evaluate, sweep
 
-    cases = labelled_cases(root)
-    if not cases:
-        print(f"no labels.json under {root}")
-        return 1
     def new_store() -> EvidenceStore:
         return EvidenceStore(MemoryDocumentRepository(), blobs)
 
-    print(f"{len(cases)} labelled case(s); current parameters: {evaluate(cases, new_store)}")
-    for params, metrics in sweep(cases, new_store)[:5]:
+    cases = labelled_cases(root, new_store)
+    if not cases:
+        print(f"no labels.json under {root}")
+        return 1
+    print(f"{len(cases)} labelled case(s); current parameters: {evaluate(cases)}")
+    for params, metrics in sweep(cases)[:5]:
         print(f"  strong={params.strong} weak={params.weak} retcon_penalty={params.retconned_penalty}: {metrics}")
     return 0
 

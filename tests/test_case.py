@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+from caligula.adapters.fixtures.case_directory import load_case, run_case
 from caligula.adapters.llm.claude_analyst import (
     ClaudeAnalyst,
     _Amount,
@@ -9,7 +10,6 @@ from caligula.adapters.llm.claude_analyst import (
     _Prediction,
     _Reading,
 )
-from caligula.case import load_case, run_case
 from caligula.domain.model.claims import SubClaim
 from conftest import FIXTURE
 

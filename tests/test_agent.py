@@ -5,13 +5,13 @@ import json
 
 import httpx
 
+from caligula.adapters.fixtures.case_directory import load_case
 from caligula.adapters.persistence.ledger_jsonl import JsonlLedger
 from caligula.adapters.presenters.public_reply import public_reply
 from caligula.adapters.sources.worldbank import WorldBankClient
 from caligula.application.investigation.single_agent import InvestigatorAgent
 from caligula.application.investigation.workspace import Connectors, Mode, Workspace
 from caligula.application.ports.llm import ToolRefusal
-from caligula.case import load_case
 from caligula.domain.model.claims import Allegation
 from conftest import FIXTURE
 
