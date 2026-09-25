@@ -45,7 +45,7 @@ scenario). This document records what we kept, what we changed, and why.
    request. We fetch captures in raw mode (`id_`) so we hash what the site
    served, not Wayback's replay page.
 6. **Uncalibrated weights are labelled as such.** Source weights and
-   thresholds are priors in `scoring.py`. Before any score is published they
+   thresholds are priors in `domain/services/scoring.py`. Before any score is published they
    must be fitted on a labelled set of past cases (for example Cour des comptes
    findings with known outcomes). Every verdict carries a disclaimer saying so.
 7. **No automatic naming of people.** The draft's suspect ranker ran with "no
@@ -142,20 +142,20 @@ Readings ── edges {doc, sub-claim, supports|contradicts|qualifies, quote}
       │      figures {doc, allocated|disbursed|benchmark|proven_spend, amount, quote}
       │      (recorded, or Claude `read` per document)
       ▼
-validate.py ── doc exists, blob hash intact, quote verbatim, amount in quote
+validation ── doc exists, blob hash intact, quote verbatim, amount in quote
       │         rejected items are reported, never silently dropped
       ▼
-retcon.py ── versions per canonical URL, field diffs
-provenance.py ── union-find over cites / derived_from / same document / same text
+retcon ── versions per canonical URL, field diffs
+provenance ── union-find over cites / derived_from / same document / same text
       ▼
-scoring.py ── per sub-claim: noisy-OR over independent clusters,
+scoring ── per sub-claim: noisy-OR over independent clusters,
       │        each cluster counted once at its best document's weight;
       │        rewritten versions penalized
       │        hypotheses: falsified if any prediction is contradicted
       │        financial: committed amount (from the attested version) vs
       │        proven spend / benchmark; flagged if > 20% with >= 2 origins
       ▼
-verdict.py ── contradicted | unverified | partially_supported | high_suspicion
+verdict ── contradicted | unverified | partially_supported | high_suspicion
                confidence, missing evidence, retcon flags, rejected proposals
 ```
 
@@ -187,6 +187,9 @@ sub-claim; it is what the verdict is about, and it is never marked proven.
 
 ## Roadmap
 
+What has been built so far. The forward-looking backlog, with task ids, is in
+[roadmap.md](roadmap.md).
+
 - **V1 (done):** store, hashing, retcon diff, provenance clusters,
   validation, scoring, hypotheses, financial check, Wayback and contributor
   ingesters, Claude decomposition and reading, synthetic STEG case.
@@ -210,7 +213,9 @@ sub-claim; it is what the verdict is about, and it is never marked proven.
 - **V3.2 (done):** phased workflow: planner with code-enforced coverage,
   tasks with outcomes (absence as evidence), leads board, automatic challenge
   tasks, stopping rules, Markdown case file, PoC mode.
-  Next: retcon and stance monitors, triage queue, access-to-information
+- **A1-A4 (done):** hexagonal layout, dependency-rule test, tests by layer,
+  CI (see [Code structure](#code-structure)).
+  Next: see [roadmap.md](roadmap.md). Earlier notes: retcon and stance monitors, triage queue, access-to-information
   request tracking, RFC 3161 anchoring of the ledger, Sentinel-2 and
   night-lights tools.
 - **V4:** relationship graph for reviewers (company, owner, signatory) behind

@@ -18,8 +18,8 @@ defended.
 
 ## Workflow graph
 
-The graphs below are the orchestration as implemented (`cli.py`,
-`agent/team.py`, `agent/runner.py`, `agent/tools.py`). Node shapes:
+The graphs below are the orchestration as implemented (`adapters/cli`,
+`application/investigation/team.py`, `single_agent.py`, `toolkit.py`). Node shapes:
 
 | Shape | Meaning |
 |---|---|
@@ -53,7 +53,7 @@ flowchart TD
     STOP -- "continue with n + 1" --> ROUND
     STOP -- "no_open_tasks, no_progress, round_limit" --> VER
     SINGLE --> VER["Verdict<br/>code, from accepted evidence only"]
-    VER --> REP["Case file out/CASE.md<br/>report.py"]
+    VER --> REP["Case file out/CASE.md<br/>presenters/markdown_report.py"]
     REP --> REPLY{"Public reply policy"}
     REPLY -- "fact-check, not accusatory" --> PUB(["Short reply with sources"])
     REPLY -- "investigation or high_suspicion" --> HOLD(["Held: publication gate<br/>editor, lawyer, right of reply"])
@@ -97,7 +97,7 @@ flowchart TD
 
 ### 3. Inside an agent (tool loop)
 
-The same loop (`agent/loop.py`) runs the single investigator, each
+The same `AgentRunner` port (Claude adapter: `adapters/llm/claude_runner.py`) runs the single investigator, each
 specialist and the reviewer; only the tool set, the brief and the wrap-up
 tool differ.
 
@@ -254,7 +254,7 @@ apply.
 Waiting for someone to ask misses most cases. Three monitors can open cases on
 their own, each feeding the same workflow through a triage queue:
 
-1. **Procurement red flags** (`caligula screen`, `redflags.py`): score every
+1. **Procurement red flags** (`caligula screen`, `domain/services/red_flags.py`): score every
    new award for non-competitive procedure, missing notice, single bidder,
    rushed deadline, newly created supplier, price above estimate, inflating
    amendments, splitting under thresholds, supplier dominance, timeline

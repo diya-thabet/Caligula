@@ -26,10 +26,10 @@ environment. A project that runs automated suspicion about people is not.
 
 | Risk | Main texts (to verify) | How it arises for us | Mitigation (code / process) |
 |---|---|---|---|
-| **"False news"** | Decree-law 2022-54, art. 24: up to 5 years' prison and a fine, doubled when the target is a public official | Any published claim about an official that turns out wrong, or is framed as wrong by a prosecutor. Actively used against journalists, lawyers and critics since 2023. | Verdicts computed from verified evidence only; `high_suspicion` is the ceiling, never "guilty"; publication gate (`publication.py`); corrections log |
+| **"False news"** | Decree-law 2022-54, art. 24: up to 5 years' prison and a fine, doubled when the target is a public official | Any published claim about an official that turns out wrong, or is framed as wrong by a prosecutor. Actively used against journalists, lawyers and critics since 2023. | Verdicts computed from verified evidence only; `high_suspicion` is the ceiling, never "guilty"; publication gate (`application/usecases/publication.py`); corrections log |
 | **Defamation** | Penal Code (defamation articles, 245 ff.); Decree-law 2011-115 (press code) | Imputing a fact that harms someone's honour. Truth is a defence mainly for facts about public functions, and must be *proved*. | Evidence ledger and hashes; wording limited to documents; right of reply before publication |
-| **Personal data** | Organic Law 2004-63 (INPDP); GDPR if EU residents are concerned | Building files on people; processing data about suspected offences (specially restricted); sending personal data abroad (a cloud LLM API is a cross-border transfer) | Intake gate (no free-standing targets); `privacy.minimise` before any agent reads social, news or contributor text; custody data restricted; retention limits; **declaration to INPDP before launch** |
-| **Unauthorised access** | Decree-law 2022-54 (offences against information systems) | Logging into closed systems, using leaked credentials, joining private groups under false pretences, bypassing access controls | Public sources only (tool docstrings and prompts); invite links refused in code (`telegram.channel_name`); no login-capable connectors |
+| **Personal data** | Organic Law 2004-63 (INPDP); GDPR if EU residents are concerned | Building files on people; processing data about suspected offences (specially restricted); sending personal data abroad (a cloud LLM API is a cross-border transfer) | Intake gate (no free-standing targets); `domain/services/privacy.minimise` before any agent reads social, news or contributor text; custody data restricted; retention limits; **declaration to INPDP before launch** |
+| **Unauthorised access** | Decree-law 2022-54 (offences against information systems) | Logging into closed systems, using leaked credentials, joining private groups under false pretences, bypassing access controls | Public sources only (tool docstrings and prompts); invite links refused in code (`adapters/sources/telegram.channel_name`); no login-capable connectors |
 | **Secrets** | Penal Code provisions on state/defence secrets; professional secrecy | Holding or publishing classified or leaked documents | Intake flags leaked material → lawyer decides before any agent runs |
 | **Copyright** | Law 94-36 on literary and artistic property (as amended) | Storing full copies of articles is evidence preservation; republishing them is not | Store for evidence, publish quotes with attribution only |
 | **Platform terms** | X, Telegram, Meta terms of service | Scraping, automated replies, account bans | Telegram public web preview only; X through its official API when used; no mass scraping |
@@ -52,7 +52,7 @@ I separate this into what we should build and what we should not.
 - **Companies**, without restriction to public contracts: registry facts,
   capital, addresses, managers and declared beneficial owners (Law 2018-52 on
   the national business register), awards, amendments. Company-level
-  red flags are in `redflags.screen_companies`: capital far below the award,
+  red flags are in `domain/services/red_flags.screen_companies`: capital far below the award,
   many companies at one address, competing bidders sharing managers or
   addresses (collusion), and name resemblance between a winner's managers and
   the officials who signed. The last one is always a lead for human review.
@@ -134,16 +134,16 @@ under Decree-law 2022-54 and would taint the evidence.
 
 ## 6. What code enforces
 
-- `policy.decide`: refuses espionage/state-security claims, private life,
+- `domain/services/intake_policy.decide`: refuses espionage/state-security claims, private life,
   sensitive-trait suspicion, claims without a documented act or public nexus;
   routes financial-crime, foreign-funding, private-individual and leak cases
   to a lawyer (`--legal-approved` required, recorded in the ledger).
-- `privacy.minimise`: masks e-mails, phone numbers, ID and bank numbers in
+- `domain/services/privacy.minimise`: masks e-mails, phone numbers, ID and bank numbers in
   social, news and contributor text before any agent reads it.
-- `ledger.Ledger`: hash-chained log of intake, captures, proposals, review
+- the ledger (`domain/services/ledger_chain.py`, `adapters/persistence/ledger_jsonl.py`): hash-chained log of intake, captures, proposals, review
   decisions, legal approvals and publication steps; `verify()` finds any
   tampering.
-- `telegram.channel_name`: public channels only; invite links refused.
+- `adapters/sources/telegram.channel_name`: public channels only; invite links refused.
 - `publication.Publication`: no publication without editor approval, then
   legal approval, then a reply request to every named party and the end of
   the reply window; replies published alongside; corrections appended.
