@@ -1,14 +1,15 @@
-"""Tools the investigator agent can call.
+"""Tools the agents can call.
 
 Tool docstrings are the model's instructions for each tool, so they say when
-to use it and what comes back. Every tool counts against the budget except
-`assess` and `finish`, which the agent always needs to wrap up.
+to use it and what comes back. `build_tools` hands each agent only the tools
+of its role; every call is charged to that agent's budget except the ones
+needed to wrap up (`assess`, `report`, `finish`, `complete_review`).
 """
 
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from datetime import UTC, datetime
 from functools import wraps
 from typing import Literal
@@ -16,18 +17,21 @@ from typing import Literal
 from anthropic import beta_tool
 from anthropic.lib.tools import ToolError
 
-from caligula.agent.workspace import Purpose, Workspace
+from caligula.agent.workspace import AgentContext, CollectionRequest, ProposalStatus, Purpose, Workspace
 from caligula.entities import EntityKind, match
 from caligula.hashing import sha256_bytes
+from caligula.ingest.telegram import PrivateSourceError
 from caligula.ingest.text import extract_text
 from caligula.ingest.wayback import Capture
 from caligula.models import AmountRole, EvidenceEdge, FinancialFigure, Relation, SourceKind
+from caligula.privacy import MINIMISED_KINDS, minimise
 from caligula.retcon import diff_fields
 
 MAX_READ = 8000
 KindName = Literal[
     "official_live", "archive", "foreign_mirror", "audit", "statistics", "contributor", "osint", "news", "social"
 ]
+SpecialistName = Literal["official", "funders_audit", "web_news", "social", "telegram"]
 
 
 def _date(value: str | None) -> datetime | None:
@@ -37,36 +41,58 @@ def _date(value: str | None) -> datetime | None:
     return d if d.tzinfo else d.replace(tzinfo=UTC)
 
 
-def build_tools(ws: Workspace) -> list:
+def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[str] | None = None) -> list:
+    """Tools bound to one agent. `ctx` defaults to a single agent using the workspace budget."""
+    single = ctx is None
+    ctx = ctx or AgentContext(name="investigator", budget=ws.budget)
+
+    def spend() -> None:
+        if single:
+            ws.budget -= 1
+            ctx.budget = ws.budget
+        else:
+            ctx.budget -= 1
+
     def metered(fn: Callable) -> Callable:
         @wraps(fn)
         def wrapper(**kwargs):
-            if ws.finished:
-                raise ToolError("The investigation is finished; no further tool calls.")
-            if ws.budget <= 0:
-                raise ToolError("Tool budget exhausted. Call assess, then finish with what you have.")
-            ws.budget -= 1
+            if ws.finished or ctx.done:
+                raise ToolError("Your part of the investigation is finished; no further tool calls.")
+            if ctx.budget <= 0:
+                raise ToolError("Tool budget exhausted. Wrap up now (report, finish or complete_review).")
+            spend()
             try:
                 out = fn(**kwargs)
             except ToolError as exc:
-                ws.log(fn.__name__, kwargs, f"error: {exc}")
+                ws.log(ctx.name, fn.__name__, kwargs, f"error: {exc}")
                 raise
             except Exception as exc:  # connector failures are information, not crashes
-                ws.log(fn.__name__, kwargs, f"error: {exc}")
+                ws.log(ctx.name, fn.__name__, kwargs, f"error: {exc}")
                 raise ToolError(f"{type(exc).__name__}: {exc}") from exc
-            ws.log(fn.__name__, kwargs, out[:300])
+            ws.log(ctx.name, fn.__name__, kwargs, out[:300])
             return out
 
         return wrapper
 
     def store_document(raw: bytes, *, kind: SourceKind, url: str, canonical_url: str, publisher: str,
-                       observed_at: datetime, filename: str = "") -> str:
+                       observed_at: datetime, filename: str = "", text: str | None = None,
+                       published_at: datetime | None = None) -> str:
         doc_id = f"{kind.value}-{sha256_bytes(raw)[:12]}"
-        if ws.store.get(doc_id) is None:
-            extracted = extract_text(raw, filename or url)
-            ws.store.add(doc_id=doc_id, raw=raw, text=extracted.text, extraction=extracted.method,
-                         canonical_url=canonical_url, url=url, source_kind=kind, publisher=publisher,
-                         observed_at=observed_at)
+        with ws.lock:
+            if ws.store.get(doc_id) is not None:
+                return doc_id
+            extraction = "plain"
+            if text is None:
+                extracted = extract_text(raw, filename or url)
+                text, extraction = extracted.text, extracted.method
+            masked: dict[str, int] = {}
+            if kind in MINIMISED_KINDS:
+                text, masked = minimise(text)
+            doc = ws.store.add(doc_id=doc_id, raw=raw, text=text, extraction=extraction, canonical_url=canonical_url,
+                               url=url, source_kind=kind, publisher=publisher, observed_at=observed_at,
+                               published_at=published_at)
+            ws.ledger.append("capture", ctx.name, doc_id=doc_id, url=url, raw_sha256=doc.raw_sha256,
+                             observed_at=observed_at.isoformat(), masked=masked)
         return doc_id
 
     @beta_tool
@@ -84,7 +110,7 @@ def build_tools(ws: Workspace) -> list:
         (market numbers, decree numbers, company names) as well as paraphrases.
 
         Args:
-            query: Search text, French or Arabic.
+            query: Search text in French or English.
             purpose: "support" to find evidence for a sub-claim, "challenge" to look for
                 evidence that would refute it or give an innocent explanation, "explore" otherwise.
             subclaim_id: The sub-claim this search is about, if any.
@@ -93,11 +119,12 @@ def build_tools(ws: Workspace) -> list:
             observed_before: ISO date; only documents observed on/before it.
             k: Number of results.
         """
-        ws.searches.append((Purpose(purpose), subclaim_id, query))
-        hits = ws.store.search(
-            query, k=k, kinds=[SourceKind(s) for s in source_kinds] if source_kinds else None,
-            observed_after=_date(observed_after), observed_before=_date(observed_before),
-        )
+        ws.add_search(Purpose(purpose), subclaim_id, query)
+        with ws.lock:  # other agents may be adding documents concurrently
+            hits = ws.store.search(
+                query, k=k, kinds=[SourceKind(s) for s in source_kinds] if source_kinds else None,
+                observed_after=_date(observed_after), observed_before=_date(observed_before),
+            )
         rows = []
         for h in hits:
             d = ws.store.get(h.doc_id)
@@ -109,7 +136,8 @@ def build_tools(ws: Workspace) -> list:
     @metered
     def read_document(doc_id: str, offset: int = 0) -> str:
         """Read a stored document's text and metadata. Long documents are returned in
-        windows; call again with the returned next_offset to continue.
+        windows; call again with the returned next_offset to continue. Personal
+        identifiers in social, news and contributor texts are masked.
 
         Args:
             doc_id: Document id from a search or ingest result.
@@ -185,13 +213,15 @@ def build_tools(ws: Workspace) -> list:
     @beta_tool
     @metered
     def ingest_url(url: str, source_kind: KindName, publisher: str, canonical_url: str | None = None) -> str:
-        """Fetch a live URL now, hash it, and store it. For official pages, also check the
-        archive: a live page can be edited after the fact. Returns the doc_id.
+        """Fetch a publicly accessible URL now, hash it, and store it exactly as served:
+        an official claim stored this way is proof of what was said, even if the page
+        changes later. Never use for pages behind a login or paywall. For official
+        pages, also check the archive. Returns the doc_id.
 
         Args:
             url: URL to fetch.
             source_kind: What kind of source this is.
-            publisher: Organisation or outlet that published it.
+            publisher: Organisation, outlet or account that published it.
             canonical_url: Stable identity of the document if different from url.
         """
         if ws.connectors.live is None:
@@ -224,6 +254,53 @@ def build_tools(ws: Workspace) -> list:
 
     @beta_tool
     @metered
+    def fetch_telegram_channel(channel: str, keywords: list[str] | None = None, before: int | None = None) -> str:
+        """Read recent posts of a PUBLIC Telegram channel (e.g. "@channel" or
+        "https://t.me/channel"), store the matching posts, and return their doc_ids.
+        Private groups and invite links are refused. Forwarded posts show their origin:
+        many channels forwarding one post are one source.
+
+        Args:
+            channel: Public channel name or link.
+            keywords: Keep only posts containing one of these words (case-insensitive).
+            before: Post id to page back from.
+        """
+        if ws.connectors.telegram is None:
+            raise ToolError("Telegram connector not configured.")
+        try:
+            page_url, raw_page, posts = ws.connectors.telegram.fetch(channel, before=before)
+        except PrivateSourceError as exc:
+            raise ToolError(str(exc)) from exc
+        ws.ledger.append("capture", ctx.name, url=page_url, raw_sha256=sha256_bytes(raw_page), posts=len(posts))
+        terms = [k.lower() for k in keywords or []]
+        stored = []
+        for p in posts:
+            if terms and not any(t in p.text.lower() for t in terms):
+                continue
+            header = f"Telegram @{p.channel}, post {p.post_id}" + (f", forwarded from {p.forwarded_from}" if p.forwarded_from else "")
+            text = f"{header}\n{p.text}"
+            raw = json.dumps({"url": p.url, "posted_at": p.posted_at.isoformat() if p.posted_at else None,
+                              "forwarded_from": p.forwarded_from, "text": p.text}, ensure_ascii=False).encode()
+            doc_id = store_document(raw, kind=SourceKind.SOCIAL, url=p.url, canonical_url=p.url,
+                                    publisher=f"Telegram @{p.channel}", observed_at=datetime.now(UTC),
+                                    text=text, published_at=p.posted_at)
+            stored.append({"doc_id": doc_id, "posted_at": p.posted_at.isoformat() if p.posted_at else None,
+                           "forwarded_from": p.forwarded_from, "snippet": ws.store.get(doc_id).text[:200]})
+        oldest = min((p.post_id for p in posts), default=None)
+        return json.dumps({"stored": stored, "posts_on_page": len(posts), "page_back_with_before": oldest},
+                          ensure_ascii=False)
+
+    def _record(item: EvidenceEdge | FinancialFigure) -> str:
+        reason, proposal_id = ws.record(item, ctx.name)
+        if reason:
+            raise ToolError(f"Rejected: {reason}")
+        if proposal_id and ctx.name == "reviewer":
+            ws.review(proposal_id, True, "recorded by reviewer", ctx.name)
+            return "Accepted."
+        return f"Proposed as {proposal_id}; the reviewer decides whether it counts." if proposal_id else "Accepted."
+
+    @beta_tool
+    @metered
     def record_evidence(
         doc_id: str,
         subclaim_id: str,
@@ -242,12 +319,8 @@ def build_tools(ws: Workspace) -> list:
             quote: Exact text copied from the document.
             rationale: One sentence on why this quote bears on the sub-claim.
         """
-        edge = EvidenceEdge(doc_id=doc_id, subclaim_id=subclaim_id, relation=Relation(relation),
-                            quote=quote, rationale=rationale)
-        reason = ws.record_edge(edge)
-        if reason:
-            raise ToolError(f"Rejected: {reason}")
-        return "Accepted."
+        return _record(EvidenceEdge(doc_id=doc_id, subclaim_id=subclaim_id, relation=Relation(relation),
+                                    quote=quote, rationale=rationale))
 
     @beta_tool
     @metered
@@ -267,17 +340,14 @@ def build_tools(ws: Workspace) -> list:
             amount_tnd: Amount in dinars (units, not millions).
             quote: Exact text containing the amount.
         """
-        reason = ws.record_figure(FinancialFigure(doc_id=doc_id, role=AmountRole(role), amount_tnd=amount_tnd, quote=quote))
-        if reason:
-            raise ToolError(f"Rejected: {reason}")
-        return "Accepted."
+        return _record(FinancialFigure(doc_id=doc_id, role=AmountRole(role), amount_tnd=amount_tnd, quote=quote))
 
     @beta_tool
     @metered
     def compare_names(names: list[str], kind: Literal["person", "company"]) -> str:
-        """Check whether names in different scripts or spellings may refer to the same
-        company or person (Arabic/French, word order, Ben/Bin). Person matches are
-        leads for human review, never proof of identity.
+        """Check whether names in different spellings may refer to the same company or
+        person (word order, accents, Ben/Bin, Arabic transliterations). Person matches
+        are leads for human review, never proof of identity.
 
         Args:
             names: Two or more names.
@@ -293,10 +363,9 @@ def build_tools(ws: Workspace) -> list:
 
     @beta_tool
     def assess() -> str:
-        """Score the evidence recorded so far. Returns each sub-claim's status,
-        hypotheses, retcon flags, the financial check, what evidence is still missing,
-        supported sub-claims not yet challenged, and the remaining tool budget. Use it
-        to decide the next search."""
+        """Score the evidence that currently counts. Returns each sub-claim's status,
+        hypotheses, retcon flags, the financial check, missing evidence, supported
+        sub-claims not yet challenged, pending proposals and your remaining budget."""
         v = ws.verdict()
         out = {
             "verdict": v.verdict,
@@ -308,10 +377,115 @@ def build_tools(ws: Workspace) -> list:
             "financial": v.financial.model_dump(exclude={"figures"}) if v.financial else None,
             "missing_evidence": v.missing_evidence,
             "not_yet_challenged": ws.unchallenged(v),
-            "budget_left": ws.budget,
+            "pending_proposals": sum(p.status == ProposalStatus.PENDING for p in ws.proposals),
+            "budget_left": ctx.budget,
         }
-        ws.log("assess", {}, f"{v.verdict} {v.confidence}")
+        ws.log(ctx.name, "assess", {}, f"{v.verdict} {v.confidence}")
         return json.dumps(out, ensure_ascii=False, default=str)
+
+    # --- collector wrap-up -------------------------------------------------
+
+    @beta_tool
+    def report(summary: str) -> str:
+        """Finish your collection round. Summarise what you stored and proposed, what
+        you looked for and did not find, and leads other specialists should follow.
+        Cite documents as [doc_id].
+
+        Args:
+            summary: Your report to the reviewer.
+        """
+        ctx.done, ctx.report = True, summary
+        ws.log(ctx.name, "report", {}, summary[:300])
+        return "Report filed. Reply with a one-line acknowledgement only."
+
+    # --- reviewer ------------------------------------------------------------
+
+    @beta_tool
+    @metered
+    def list_proposals(status: Literal["pending", "accepted", "disputed"] = "pending") -> str:
+        """List evidence proposed by the collectors, with the quoted text and the
+        document's source kind and dates, so you can judge each one.
+
+        Args:
+            status: Which proposals to list.
+        """
+        rows = []
+        for p in ws.proposals:
+            if p.status != status:
+                continue
+            d = ws.store.get(p.item.doc_id)
+            rows.append({"id": p.id, "by": p.by, **p.item.model_dump(mode="json"), "doc_kind": d.source_kind,
+                         "doc_publisher": d.publisher, "doc_observed_at": d.observed_at.date().isoformat(),
+                         "note": p.note})
+        return json.dumps(rows, ensure_ascii=False) if rows else f"No {status} proposals."
+
+    @beta_tool
+    @metered
+    def review_proposal(proposal_id: str, decision: Literal["accept", "dispute"], note: str) -> str:
+        """Accept a proposal (it then counts in the scoring) or dispute it (it does not).
+        Dispute when the quote does not actually bear on the sub-claim, the relation is
+        wrong, the document concerns a different entity or date, or it merely repeats a
+        source already counted. You may change an earlier decision.
+
+        Args:
+            proposal_id: Proposal id (P1, P2, ...).
+            decision: accept or dispute.
+            note: The reason, one or two sentences.
+        """
+        try:
+            p = ws.review(proposal_id, decision == "accept", note, ctx.name)
+        except KeyError as exc:
+            raise ToolError(f"No proposal {proposal_id}.") from exc
+        return f"{p.id} {p.status}."
+
+    @beta_tool
+    @metered
+    def request_collection(
+        specialist: SpecialistName,
+        instructions: str,
+        purpose: Literal["support", "challenge", "explore"],
+        subclaim_id: str | None = None,
+    ) -> str:
+        """Ask a source specialist to collect more in the next round: a gap to fill, a
+        lead to follow, or an innocent explanation to look for (purpose "challenge").
+
+        Args:
+            specialist: official (JORT, TUNEPS, ministries, archives of their pages),
+                funders_audit (World Bank, audit and statistics), web_news (articles),
+                social (public posts of officials and institutions), telegram (public channels).
+            instructions: What to look for and where.
+            purpose: support, challenge or explore.
+            subclaim_id: The sub-claim concerned, if any.
+        """
+        with ws.lock:
+            ws.requests.append(CollectionRequest(specialist, instructions, subclaim_id, Purpose(purpose)))
+        return "Queued for the next collection round."
+
+    @beta_tool
+    def complete_review(summary: str) -> str:
+        """Close the review. Refused while proposals are pending, or while a supported
+        sub-claim has not been challenged (request a challenge collection or search
+        yourself) unless your budget is spent. The summary is for a human editor: the
+        anomalies, the evidence for each, contradictions, and what is still needed.
+        Cite documents as [doc_id]; do not name or accuse individuals.
+
+        Args:
+            summary: Review summary.
+        """
+        pending = [p.id for p in ws.proposals if p.status == ProposalStatus.PENDING]
+        if pending and ctx.budget > 0:
+            raise ToolError(f"Not finished: proposals {pending} are still pending.")
+        unchallenged = ws.unchallenged()
+        queued = {r.subclaim_id for r in ws.requests if r.purpose == Purpose.CHALLENGE}
+        missing = [c for c in unchallenged if c not in queued]
+        if missing and ctx.budget > 0:
+            raise ToolError(f"Not finished: supported sub-claims {missing} have not been challenged. "
+                            "Search with purpose 'challenge' or request a challenge collection.")
+        ctx.done, ctx.report = True, summary
+        ws.log(ctx.name, "complete_review", {}, summary[:300])
+        return "Review closed. Reply with a one-line acknowledgement only."
+
+    # --- single-agent wrap-up ------------------------------------------------
 
     @beta_tool
     def finish(summary: str) -> str:
@@ -324,14 +498,27 @@ def build_tools(ws: Workspace) -> list:
             summary: Plain-language account of what the evidence shows and what is missing.
         """
         pending = ws.unchallenged()
-        if pending and ws.budget > 0:
+        if pending and ctx.budget > 0:
             raise ToolError(
                 f"Not finished: sub-claims {pending} are supported but no challenge search has "
                 "looked for evidence against them (emergency decrees, force majeure, price shocks, corrections)."
             )
         ws.summary = summary
-        ws.log("finish", {}, "done")
+        ws.log(ctx.name, "finish", {}, "done")
         return "Investigation closed. Reply with a one-line acknowledgement only."
 
-    return [search_evidence, read_document, compare_versions, find_archived_captures, ingest_archived_capture,
-            ingest_url, search_funder_records, record_evidence, record_amount, compare_names, assess, finish]
+    everything = {t.name: t for t in [
+        search_evidence, read_document, compare_versions, find_archived_captures, ingest_archived_capture,
+        ingest_url, search_funder_records, fetch_telegram_channel, record_evidence, record_amount, compare_names,
+        assess, report, list_proposals, review_proposal, request_collection, complete_review, finish,
+    ]}
+    if names is None:
+        names = SINGLE_AGENT_TOOLS
+    return [everything[n] for n in names]
+
+
+SINGLE_AGENT_TOOLS = [
+    "search_evidence", "read_document", "compare_versions", "find_archived_captures", "ingest_archived_capture",
+    "ingest_url", "search_funder_records", "fetch_telegram_channel", "record_evidence", "record_amount",
+    "compare_names", "assess", "finish",
+]

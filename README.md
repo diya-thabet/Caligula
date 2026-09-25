@@ -38,10 +38,10 @@ caligula calibrate fixtures
 # Agent (needs ANTHROPIC_API_KEY or an `ant auth login` profile)
 caligula investigate "Le taux de chômage est tombé à 12 % en 2026" --mode factcheck
 caligula investigate "$(jq -r .allegation.text fixtures/steg_synthetic/case.json)" \
-    --mode investigate --case-dir fixtures/steg_synthetic
+    --mode investigate --team --case-dir fixtures/steg_synthetic
 ```
 
-OCR needs `tesseract-ocr` with the `ara` and `fra` models and `poppler-utils`.
+OCR needs `tesseract-ocr` with the `fra` and `eng` models (`ara` optional) and `poppler-utils`.
 
 The STEG case and award records in `fixtures/` are synthetic: every company,
 document and amount is fictional. The STEG case exercises the full pipeline: a
@@ -51,4 +51,5 @@ invented quotes are rejected.
 
 Caligula's output is an evidence assessment, not a finding of guilt. It does not
 name individuals; attribution requires human review and a right of reply.
-See [docs/agent.md](docs/agent.md) for the investigator agent.
+See [docs/agent.md](docs/agent.md) for the agents and [docs/legal.md](docs/legal.md)
+for the legal framework the design follows.

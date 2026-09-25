@@ -12,7 +12,7 @@ def load_awards():
 
 
 def test_screening_ranks_and_explains():
-    results = {s.award_id: s for s in screen(load_awards())}
+    results = {s.subject_id: s for s in screen(load_awards())}
     top = results["2026-017"]
     assert {f.code for f in top.flags} == {
         "non_competitive_procedure", "no_prior_notice", "new_supplier", "price_above_estimate",
@@ -22,7 +22,7 @@ def test_screening_ranks_and_explains():
     assert {"possible_splitting", "single_bidder", "supplier_dominance", "no_prior_notice"} <= split
     late = {f.code: f.detail for f in results["2026-020"].flags}
     assert late == {"short_submission_period": "10 days to submit", "inflating_amendments": "amendments add 38% to the award"}
-    assert next(iter(screen(load_awards()))).award_id == "2026-017"
+    assert next(iter(screen(load_awards()))).subject_id == "2026-017"
 
 
 def test_calibration_harness_on_synthetic_case(blobs):

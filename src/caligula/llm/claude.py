@@ -21,6 +21,7 @@ from caligula.models import (
     Relation,
     SubClaim,
 )
+from caligula.policy import Intake
 
 MODEL = "claude-opus-5"
 # Route policy declines to Anthropic's recommended fallback model instead of failing the call.
@@ -112,6 +113,31 @@ comparable price), proven_spend (documented actual cost).
 - Do not infer intent or name culprits."""
 
 
+CLASSIFY_SYSTEM = """\
+You triage requests sent to Caligula, a Tunisian public-interest fact-checking \
+and investigation project. Describe the request; do not judge it or decide \
+whether to accept it.
+
+- claim_type: the closest category. Use espionage_or_state_security for any \
+accusation of spying, treason, foreign agency or threats to state security, \
+and private_life for claims about someone's private conduct.
+- subject_types: everyone and everything the claim is about.
+- public_nexus: true only if the claim involves public money, a public office \
+or body acting in that capacity, a public contract, or a public statement.
+- documented_act: true only if the claim refers to a specific act that \
+happened or is happening (a contract, payment, decision, statement), false \
+for predictions, suspicions about intentions, or general profiles.
+- relies_on_sensitive_traits: true if suspicion rests on religion, health, \
+ethnicity, sexuality, origin or political opinion.
+- involves_leaked_or_classified_material: true if the request relies on or \
+offers leaked, confidential or classified documents."""
+
+DECOMPOSE_LANGUAGE = """
+
+Write sub-claims, hypotheses and questions in the language of the allegation \
+(French or English)."""
+
+
 class ClaudeInvestigator:
     def __init__(self, client: anthropic.Anthropic | None = None, model: str = MODEL):
         self.client = client or anthropic.Anthropic()
@@ -133,8 +159,11 @@ class ClaudeInvestigator:
             raise RuntimeError(f"no parsable output (stop_reason={response.stop_reason})")
         return response.parsed_output
 
+    def classify(self, text: str) -> Intake:
+        return self._parse(CLASSIFY_SYSTEM, f"<request>\n{text}\n</request>", Intake)
+
     def decompose(self, allegation_id: str, text: str) -> Allegation:
-        d = self._parse(DECOMPOSE_SYSTEM, f"<allegation>\n{text}\n</allegation>", _Decomposition)
+        d = self._parse(DECOMPOSE_SYSTEM + DECOMPOSE_LANGUAGE, f"<allegation>\n{text}\n</allegation>", _Decomposition)
         # Drop references to sub-claims the model did not define.
         known = {c.id for c in d.subclaims}
         return Allegation(

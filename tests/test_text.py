@@ -20,3 +20,10 @@ def test_scanned_pdf_falls_back_to_ocr():
     result = extract_text(buf.getvalue(), "scan.pdf")
     assert result.method == "ocr"
     assert extract_amounts(result.text) == [120_000_000]
+
+
+def test_ocr_digit_repair_only_touches_numbers():
+    from caligula.ingest.text import repair_ocr_digits
+
+    assert repair_ocr_digits("Montant : 120 000 OOO TND le 2O26-O3-01") == "Montant : 120 000 000 TND le 2026-03-01"
+    assert repair_ocr_digits("Office OIL, Oil and Lol") == "Office OIL, Oil and Lol"

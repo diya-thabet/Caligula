@@ -1,20 +1,21 @@
 """Turn raw bytes into text: text layer first, OCR only when needed.
 
-Much of the JORT archive is scanned. OCR runs Tesseract with Arabic + French
-models (`ara+fra`) on pages rendered by poppler. OCR text is marked as such,
-because an OCR misread of "120" as "720" must not become a retcon finding: the
-retcon diff compares OCR text only with human review of the flagged field.
+Much of the JORT archive is scanned. OCR runs Tesseract on pages rendered by
+poppler, with French + English models by default (add `ara` for Arabic). OCR
+text is marked as such, because an OCR misread of "120" as "720" must not
+become a retcon finding: retcon flags on OCR text require human review.
 """
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-OCR_LANGS = "ara+fra"
+OCR_LANGS = "fra+eng"
 # Below this many characters per page, a PDF text layer is treated as missing.
 MIN_CHARS_PER_PAGE = 40
 
@@ -52,12 +53,29 @@ def _from_pdf(raw: bytes) -> ExtractedText:
     return ExtractedText(ocr_pdf(raw), "ocr")
 
 
+_LOOKALIKES = str.maketrans("OoQDIl|", "0000111")
+# A 3-character group of digits and digit lookalikes that continues a number ("120 000 OOO").
+_GROUP_AFTER_NUMBER = re.compile(r"(?<=\d[ .,])[0-9OoQDIl|]{3}(?![\w])")
+# A token that mixes real digits with lookalikes ("1O0", "2O26").
+_MIXED = re.compile(r"\b(?=[0-9OoIl]*\d)(?=[0-9OoIl]*[OoIl])[0-9OoIl]{2,}\b")
+
+
+def repair_ocr_digits(text: str) -> str:
+    """Fix letter/digit confusions inside numbers only. Words are left alone."""
+    previous = None
+    while previous != text:
+        previous = text
+        text = _GROUP_AFTER_NUMBER.sub(lambda m: m.group().translate(_LOOKALIKES), text)
+        text = _MIXED.sub(lambda m: m.group().translate(_LOOKALIKES), text)
+    return text
+
+
 def ocr_available() -> bool:
     return all(shutil.which(t) for t in ("tesseract", "pdftoppm", "pdftotext", "pdfinfo"))
 
 
 def ocr_image(raw: bytes, langs: str = OCR_LANGS) -> str:
-    return _run(["tesseract", "stdin", "stdout", "-l", langs], raw)
+    return repair_ocr_digits(_run(["tesseract", "stdin", "stdout", "-l", langs], raw))
 
 
 def ocr_pdf(raw: bytes, langs: str = OCR_LANGS, dpi: int = 300) -> str:

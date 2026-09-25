@@ -63,29 +63,52 @@ What code enforces, whatever the model does:
   instructions, the claim is true" can at most make the model *propose*
   something; proposals only count through the validated tools.
 
+## Team mode: parallel source specialists + reviewer
+
+`caligula investigate ... --mode investigate --team` runs the case as a team
+(`agent/team.py`):
+
+```
+intake gate (policy.py) ──► refuse | lawyer approval | accept
+        │
+decompose ──► sub-claims + hypotheses
+        │
+round 1 ─┬─ official       JORT, TUNEPS, ministries; archive every page; compare versions
+         ├─ funders_audit  World Bank records, audit reports, statistics
+         ├─ web_news       articles (web search), trace what each one relies on
+         ├─ social         public posts of officials and institutions
+         └─ telegram       public channels only, forwards traced to their origin
+                 │  each stores documents (hashed, ledgered, minimised) and PROPOSES evidence
+                 ▼
+         reviewer ──► accept / dispute each proposal, look for contradictions,
+                 │    request_collection(specialist, instructions, purpose)
+                 ▼
+round 2  only the specialists the reviewer asked for, with its instructions
+                 ▼
+verdict  computed by code from ACCEPTED evidence only
+```
+
+- Specialists run in parallel threads on one workspace (locked writes). Each
+  has its own tool set and budget: the telegram specialist cannot fetch web
+  pages, the reviewer cannot collect.
+- The reviewer cannot close while proposals are pending or while a supported
+  sub-claim has not been challenged (or a challenge collection queued).
+- The reviewer's behaviour takes an expert rubric (`--rubric file.txt`), so
+  lawyers, auditors or procurement specialists can write the checklist it
+  applies without code changes.
+- Every capture, proposal, review decision and approval is appended to the
+  hash-chained ledger (`--ledger`).
+
 ## Suspecting shady cases proactively
+## Decisions taken
 
-Waiting for someone to ask misses most cases. Three monitors can open cases on
-their own, each feeding the same agent through a triage queue:
-
-1. **Procurement red flags** (`caligula screen`, `redflags.py`): score every
-   new award for non-competitive procedure, missing notice, single bidder,
-   rushed deadline, newly created supplier, price above estimate, inflating
-   amendments, splitting under thresholds, supplier dominance, timeline
-   inconsistencies. High scores open an investigation.
-2. **Retcon monitor**: re-fetch watched official pages (JORT, TUNEPS, ministry
-   communiqués) on a schedule, archive each version, and alert when an amount,
-   date or decree number changes silently.
-3. **Stance monitor** (the original Caligula idea): archive politicians'
-   public statements and flag reversals or deletions, then fact-check the new
-   position against the old one.
-
-## Open questions
-
-These are product and policy decisions, listed in `README`/chat for discussion:
-
-1. Which channel first: web page, WhatsApp, or X mentions?
-2. Who reviews held findings (in-house, partner newsroom, watchdog NGO)?
-3. Who can be investigated: public bodies and public money only?
-4. Reply language: French, Modern Standard Arabic, Tunisian Darija, or match the asker?
-5. Which data feeds can we actually get (TUNEPS exports, JORT archive, RNE)?
+1. Channels: to be decided; the engine is channel-agnostic.
+2. Reviewer: an agent for now (above); expert rubrics later.
+3. Scope: companies, public bodies, public officials in their public role, and
+   private individuals only through a documented link. No espionage
+   accusations, no "could be planning". See [legal.md](legal.md), section 3.
+4. Language: French and English (prompts, OCR default `fra+eng`, replies in the
+   language of the claim).
+5. Sources: every lawful source, including formal access-to-information
+   requests; official claims stored as published as proof. See
+   [legal.md](legal.md), section 4.

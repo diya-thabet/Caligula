@@ -31,6 +31,11 @@ def main(argv: list[str] | None = None) -> int:
     inv.add_argument("--no-web", action="store_true", help="disable web search")
     inv.add_argument("--blobs", type=Path, default=Path("blobs"))
     inv.add_argument("--db", help="PostgreSQL DSN; default is an in-memory store")
+    inv.add_argument("--team", action="store_true", help="parallel source specialists + reviewer")
+    inv.add_argument("--rounds", type=int, default=2, help="collection rounds in team mode")
+    inv.add_argument("--rubric", type=Path, help="expert review rubric (text file) for the reviewer")
+    inv.add_argument("--ledger", type=Path, default=Path("ledger.jsonl"), help="evidence ledger file")
+    inv.add_argument("--legal-approved", metavar="NAME", help="lawyer who approved the scope, when intake requires it")
     args = parser.parse_args(argv)
 
     if args.command == "investigate":
@@ -54,26 +59,59 @@ def main(argv: list[str] | None = None) -> int:
 def investigate(args: argparse.Namespace) -> int:
     from caligula.agent.reply import public_reply
     from caligula.agent.runner import InvestigatorAgent
+    from caligula.agent.team import InvestigationTeam
     from caligula.agent.workspace import Connectors, Mode, Workspace
     from caligula.case import load_case
     from caligula.ingest.sources import LiveFetcher, WorldBankClient
+    from caligula.ingest.telegram import TelegramClient
     from caligula.ingest.wayback import WaybackClient
+    from caligula.ledger import Ledger
     from caligula.llm.claude import ClaudeInvestigator
+    from caligula.policy import Decision, decide
+
+    ledger = Ledger(args.ledger)
+    llm = ClaudeInvestigator()
+    intake = llm.classify(args.claim)
+    decision = decide(intake)
+    ledger.append("intake", "caligula", case_id=args.id, decision=decision.decision.value,
+                  reasons=decision.reasons, intake=intake.model_dump(mode="json"))
+    print(f"Intake: {decision.decision} ({intake.claim_type}; subjects {[str(s) for s in intake.subject_types]})")
+    for reason in decision.reasons:
+        print(f"  - {reason}")
+    if decision.decision == Decision.REFUSE:
+        return 2
+    if decision.decision == Decision.LEGAL_REVIEW:
+        if not args.legal_approved:
+            print("Stopped: a lawyer must approve the scope first (re-run with --legal-approved NAME).")
+            return 3
+        ledger.append("legal_approval", args.legal_approved, case_id=args.id, scope=args.claim)
 
     store = open_store(args.db, BlobStore(args.blobs))
     if args.case_dir:
         load_case(args.case_dir, store)
     mode = Mode(args.mode)
-    allegation = ClaudeInvestigator().decompose(args.id, args.claim)
-    connectors = Connectors(wayback=WaybackClient(), live=LiveFetcher(), funders=WorldBankClient())
-    ws = Workspace(store=store, allegation=allegation, mode=mode, connectors=connectors)
-    result = InvestigatorAgent(web_search=not args.no_web).run(ws)
+    allegation = llm.decompose(args.id, args.claim)
+    connectors = Connectors(wayback=WaybackClient(), live=LiveFetcher(), funders=WorldBankClient(),
+                            telegram=TelegramClient())
+    ws = Workspace(store=store, allegation=allegation, mode=mode, connectors=connectors, ledger=ledger)
+    if args.team:
+        rubric = args.rubric.read_text(encoding="utf-8") if args.rubric else ""
+        result = InvestigationTeam(web_search=not args.no_web, rubric=rubric, max_rounds=args.rounds).run(ws)
+        narrative = result.review
+        for name, reports in result.reports.items():
+            print(f"\n[{name}] " + "\n  ".join(reports))
+    else:
+        result = InvestigatorAgent(web_search=not args.no_web).run(ws)
+        narrative = result.summary
 
-    print(summarize(result.verdict))
-    print(f"\nAgent summary ({len(result.trace)} tool calls, stop: {result.stop_reason}):\n{result.summary}")
+    print("\n" + summarize(result.verdict))
+    print(f"\n{'Review' if args.team else 'Agent summary'} ({len(result.trace)} tool calls):\n{narrative}")
     if result.unknown_citations:
         print(f"\nWARNING: summary cites unknown documents: {result.unknown_citations}")
-    print(f"\nPublic reply:\n{public_reply(result, mode, store)}")
+    print(f"\nPublic reply:\n{public_reply(result, mode, store, args.claim)}")
+    broken = ledger.verify()
+    print(f"\nLedger: {len(ledger.entries)} entries, head {ledger.head[:16]}, "
+          f"{'intact' if broken is None else f'BROKEN at entry {broken}'}")
     if hasattr(store, "save_investigation"):
         store.save_investigation(
             args.id, mode.value, allegation.model_dump(mode="json"), result.verdict.model_dump(mode="json"),
@@ -102,7 +140,7 @@ def screen_awards(path: Path) -> int:
 
     awards = {a["id"]: Award.model_validate(a) for a in json.loads(path.read_text(encoding="utf-8"))["awards"]}
     for s in screen(list(awards.values())):
-        a = awards[s.award_id]
+        a = awards[s.subject_id]
         print(f"{s.score:5.2f}  {a.id}  {a.buyer} -> {a.supplier}  {a.amount_tnd:,.0f} TND  {a.object}")
         for f in s.flags:
             print(f"         - {f.code}: {f.detail}")

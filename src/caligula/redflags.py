@@ -76,7 +76,7 @@ class Flag:
 
 @dataclass
 class Screening:
-    award_id: str
+    subject_id: str  # award id or company id
     score: float
     flags: list[Flag] = field(default_factory=list)
 
@@ -175,5 +175,109 @@ def screen(awards: list[Award], thresholds: Thresholds | None = None) -> list[Sc
     for a in awards:
         flags = screen_award(a, t) + [p[a.id] for p in portfolio if a.id in p]
         if flags:
-            results.append(Screening(award_id=a.id, score=round(sum(f.weight for f in flags), 2), flags=flags))
-    return sorted(results, key=lambda s: (-s.score, s.award_id))
+            results.append(Screening(subject_id=a.id, score=round(sum(f.weight for f in flags), 2), flags=flags))
+    return sorted(results, key=lambda s: (-s.score, s.subject_id))
+
+
+# --- Company-level indicators ---------------------------------------------
+#
+# Financial-crime typologies (shell companies, collusion, conflicts of interest)
+# screened from registry and award data. They describe companies and
+# relationships in documents; a match between a person's name and an official's
+# name is always a lead for human review, never an identification.
+
+
+class Company(BaseModel):
+    id: str
+    name: str
+    registered_at: datetime | None = None
+    capital_tnd: float | None = None
+    address: str | None = None
+    managers: list[str] = Field(default_factory=list)
+    owners: list[str] = Field(default_factory=list)  # beneficial owners as declared in the register
+
+
+class Tender(BaseModel):
+    id: str
+    buyer: str
+    bidder_ids: list[str]
+    award_id: str | None = None
+    signatories: list[str] = Field(default_factory=list)  # officials who signed or chaired the award
+
+
+COMPANY_WEIGHTS = {
+    "low_capital_vs_award": 1.0,
+    "shared_address_cluster": 0.75,
+    "bidders_share_people": 1.5,
+    "bidders_share_address": 1.25,
+    "official_name_match": 1.0,
+}
+
+
+@dataclass(frozen=True)
+class CompanyThresholds:
+    capital_ratio: float = 0.01  # capital below 1% of the award value
+    address_cluster: int = 5  # this many companies registered at one address
+    name_review: float = 0.85  # name similarity that warrants human review
+
+
+def _norm_address(a: str) -> str:
+    return " ".join(a.lower().replace(",", " ").split())
+
+
+def screen_companies(
+    companies: list[Company],
+    awards: list[Award],
+    tenders: list[Tender],
+    thresholds: CompanyThresholds | None = None,
+) -> list[Screening]:
+    """Company-level screenings keyed by company id, highest score first."""
+    from caligula.entities import EntityKind, match
+
+    t = thresholds or CompanyThresholds()
+    by_id = {c.id: c for c in companies}
+    by_name = {c.name: c for c in companies}
+    flags: dict[str, list[Flag]] = defaultdict(list)
+
+    def add(company_id: str, code: str, detail: str) -> None:
+        flags[company_id].append(Flag(code, COMPANY_WEIGHTS[code], detail))
+
+    for a in awards:
+        c = by_name.get(a.supplier)
+        if c and c.capital_tnd is not None and c.capital_tnd < a.amount_tnd * t.capital_ratio:
+            add(c.id, "low_capital_vs_award",
+                f"capital {c.capital_tnd:,.0f} TND for an award of {a.amount_tnd:,.0f} TND ({a.id})")
+
+    at_address: dict[str, list[Company]] = defaultdict(list)
+    for c in companies:
+        if c.address:
+            at_address[_norm_address(c.address)].append(c)
+    for group in at_address.values():
+        if len(group) >= t.address_cluster:
+            for c in group:
+                add(c.id, "shared_address_cluster", f"{len(group)} companies registered at the same address")
+
+    for tender in tenders:
+        bidders = [by_id[i] for i in tender.bidder_ids if i in by_id]
+        for i, a in enumerate(bidders):
+            for b in bidders[i + 1 :]:
+                shared = sorted(set(a.managers + a.owners) & set(b.managers + b.owners))
+                if shared:
+                    detail = f"competing bidders on {tender.id} share {len(shared)} manager/owner record(s)"
+                    add(a.id, "bidders_share_people", detail)
+                    add(b.id, "bidders_share_people", detail)
+                if a.address and b.address and _norm_address(a.address) == _norm_address(b.address):
+                    detail = f"competing bidders on {tender.id} share a registered address"
+                    add(a.id, "bidders_share_address", detail)
+                    add(b.id, "bidders_share_address", detail)
+        winner = next((by_name.get(a.supplier) for a in awards if a.id == tender.award_id), None)
+        if winner:
+            for person in winner.managers + winner.owners:
+                for official in tender.signatories:
+                    m = match(person, official, EntityKind.PERSON)
+                    if m.score >= t.name_review:
+                        add(winner.id, "official_name_match",
+                            f"a manager/owner name resembles a signatory of {tender.id} (score {m.score}); "
+                            "requires human verification of identity and relationship")
+    results = [Screening(subject_id=cid, score=round(sum(f.weight for f in fl), 2), flags=fl) for cid, fl in flags.items()]
+    return sorted(results, key=lambda s: (-s.score, s.subject_id))

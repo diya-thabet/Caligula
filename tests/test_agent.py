@@ -24,7 +24,12 @@ class ScriptedRunner:
         self.script, self.record = script, record
 
     def __iter__(self):
-        for name, args in self.script:
+        script = list(self.script)
+        while script:
+            name, args = script.pop(0)
+            if name == "__expand__":  # decide the next calls from the live workspace state
+                script[:0] = args()
+                continue
             try:
                 out, err = self.tools[name].call(args), False
             except Exception as exc:  # ToolError -> is_error result, as in the SDK runner

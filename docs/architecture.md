@@ -140,8 +140,16 @@ sub-claim; it is what the verdict is about, and it is never marked proven.
 - **V3 (first version done, see [agent.md](agent.md)):** investigator agent
   on the Claude tool runner with fact-check and investigation modes, enforced
   challenge phase, budgets, Wayback / live / World Bank connectors, web search
-  for discovery, public-reply policy. Next: retcon and stance monitors,
-  triage queue, Sentinel-2 and night-lights tools.
+  for discovery, public-reply policy.
+- **V3.1 (done):** team mode with parallel source specialists (official,
+  funders/audit, web news, social, public Telegram) proposing evidence and a
+  reviewer agent accepting or disputing it and requesting further collection;
+  legal safeguards in code (intake policy gate, data minimisation,
+  hash-chained ledger, publication gate with right of reply), company-level
+  red flags, French/English focus. See [legal.md](legal.md).
+  Next: retcon and stance monitors, triage queue, access-to-information
+  request tracking, RFC 3161 anchoring of the ledger, Sentinel-2 and
+  night-lights tools.
 - **V4:** relationship graph for reviewers (company, owner, signatory) behind
   human review and right of reply; reviewer UI; report generator; public API
   so others can replicate a verdict.
@@ -150,7 +158,7 @@ sub-claim; it is what the verdict is about, and it is never marked proven.
 
 - The live paths (`--live`, `investigate`) have only run against a scripted
   stand-in for Claude; the first real run needs API credentials.
-- JORT, TUNEPS, RNE, Wayback and World Bank were unreachable from the build
+- JORT, TUNEPS, RNE, Wayback, World Bank and Telegram were unreachable from the build
   environment, so the connectors are tested against mocked responses only.
 - The embedder is a character n-gram baseline; a neural multilingual embedder
   should replace it once chosen.
