@@ -36,6 +36,12 @@ def test_synthetic_steg_case_offline(store):
     assert award.ranking == ["H3", "H4"] and award.untested == ["H5", "H6", "H7"]
     assert {r.subclaim_id for r in award.rows if r.diagnostic} == {"C9"}
     assert award.inconsistency["H3"] == 0.25 and award.inconsistency["H4"] == 1.275
+    # The verdict rests on the benchmark and on the satellite analysis: each is a single origin.
+    critical = [(d.origin, d.changes) for d in v.depends_on if d.changes_verdict]
+    assert critical == [
+        (["benchmark"], ["verdict high_suspicion -> partially_supported", "C6 supported -> unverified"]),
+        (["sentinel"], ["verdict high_suspicion -> partially_supported", "C4 supported -> partially_supported"]),
+    ]
     c9 = {w.doc_id: (w.weight, w.interest) for w in v.weighed if w.subclaim_id == "C9"}
     assert c9 == {"steg_procedure": (0.25, "self_serving"), "audit": (0.85, "none"), "absence:jort": (0.425, "none")}
     [flag] = v.retcon_flags

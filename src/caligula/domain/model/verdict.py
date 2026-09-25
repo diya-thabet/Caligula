@@ -81,6 +81,14 @@ class AchMatrix(BaseModel):
     untested: list[str]  # no evidence yet on anything they predict: neither likely nor unlikely
 
 
+class Dependency(BaseModel):
+    """What the conclusion loses if one independent origin turns out to be wrong."""
+
+    origin: list[str]  # the documents (or searches) sharing that origin
+    changes: list[str]  # e.g. "verdict high_suspicion -> partially_supported", "C5 supported -> unverified"
+    changes_verdict: bool
+
+
 class FinancialAnomaly(BaseModel):
     reference_role: AmountRole
     reference_amount_tnd: float
@@ -103,5 +111,7 @@ class Verdict(BaseModel):
     retcon_flags: list[RetconFlag]
     rejected_evidence: list[RejectedEvidence]
     weighed: list[WeighedEvidence]
+    # Filled by the sensitivity analysis: origins whose removal changes something, most critical first.
+    depends_on: list[Dependency] = []
     missing_evidence: list[str]
     disclaimer: str

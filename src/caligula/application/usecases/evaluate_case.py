@@ -22,8 +22,10 @@ def evaluate_readings(
     figures: list[FinancialFigure],
     params: Params = DEFAULT_PARAMS,
     absences: list[AbsenceFinding] | None = None,
+    sensitivity: bool = True,
 ) -> Verdict:
-    return build_verdict(store.corpus(), allegation, edges, figures, params, absences=absences)
+    return build_verdict(store.corpus(), allegation, edges, figures, params, absences=absences,
+                         sensitivity=sensitivity)
 
 
 def evaluate_with_analyst(

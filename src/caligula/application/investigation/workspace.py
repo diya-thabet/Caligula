@@ -263,15 +263,17 @@ class Workspace:
             self.ledger.append("review", reviewer, id=p.id, status=p.status.value, note=note)
             return p
 
-    def verdict(self) -> Verdict:
+    def verdict(self, sensitivity: bool = True) -> Verdict:
+        """The verdict from accepted evidence. `sensitivity=False` skips the
+        recomputation per origin when only statuses are needed."""
         with self.lock:
             v = build_verdict(self.store.corpus(), self.allegation, list(self.edges), list(self.figures), self.params,
-                              absences=list(self.absences))
+                              absences=list(self.absences), sensitivity=sensitivity)
             v.rejected_evidence = self.rejected + v.rejected_evidence
             return v
 
     def unchallenged(self, verdict: Verdict | None = None) -> list[str]:
         """Supported sub-claims nobody has yet tried to refute."""
-        verdict = verdict or self.verdict()
+        verdict = verdict or self.verdict(sensitivity=False)
         cov = self.coverage()
         return [c.id for c in verdict.by_subclaim if c.status == SUPPORTED and not cov[c.id]["challenged"]]

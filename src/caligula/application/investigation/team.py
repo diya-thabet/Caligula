@@ -195,7 +195,7 @@ class InvestigationTeam:
 
     @staticmethod
     def _summarise(ws, n, active, closed_before, added) -> RoundSummary:
-        v = ws.verdict()
+        v = ws.verdict(sensitivity=False)
         return RoundSummary(
             round=n, specialists=active,
             tasks_closed={t.id: t.outcome.value for t in ws.tasks

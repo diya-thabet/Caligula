@@ -27,6 +27,7 @@ from caligula.domain.services.scoring import (
     score_subclaims,
     weigh_edges,
 )
+from caligula.domain.services.sensitivity import dependencies
 from caligula.domain.services.validation import validate_edges, validate_figures
 
 DISCLAIMER = (
@@ -43,10 +44,42 @@ def build_verdict(
     figures: list[FinancialFigure],
     params: Params = DEFAULT_PARAMS,
     absences: list[AbsenceFinding] | None = None,
+    sensitivity: bool = True,
+) -> Verdict:
+    absences = absences or []
+    verdict = _assess(corpus, allegation, edges, figures, absences, params)
+    if not sensitivity:
+        return verdict
+    clusters = origin_clusters(corpus.documents)
+    origins: dict[str, set[str]] = {}
+    for item in verdict.weighed:
+        origins.setdefault(item.cluster, set()).add(item.doc_id)
+    for fig in verdict.financial.figures if verdict.financial else []:
+        origins.setdefault(clusters[fig.doc_id], set()).add(fig.doc_id)
+
+    def without(cluster: str) -> Verdict:
+        kept = {i: d for i, d in corpus.documents.items() if clusters[i] != cluster}
+        return _assess(
+            Corpus(kept, corpus.intact), allegation,
+            [e for e in edges if e.doc_id in kept], [f for f in figures if f.doc_id in kept],
+            [a for a in absences if (a.doc_id in kept if a.doc_id else f"absence:{a.register_id}" != cluster)],
+            params)
+
+    verdict.depends_on = dependencies(verdict, ((c, sorted(m)) for c, m in origins.items()), without)
+    return verdict
+
+
+def _assess(
+    corpus: Corpus,
+    allegation: Allegation,
+    edges: list[EvidenceEdge],
+    figures: list[FinancialFigure],
+    absences: list[AbsenceFinding],
+    params: Params,
 ) -> Verdict:
     edges, rejected_edges = validate_edges(corpus, allegation, edges)
     figures, rejected_figures = validate_figures(corpus, figures)
-    absences, rejected_absences = validate_absences(corpus, allegation, absences or [])
+    absences, rejected_absences = validate_absences(corpus, allegation, absences)
     rejected: list[RejectedEvidence] = rejected_edges + rejected_figures + rejected_absences
 
     retcons = detect_retcons(corpus.documents.values())

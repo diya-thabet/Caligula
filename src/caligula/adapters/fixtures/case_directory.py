@@ -81,10 +81,12 @@ def run_case(
     store: EvidenceStore,
     analyst: ClaimAnalyst | None = None,
     params: Params = DEFAULT_PARAMS,
+    sensitivity: bool = True,
 ) -> Verdict:
     r = recorded_readings(load_case(case_dir, store))
     if analyst is None:
-        return evaluate_readings(store, r.allegation, r.edges, r.figures, params, absences=r.absences)
+        return evaluate_readings(store, r.allegation, r.edges, r.figures, params, absences=r.absences,
+                                 sensitivity=sensitivity)
     return evaluate_with_analyst(store, analyst, r.allegation.id, r.allegation.text, params)
 
 
@@ -104,7 +106,7 @@ def labelled_cases(root: Path, new_store: Callable[[], EvidenceStore]) -> list[L
         case_dir = labels_path.parent
 
         def evaluate(params: Params, case_dir: Path = case_dir) -> Verdict:
-            return run_case(case_dir, new_store(), params=params)
+            return run_case(case_dir, new_store(), params=params, sensitivity=False)
 
         labels = json.loads(labels_path.read_text(encoding="utf-8"))
         cases.append(LabelledCase(name=case_dir.name, labels=labels, evaluate=evaluate))
