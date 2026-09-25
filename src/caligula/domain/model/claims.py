@@ -56,11 +56,27 @@ class SubClaim(BaseModel):
     expected_records: list[ExpectedRecord] = Field(default_factory=list)
 
 
+class HypothesisKind(StrEnum):
+    ALLEGATION = "allegation"  # the wrongdoing as alleged
+    INNOCENT = "innocent"  # a lawful or benign explanation of the same facts
+    ALTERNATIVE = "alternative"  # another explanation of a fact (e.g. a cause), neither guilty nor innocent
+
+
 class Hypothesis(BaseModel):
     id: str
     statement: str
     # sub-claim id -> the truth value this hypothesis predicts for it.
     predicts: dict[str, bool]
+    kind: HypothesisKind = HypothesisKind.ALTERNATIVE
+    explains: str | None = None  # id of the standard innocent explanation it covers, if any
+
+
+class RuledOut(BaseModel):
+    """A standard innocent explanation set aside for this case, with the reason.
+    Shown in the case file so an editor or a lawyer can disagree."""
+
+    explanation_id: str
+    reason: str
 
 
 class Allegation(BaseModel):
@@ -75,6 +91,7 @@ class Allegation(BaseModel):
     # Sub-claim settled by the deterministic financial anomaly check, if any.
     financial_subclaim: str | None = None
     parties: list[Party] = Field(default_factory=list)
+    ruled_out: list[RuledOut] = Field(default_factory=list)
 
     def expected(self) -> dict[str, tuple[str, ExpectedRecord]]:
         """Every expected record by id ("C5.E1"), with its sub-claim id."""
