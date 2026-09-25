@@ -1,7 +1,7 @@
 from datetime import date
 
-from caligula.extract import extract_amounts, extract_dates, extract_decrees
-from caligula.hashing import normalize_text, text_sha256
+from caligula.domain.services.extraction import extract_amounts, extract_dates, extract_decrees
+from caligula.domain.services.text import normalize_text, text_sha256
 
 
 def test_normalize_folds_arabic_digits_tatweel_and_spacing():

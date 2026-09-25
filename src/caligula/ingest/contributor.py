@@ -17,7 +17,7 @@ from datetime import datetime
 
 from PIL import Image
 
-from caligula.hashing import sha256_bytes
+from caligula.domain.services.text import sha256_bytes
 
 _GPS_IFD = 0x8825
 _IMAGE_FORMATS = {"JPEG", "PNG", "WEBP", "TIFF"}

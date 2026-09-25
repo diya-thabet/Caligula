@@ -20,7 +20,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
-from caligula.hashing import normalize_text
+from caligula.domain.services.text import normalize_text
 
 _TOKEN = re.compile(r"[\w؀-ۿ]+(?:[-/]\w+)*")
 RRF_K = 60

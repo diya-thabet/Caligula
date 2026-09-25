@@ -2,7 +2,8 @@ import json
 from pathlib import Path
 
 from caligula.calibration import evaluate, labelled_cases, sweep
-from caligula.redflags import Award, screen
+from caligula.domain.model.procurement import Award
+from caligula.domain.services.red_flags import screen
 
 AWARDS = Path(__file__).parent.parent / "fixtures" / "awards_synthetic.json"
 

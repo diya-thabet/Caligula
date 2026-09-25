@@ -14,7 +14,7 @@ from pydantic import BaseModel
 from caligula.domain.model.claims import Allegation, Hypothesis, SubClaim
 from caligula.domain.model.documents import Document
 from caligula.domain.model.evidence import AmountRole, EvidenceEdge, FinancialFigure, Relation
-from caligula.policy import Intake
+from caligula.domain.model.intake import Intake
 
 if TYPE_CHECKING:
     from caligula.agent.plan import PlanDraft

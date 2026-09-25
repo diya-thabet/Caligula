@@ -80,12 +80,13 @@ def investigate(args: argparse.Namespace) -> int:
     from caligula.agent.team import InvestigationTeam
     from caligula.agent.workspace import Connectors, Mode, Workspace
     from caligula.case import load_case
+    from caligula.domain.model.intake import Decision
+    from caligula.domain.services.intake_policy import decide
     from caligula.ingest.sources import LiveFetcher, WorldBankClient
     from caligula.ingest.telegram import TelegramClient
     from caligula.ingest.wayback import WaybackClient
     from caligula.ledger import Ledger
     from caligula.llm.claude import ClaudeInvestigator
-    from caligula.policy import Decision, decide
 
     ledger = Ledger(args.ledger)
     llm = ClaudeInvestigator()
@@ -165,7 +166,8 @@ def calibrate(root: Path, blobs: BlobStore) -> int:
 def screen_awards(path: Path) -> int:
     import json
 
-    from caligula.redflags import Award, screen
+    from caligula.domain.model.procurement import Award
+    from caligula.domain.services.red_flags import screen
 
     awards = {a["id"]: Award.model_validate(a) for a in json.loads(path.read_text(encoding="utf-8"))["awards"]}
     for s in screen(list(awards.values())):

@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from datetime import date
 
-from caligula.hashing import normalize_text
+from caligula.domain.services.text import normalize_text
 
 _NUM = r"\d{1,3}(?:[ .,]\d{3})+(?:,\d+)?|\d+(?:[.,]\d+)?"
 _AMOUNT = re.compile(

@@ -2,12 +2,14 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
+from caligula.domain.model.intake import ClaimType, Decision, Intake, SubjectType
+from caligula.domain.model.procurement import Award, Company, Tender
+from caligula.domain.services.intake_policy import decide
+from caligula.domain.services.privacy import minimise
+from caligula.domain.services.red_flags import screen_companies
 from caligula.ingest.telegram import PrivateSourceError, channel_name, parse_preview
 from caligula.ledger import Ledger
-from caligula.policy import ClaimType, Decision, Intake, SubjectType, decide
-from caligula.privacy import minimise
 from caligula.publication import Publication, PublicationError
-from caligula.redflags import Award, Company, Tender, screen_companies
 
 
 def test_minimise_masks_identifiers_but_keeps_amounts_and_dates():

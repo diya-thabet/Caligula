@@ -3,7 +3,7 @@ import io
 import pytest
 from PIL import Image, ImageDraw, ImageFont
 
-from caligula.extract import extract_amounts
+from caligula.domain.services.extraction import extract_amounts
 from caligula.ingest.text import extract_text, ocr_available
 
 

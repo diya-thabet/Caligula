@@ -11,7 +11,7 @@ from collections import Counter
 
 from caligula.domain.model.documents import Document
 from caligula.domain.model.verdict import FieldChange, RetconFlag
-from caligula.extract import extract_fields
+from caligula.domain.services.extraction import extract_fields
 from caligula.store import EvidenceStore
 
 
