@@ -1,8 +1,6 @@
 import pytest
 
-from caligula.domain.model.documents import SourceKind
 from caligula.domain.services.names import EntityKind, EntityResolver, match, similarity
-from conftest import add_doc
 
 
 @pytest.mark.parametrize("a, b", [
@@ -34,14 +32,3 @@ def test_resolver_merges_companies_and_proposes_people():
     r.add("Mohamed Ben Salah", EntityKind.PERSON)
     person, to_review = r.add("M'hamed Bensalah", EntityKind.PERSON)
     assert len(r.entities) == 4 and to_review[0][0].names == ["Mohamed Ben Salah"]
-
-
-def test_memory_search_finds_exact_reference_and_paraphrase(store):
-    add_doc(store, "award", "Avis d'attribution du marché n° 2026-017, procédure de gré à gré", kind=SourceKind.ARCHIVE)
-    add_doc(store, "weather", "Relevé météorologique de juillet")
-    add_doc(store, "news", "Le contrat 2026-017 aurait été conclu sans concurrence")
-    hits = store.search("marché 2026-017 gré à gré")
-    assert hits[0].doc_id == "award"
-    assert "news" in [h.doc_id for h in hits[:2]]
-    assert [h.doc_id for h in store.search("2026-017", kinds=[SourceKind.NEWS])] == ["news"]
-    assert "2026-017" in hits[0].snippet

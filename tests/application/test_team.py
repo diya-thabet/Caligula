@@ -17,7 +17,7 @@ from caligula.application.investigation.plan import (
 from caligula.application.investigation.prompts import SPECIALIST_FOCUS
 from caligula.application.investigation.team import InvestigationTeam, Specialist
 from caligula.application.investigation.workspace import Mode
-from test_agent import ScriptedAgentRunner, workspace
+from support import ScriptedAgentRunner, workspace
 
 WS = {}
 

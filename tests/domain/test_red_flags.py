@@ -1,14 +1,10 @@
 import json
 from pathlib import Path
 
-from caligula.adapters.fixtures.case_directory import labelled_cases
-from caligula.adapters.persistence.memory import MemoryDocumentRepository
-from caligula.application.evidence_store import EvidenceStore
-from caligula.application.usecases.calibration import evaluate, sweep
 from caligula.domain.model.procurement import Award
 from caligula.domain.services.red_flags import screen
 
-AWARDS = Path(__file__).parent.parent / "fixtures" / "awards_synthetic.json"
+AWARDS = Path(__file__).parents[2] / "fixtures" / "awards_synthetic.json"
 
 
 def load_awards():
@@ -27,14 +23,3 @@ def test_screening_ranks_and_explains():
     late = {f.code: f.detail for f in results["2026-020"].flags}
     assert late == {"short_submission_period": "10 days to submit", "inflating_amendments": "amendments add 38% to the award"}
     assert next(iter(screen(load_awards()))).subject_id == "2026-017"
-
-
-def test_calibration_harness_on_synthetic_case(blobs):
-    new_store = lambda: EvidenceStore(MemoryDocumentRepository(), blobs)  # noqa: E731
-    cases = labelled_cases(Path(__file__).parent.parent / "fixtures", new_store)
-    assert [c.name for c in cases] == ["steg_synthetic"]
-    m = evaluate(cases)
-    assert (m.verdict_accuracy, m.subclaim_accuracy) == (1.0, 1.0)
-    assert m.brier < 0.01
-    best_params, best = sweep(cases)[0]
-    assert best.subclaim_accuracy == 1.0

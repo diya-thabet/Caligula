@@ -5,55 +5,15 @@ import json
 
 import httpx
 
-from caligula.adapters.fixtures.case_directory import load_case
-from caligula.adapters.persistence.ledger_jsonl import JsonlLedger
 from caligula.adapters.presenters.public_reply import public_reply
 from caligula.adapters.sources.worldbank import WorldBankClient
 from caligula.application.investigation.single_agent import InvestigatorAgent
-from caligula.application.investigation.workspace import Connectors, Mode, Workspace
-from caligula.application.ports.llm import ToolRefusal
-from caligula.domain.model.claims import Allegation
-from conftest import FIXTURE
-
-
-def play(tools, script, record):
-    """Plays scripted tool calls through the real tool functions, as a model would."""
-    by_name = {t.__name__: t for t in tools}
-    script = list(script)
-    while script:
-        name, args = script.pop(0)
-        if name == "__expand__":  # decide the next calls from the live workspace state
-            script[:0] = args()
-            continue
-        try:
-            out, err = by_name[name](**args), False
-        except ToolRefusal as exc:  # returned to the model as a tool error
-            out, err = str(exc), True
-        record.append((name, err, out))
-
-
-class ScriptedAgentRunner:
-    """Fake `AgentRunner`: `script_for(system, brief)` returns (script, record) for each agent run."""
-
-    def __init__(self, script_for, calls=None):
-        self.script_for = script_for
-        self.calls = [] if calls is None else calls
-
-    def run(self, system, tools, brief, max_iterations, done, web_search=False):
-        self.calls.append({"system": system, "tools": tools, "brief": brief, "web_search": web_search})
-        script, record = self.script_for(system, brief)
-        play(tools, script, record)
-        return "end_turn"
+from caligula.application.investigation.workspace import Connectors, Mode
+from support import ScriptedAgentRunner, workspace
 
 
 def agent_for(script, record, calls):
     return InvestigatorAgent(ScriptedAgentRunner(lambda system, brief: (script, record), calls), web_search=False)
-
-
-def workspace(store, mode=Mode.INVESTIGATE, **kw):
-    case = load_case(FIXTURE, store)
-    return Workspace(store=store, allegation=Allegation.model_validate(case["allegation"]), mode=mode,
-                     ledger=JsonlLedger(), **kw)
 
 
 def test_agent_builds_case_and_must_challenge_before_finishing(store):
