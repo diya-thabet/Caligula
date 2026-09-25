@@ -11,9 +11,12 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+from caligula.domain.model.claims import Allegation
+from caligula.domain.model.documents import SourceKind
+from caligula.domain.model.evidence import EvidenceEdge, FinancialFigure
+from caligula.domain.model.verdict import Verdict
 from caligula.ingest.text import extract_text
 from caligula.llm.claude import ClaudeInvestigator
-from caligula.models import Allegation, EvidenceEdge, FinancialFigure, SourceKind, Verdict
 from caligula.scoring import DEFAULT_PARAMS, Params
 from caligula.store import EvidenceStore
 from caligula.verdict import build_verdict

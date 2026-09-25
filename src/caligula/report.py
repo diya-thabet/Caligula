@@ -10,7 +10,8 @@ from datetime import UTC, datetime
 
 from caligula.agent.plan import TaskStatus
 from caligula.agent.workspace import ProposalStatus, Workspace
-from caligula.models import EvidenceEdge, Verdict
+from caligula.domain.model.evidence import EvidenceEdge
+from caligula.domain.model.verdict import Verdict
 from caligula.provenance import origin_clusters
 
 POC_BANNER = (

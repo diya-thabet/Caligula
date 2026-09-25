@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import re
 
-from caligula.models import SourceKind
+from caligula.domain.model.documents import SourceKind
 
 # Sources whose text is minimised before any agent reads it.
 MINIMISED_KINDS = {SourceKind.SOCIAL, SourceKind.CONTRIBUTOR, SourceKind.NEWS}

@@ -9,14 +9,9 @@ human review with a right of reply.
 
 from __future__ import annotations
 
-from caligula.models import (
-    Allegation,
-    EvidenceEdge,
-    FinancialFigure,
-    RejectedEvidence,
-    SubClaimResult,
-    Verdict,
-)
+from caligula.domain.model.claims import Allegation
+from caligula.domain.model.evidence import EvidenceEdge, FinancialFigure, RejectedEvidence
+from caligula.domain.model.verdict import SubClaimResult, Verdict
 from caligula.provenance import group_by_cluster, origin_clusters
 from caligula.retcon import detect_retcons
 from caligula.scoring import (

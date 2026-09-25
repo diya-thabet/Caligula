@@ -33,8 +33,8 @@ from caligula.agent.prompts import _COLLECTOR, REVIEWER, SPECIALIST_FOCUS
 from caligula.agent.runner import case_brief, unknown_citations
 from caligula.agent.tools import build_tools
 from caligula.agent.workspace import AgentContext, ProposalStatus, TraceEntry, Workspace
+from caligula.domain.model.verdict import Verdict
 from caligula.llm.claude import MODEL, ClaudeInvestigator
-from caligula.models import Verdict
 
 READ = ["search_evidence", "read_document", "compare_versions", "compare_names", "assess"]
 WORK = ["list_tasks", "complete_task", "post_lead", "record_evidence", "record_amount", "report"]

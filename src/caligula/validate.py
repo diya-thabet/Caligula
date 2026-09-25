@@ -11,18 +11,11 @@ from __future__ import annotations
 import math
 from datetime import timedelta
 
+from caligula.domain.model.claims import Allegation, SubClaim
+from caligula.domain.model.documents import Document, SourceKind
+from caligula.domain.model.evidence import EvidenceEdge, FinancialFigure, RejectedEvidence, Relation
 from caligula.extract import extract_amounts
 from caligula.hashing import normalize_text
-from caligula.models import (
-    Allegation,
-    Document,
-    EvidenceEdge,
-    FinancialFigure,
-    RejectedEvidence,
-    Relation,
-    SourceKind,
-    SubClaim,
-)
 from caligula.store import EvidenceStore
 
 # Sources the accused party can silently edit or backdate.

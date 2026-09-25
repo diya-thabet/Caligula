@@ -9,8 +9,9 @@ from __future__ import annotations
 
 from collections import Counter
 
+from caligula.domain.model.documents import Document
+from caligula.domain.model.verdict import FieldChange, RetconFlag
 from caligula.extract import extract_fields
-from caligula.models import Document, FieldChange, RetconFlag
 from caligula.store import EvidenceStore
 
 

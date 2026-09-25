@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 from caligula.case import run_case
-from caligula.models import Verdict
+from caligula.domain.model.verdict import Verdict
 from caligula.store import BlobStore, EvidenceStore, MemoryEvidenceStore
 
 

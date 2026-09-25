@@ -6,8 +6,7 @@ import psycopg
 import pytest
 
 from caligula.case import run_case
-from caligula.models import SourceKind
-
+from caligula.domain.model.documents import SourceKind
 from conftest import FIXTURE, add_doc
 
 DSN = os.environ.get("CALIGULA_TEST_DSN")

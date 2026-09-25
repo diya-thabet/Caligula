@@ -13,7 +13,6 @@ from caligula.agent.reply import public_reply
 from caligula.agent.team import InvestigationTeam, Specialist
 from caligula.agent.workspace import Mode
 from caligula.report import build_report
-
 from test_agent import ScriptedRunner, workspace
 
 WS = {}

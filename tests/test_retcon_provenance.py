@@ -1,7 +1,6 @@
-from caligula.models import SourceKind
+from caligula.domain.model.documents import SourceKind
 from caligula.provenance import group_by_cluster, origin_clusters
 from caligula.retcon import detect_retcons
-
 from conftest import add_doc
 
 URL = "https://jort.example/award"

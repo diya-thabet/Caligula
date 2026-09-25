@@ -10,7 +10,7 @@ from importlib.resources import files
 import psycopg
 from psycopg.rows import dict_row
 
-from caligula.models import Document, SourceKind
+from caligula.domain.model.documents import Document, SourceKind
 from caligula.retrieval import Embedder, SearchHit, rrf, snippet
 from caligula.store import BlobStore, EvidenceStore
 

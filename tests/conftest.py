@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from caligula.models import SourceKind
+from caligula.domain.model.documents import SourceKind
 from caligula.store import BlobStore, MemoryEvidenceStore
 
 FIXTURE = Path(__file__).parent.parent / "fixtures" / "steg_synthetic"

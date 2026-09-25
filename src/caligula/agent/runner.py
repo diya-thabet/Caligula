@@ -23,8 +23,8 @@ from caligula.agent.loop import WEB_SEARCH, run_loop
 from caligula.agent.prompts import SYSTEM
 from caligula.agent.tools import build_tools
 from caligula.agent.workspace import TraceEntry, Workspace
+from caligula.domain.model.verdict import Verdict
 from caligula.llm.claude import MODEL
-from caligula.models import Verdict
 from caligula.store import EvidenceStore
 
 

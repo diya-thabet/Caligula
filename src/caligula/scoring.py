@@ -9,16 +9,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 
-from caligula.models import (
-    Allegation,
-    AmountRole,
-    EvidenceEdge,
+from caligula.domain.model.claims import Allegation
+from caligula.domain.model.documents import SourceKind
+from caligula.domain.model.evidence import AmountRole, EvidenceEdge, FinancialFigure, Relation
+from caligula.domain.model.verdict import (
     FinancialAnomaly,
-    FinancialFigure,
     HypothesisResult,
-    Relation,
     RetconFlag,
-    SourceKind,
     SubClaimResult,
 )
 from caligula.provenance import group_by_cluster

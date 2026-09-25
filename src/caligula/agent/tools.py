@@ -19,12 +19,13 @@ from anthropic.lib.tools import ToolError
 
 from caligula.agent.plan import Outcome
 from caligula.agent.workspace import AgentContext, ProposalStatus, Purpose, Workspace
+from caligula.domain.model.documents import SourceKind
+from caligula.domain.model.evidence import AmountRole, EvidenceEdge, FinancialFigure, Relation
 from caligula.entities import EntityKind, match
 from caligula.hashing import sha256_bytes
 from caligula.ingest.telegram import PrivateSourceError
 from caligula.ingest.text import extract_text
 from caligula.ingest.wayback import Capture
-from caligula.models import AmountRole, EvidenceEdge, FinancialFigure, Relation, SourceKind
 from caligula.privacy import MINIMISED_KINDS, minimise
 from caligula.retcon import diff_fields
 

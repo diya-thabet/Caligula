@@ -14,8 +14,8 @@ from collections.abc import Mapping
 from datetime import datetime
 from pathlib import Path
 
+from caligula.domain.model.documents import Document, SourceKind
 from caligula.hashing import sha256_bytes, text_sha256
-from caligula.models import Document, SourceKind
 from caligula.retrieval import BM25, Embedder, HashingEmbedder, SearchHit, cosine, rrf, snippet
 
 

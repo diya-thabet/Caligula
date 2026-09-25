@@ -1,9 +1,8 @@
 from types import SimpleNamespace
 
 from caligula.case import load_case, run_case
+from caligula.domain.model.claims import SubClaim
 from caligula.llm.claude import ClaudeInvestigator, _Amount, _Decomposition, _Edge, _Hypothesis, _Prediction, _Reading
-from caligula.models import SubClaim
-
 from conftest import FIXTURE
 
 

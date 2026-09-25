@@ -21,7 +21,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from caligula.models import Allegation
+from caligula.domain.model.claims import Allegation
 
 SPECIALIST_NAMES = ("official", "funders_audit", "web_news", "social", "telegram")
 # Default route for each kind of question when the planner leaves a core sub-claim uncovered.

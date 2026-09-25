@@ -11,16 +11,9 @@ from typing import TYPE_CHECKING, Literal, TypeVar
 import anthropic
 from pydantic import BaseModel
 
-from caligula.models import (
-    Allegation,
-    AmountRole,
-    Document,
-    EvidenceEdge,
-    FinancialFigure,
-    Hypothesis,
-    Relation,
-    SubClaim,
-)
+from caligula.domain.model.claims import Allegation, Hypothesis, SubClaim
+from caligula.domain.model.documents import Document
+from caligula.domain.model.evidence import AmountRole, EvidenceEdge, FinancialFigure, Relation
 from caligula.policy import Intake
 
 if TYPE_CHECKING:

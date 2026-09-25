@@ -1,8 +1,7 @@
 import pytest
 
+from caligula.domain.model.documents import SourceKind
 from caligula.entities import EntityKind, EntityResolver, match, similarity
-from caligula.models import SourceKind
-
 from conftest import add_doc
 
 

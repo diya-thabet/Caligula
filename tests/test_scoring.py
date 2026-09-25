@@ -1,15 +1,7 @@
-from caligula.models import (
-    Allegation,
-    AmountRole,
-    EvidenceEdge,
-    FinancialFigure,
-    Hypothesis,
-    Relation,
-    SourceKind,
-    SubClaim,
-)
+from caligula.domain.model.claims import Allegation, Hypothesis, SubClaim
+from caligula.domain.model.documents import SourceKind
+from caligula.domain.model.evidence import AmountRole, EvidenceEdge, FinancialFigure, Relation
 from caligula.verdict import build_verdict
-
 from conftest import add_doc
 
 
