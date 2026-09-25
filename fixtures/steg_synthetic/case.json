@@ -11,7 +11,8 @@
         "statement": "A major power outage occurred on 21/07/2026.",
         "verification_questions": [
           "Is the outage documented by a source independent of STEG?"
-        ]
+        ],
+        "event_date": "2026-07-21T00:00:00Z"
       },
       {
         "id": "C2",
@@ -27,7 +28,8 @@
         "verification_questions": [
           "Is there an archived JORT or TUNEPS award notice with amount and date?",
           "Does a funder record the same project?"
-        ]
+        ],
+        "attested_before": "2026-07-21T00:00:00Z"
       },
       {
         "id": "C4",

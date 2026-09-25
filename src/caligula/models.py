@@ -44,6 +44,7 @@ class Document(BaseModel):
     raw_sha256: str
     text_sha256: str
     text: str
+    extraction: str = "plain"  # plain | pdf_text | ocr
     cites: list[str] = Field(default_factory=list)  # document ids this one cites
     derived_from: list[str] = Field(default_factory=list)  # document ids this one copies/rewrites
 
@@ -52,6 +53,11 @@ class SubClaim(BaseModel):
     id: str
     statement: str
     verification_questions: list[str] = Field(default_factory=list)
+    # A document seen before the event cannot report it happening.
+    event_date: datetime | None = None
+    # For "X existed before date D": a page the accused can edit only counts if
+    # it was observed before D (otherwise it may have been backdated).
+    attested_before: datetime | None = None
 
 
 class Hypothesis(BaseModel):
@@ -115,6 +121,8 @@ class RetconFlag(BaseModel):
     earlier_observed_at: datetime
     later_observed_at: datetime
     changes: list[FieldChange]
+    # OCR can misread digits: a flag on OCR text is a lead until a human checks the scan.
+    needs_review: bool = False
 
 
 class RejectedEvidence(BaseModel):

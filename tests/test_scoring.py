@@ -119,3 +119,25 @@ def test_exonerating_document_blocks_computed_anomaly(store):
     assert v.financial.flagged
     assert v.by_subclaim[2].status == "contradicted"
     assert v.verdict == "contradicted"
+
+
+def test_temporal_checks(store):
+    from datetime import UTC, datetime
+
+    claims = allegation()
+    claims.subclaims[0].event_date = datetime(2026, 1, 10, tzinfo=UTC)
+    claims.subclaims[2].attested_before = datetime(2026, 1, 5, tzinfo=UTC)
+    add_doc(store, "early", "outage reported", day=2)
+    add_doc(store, "live_late", "project existed", kind=SourceKind.OFFICIAL_LIVE, day=8)
+    add_doc(store, "mirror_late", "project existed", kind=SourceKind.FOREIGN_MIRROR, day=8)
+    add_doc(store, "backdated", "outage reported", day=12, published_at=datetime(2026, 1, 20, tzinfo=UTC))
+    edges = [edge("early", "C1", "outage reported"), edge("live_late", "C3", "project existed"),
+             edge("mirror_late", "C3", "project existed"), edge("backdated", "C1", "outage reported")]
+    v = build_verdict(store, claims, edges, [])
+    reasons = [r.reason for r in v.rejected_evidence]
+    assert reasons == [
+        "early was observed before the event it would report",
+        "live_late is an editable source first observed after 2026-01-05",
+        "backdated was observed before its stated publication date",
+    ]
+    assert v.by_subclaim[2].supporting_clusters == [["mirror_late"]]

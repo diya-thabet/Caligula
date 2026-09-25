@@ -7,6 +7,8 @@ labelled set of past cases before any score is published (see docs/architecture.
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field, replace
+
 from caligula.models import (
     Allegation,
     AmountRole,
@@ -34,21 +36,33 @@ SOURCE_WEIGHTS: dict[SourceKind, float] = {
     SourceKind.NEWS: 0.35,
     SourceKind.SOCIAL: 0.15,
 }
-# A version that diverges from an earlier attested copy is itself suspect.
-RETCONNED_PENALTY = 0.3
-
 SUPPORTED, CONTRADICTED, CONTESTED = "supported", "contradicted", "contested"
 PARTIAL, UNVERIFIED = "partially_supported", "unverified"
-STRONG, WEAK = 0.7, 0.3
-
-ANOMALY_RATIO = 0.20
-ANOMALY_MIN_CLUSTERS = 2
 
 
-def doc_weights(store: EvidenceStore, retcons: list[RetconFlag]) -> dict[str, float]:
+@dataclass(frozen=True)
+class Params:
+    """Every tunable number in one place, so `calibration.py` can fit them."""
+
+    weights: dict[SourceKind, float] = field(default_factory=lambda: dict(SOURCE_WEIGHTS))
+    # A version that diverges from an earlier attested copy is itself suspect.
+    retconned_penalty: float = 0.3
+    strong: float = 0.7
+    weak: float = 0.3
+    anomaly_ratio: float = 0.20
+    anomaly_min_clusters: int = 2
+
+    def with_(self, **changes) -> Params:
+        return replace(self, **changes)
+
+
+DEFAULT_PARAMS = Params()
+
+
+def doc_weights(store: EvidenceStore, retcons: list[RetconFlag], params: Params = DEFAULT_PARAMS) -> dict[str, float]:
     retconned = {f.later_doc_id for f in retcons}
     return {
-        doc.id: SOURCE_WEIGHTS[doc.source_kind] * (RETCONNED_PENALTY if doc.id in retconned else 1.0)
+        doc.id: params.weights[doc.source_kind] * (params.retconned_penalty if doc.id in retconned else 1.0)
         for doc in store.documents.values()
     }
 
@@ -65,6 +79,7 @@ def score_subclaims(
     edges: list[EvidenceEdge],
     weights: dict[str, float],
     clusters: dict[str, str],
+    params: Params = DEFAULT_PARAMS,
 ) -> dict[str, SubClaimResult]:
     results = {}
     for claim in allegation.subclaims:
@@ -80,7 +95,7 @@ def score_subclaims(
         results[claim.id] = SubClaimResult(
             id=claim.id,
             statement=claim.statement,
-            status=_status(support, contra),
+            status=_status(support, contra, params),
             support=round(support, 3),
             contradiction=round(contra, 3),
             supporting_clusters=sup_groups,
@@ -92,12 +107,12 @@ def score_subclaims(
     return results
 
 
-def _status(support: float, contra: float) -> str:
-    if support >= STRONG and contra < WEAK:
+def _status(support: float, contra: float, p: Params) -> str:
+    if support >= p.strong and contra < p.weak:
         return SUPPORTED
-    if contra >= STRONG and support < WEAK:
+    if contra >= p.strong and support < p.weak:
         return CONTRADICTED
-    if support >= WEAK and contra >= WEAK:
+    if support >= p.weak and contra >= p.weak:
         return CONTESTED
     if support > 0 or contra > 0:
         return PARTIAL
@@ -130,6 +145,7 @@ def detect_financial_anomaly(
     figures: list[FinancialFigure],
     retcons: list[RetconFlag],
     clusters: dict[str, str],
+    params: Params = DEFAULT_PARAMS,
 ) -> FinancialAnomaly | None:
     """discrepancy = committed amount - what the work can be shown to cost.
 
@@ -164,6 +180,6 @@ def detect_financial_anomaly(
         discrepancy_tnd=discrepancy,
         discrepancy_ratio=round(ratio, 3),
         independent_clusters=independent,
-        flagged=ratio > ANOMALY_RATIO and independent >= ANOMALY_MIN_CLUSTERS,
+        flagged=ratio > params.anomaly_ratio and independent >= params.anomaly_min_clusters,
         figures=used,
     )

@@ -1,14 +1,14 @@
 from types import SimpleNamespace
 
-from caligula.case import load_store, run_case
+from caligula.case import load_case, run_case
 from caligula.llm.claude import ClaudeInvestigator, _Amount, _Decomposition, _Edge, _Hypothesis, _Prediction, _Reading
 from caligula.models import SubClaim
 
 from conftest import FIXTURE
 
 
-def test_synthetic_steg_case_offline(blobs):
-    v = run_case(FIXTURE, blobs)
+def test_synthetic_steg_case_offline(store):
+    v = run_case(FIXTURE, store)
     status = {c.id: c.status for c in v.by_subclaim}
     assert status == {
         "C1": "supported", "C2": "contradicted", "C3": "supported", "C4": "supported",
@@ -18,7 +18,10 @@ def test_synthetic_steg_case_offline(blobs):
     [flag] = v.retcon_flags
     assert flag.changes[0].removed == ["120000000"] and flag.changes[0].added == ["80000000"]
     assert v.financial.reference_amount_tnd == 120e6 and v.financial.flagged
-    assert len(v.rejected_evidence) == 3
+    # 2 bad LLM proposals, 1 amount not in its quote, and the live JORT page
+    # (editable, first seen after the outage) cannot attest the project pre-existed.
+    assert len(v.rejected_evidence) == 4
+    assert any("jort_award_v2 is an editable source" in r.reason for r in v.rejected_evidence)
     assert v.verdict == "high_suspicion"
     # Three news articles citing the archived JORT page add no independent support.
     c3 = next(c for c in v.by_subclaim if c.id == "C3")
@@ -37,8 +40,8 @@ class FakeMessages:
         return SimpleNamespace(stop_reason="end_turn", stop_details=None, parsed_output=self.outputs.pop(0))
 
 
-def test_live_mode_output_goes_through_same_validation(blobs):
-    store, _ = load_store(FIXTURE, blobs)
+def test_live_mode_output_goes_through_same_validation(store):
+    load_case(FIXTURE, store)
     decomposition = _Decomposition(
         subject="s", claim_type="corruption_procurement",
         subclaims=[SubClaim(id="C1", statement="outage happened")],
@@ -58,7 +61,7 @@ def test_live_mode_output_goes_through_same_validation(blobs):
     messages = FakeMessages([decomposition, *readings])
     investigator = ClaudeInvestigator(client=SimpleNamespace(beta=SimpleNamespace(messages=messages)))
 
-    v = run_case(FIXTURE, blobs, investigator)
+    v = run_case(FIXTURE, store, investigator)
 
     assert v.by_subclaim[0].supporting_clusters == [["nightlights"]]
     assert len(v.rejected_evidence) == 2

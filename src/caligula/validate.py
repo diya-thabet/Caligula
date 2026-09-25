@@ -9,11 +9,26 @@ extractable from that quote. Rejections are reported, never silently dropped.
 from __future__ import annotations
 
 import math
+from datetime import timedelta
 
 from caligula.extract import extract_amounts
 from caligula.hashing import normalize_text
-from caligula.models import Allegation, EvidenceEdge, FinancialFigure, RejectedEvidence
+from caligula.models import (
+    Allegation,
+    Document,
+    EvidenceEdge,
+    FinancialFigure,
+    RejectedEvidence,
+    Relation,
+    SourceKind,
+    SubClaim,
+)
 from caligula.store import EvidenceStore
+
+# Sources the accused party can silently edit or backdate.
+MUTABLE_KINDS = {SourceKind.OFFICIAL_LIVE, SourceKind.SOCIAL}
+# Tolerance for time zones and crawl delays when comparing stated and observed dates.
+CLOCK_SLACK = timedelta(days=1)
 
 
 def _check_quote(store: EvidenceStore, doc_id: str, quote: str) -> str | None:
@@ -27,18 +42,31 @@ def _check_quote(store: EvidenceStore, doc_id: str, quote: str) -> str | None:
     return None
 
 
+def _check_time(doc: Document, claim: SubClaim, relation: Relation) -> str | None:
+    if doc.published_at and doc.published_at - doc.observed_at > CLOCK_SLACK:
+        return f"{doc.id} was observed before its stated publication date"
+    if relation != Relation.SUPPORTS:
+        return None
+    if claim.event_date and doc.observed_at + CLOCK_SLACK < claim.event_date:
+        return f"{doc.id} was observed before the event it would report"
+    if claim.attested_before and doc.source_kind in MUTABLE_KINDS and doc.observed_at > claim.attested_before:
+        return f"{doc.id} is an editable source first observed after {claim.attested_before:%Y-%m-%d}"
+    return None
+
+
 def validate_edges(
     store: EvidenceStore, allegation: Allegation, edges: list[EvidenceEdge]
 ) -> tuple[list[EvidenceEdge], list[RejectedEvidence]]:
-    subclaim_ids = {c.id for c in allegation.subclaims}
+    claims = {c.id: c for c in allegation.subclaims}
     kept, rejected = [], []
     for edge in edges:
         label = f"edge {edge.doc_id} {edge.relation} {edge.subclaim_id}"
-        reason = (
-            f"unknown sub-claim {edge.subclaim_id}"
-            if edge.subclaim_id not in subclaim_ids
-            else _check_quote(store, edge.doc_id, edge.quote)
-        )
+        if edge.subclaim_id not in claims:
+            reason = f"unknown sub-claim {edge.subclaim_id}"
+        else:
+            reason = _check_quote(store, edge.doc_id, edge.quote) or _check_time(
+                store.get(edge.doc_id), claims[edge.subclaim_id], edge.relation
+            )
         if reason:
             rejected.append(RejectedEvidence(item=label, reason=reason))
         else:

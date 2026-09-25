@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from caligula.models import SourceKind
-from caligula.store import BlobStore, EvidenceStore
+from caligula.store import BlobStore, MemoryEvidenceStore
 
 FIXTURE = Path(__file__).parent.parent / "fixtures" / "steg_synthetic"
 
@@ -16,7 +16,7 @@ def blobs(tmp_path):
 
 @pytest.fixture
 def store(blobs):
-    return EvidenceStore(blobs)
+    return MemoryEvidenceStore(blobs)
 
 
 def add_doc(store, doc_id, text, *, url=None, kind=SourceKind.NEWS, day=1, **kw):

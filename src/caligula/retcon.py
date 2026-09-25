@@ -42,6 +42,7 @@ def detect_retcons(store: EvidenceStore) -> list[RetconFlag]:
                         earlier_observed_at=earlier.observed_at,
                         later_observed_at=later.observed_at,
                         changes=changes,
+                        needs_review="ocr" in (earlier.extraction, later.extraction),
                     )
                 )
     return flags

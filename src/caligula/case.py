@@ -11,21 +11,28 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+from caligula.ingest.text import extract_text
 from caligula.llm.claude import ClaudeInvestigator
 from caligula.models import Allegation, EvidenceEdge, FinancialFigure, SourceKind, Verdict
-from caligula.store import BlobStore, EvidenceStore
+from caligula.scoring import DEFAULT_PARAMS, Params
+from caligula.store import EvidenceStore
 from caligula.verdict import build_verdict
 
 
-def load_store(case_dir: Path, blobs: BlobStore) -> tuple[EvidenceStore, dict]:
+def load_case(case_dir: Path, store: EvidenceStore) -> dict:
+    """Ingest the case's documents into `store` (skipping ones already there)."""
     case = json.loads((case_dir / "case.json").read_text(encoding="utf-8"))
-    store = EvidenceStore(blobs)
     for meta in case["documents"]:
-        raw = (case_dir / meta["file"]).read_bytes()
+        if store.get(meta["id"]) is not None:
+            continue
+        path = case_dir / meta["file"]
+        raw = path.read_bytes()
+        extracted = extract_text(raw, path.name)
         store.add(
             doc_id=meta["id"],
             raw=raw,
-            text=raw.decode("utf-8"),
+            text=extracted.text,
+            extraction=extracted.method,
             canonical_url=meta["canonical_url"],
             url=meta["url"],
             source_kind=SourceKind(meta["source_kind"]),
@@ -36,11 +43,16 @@ def load_store(case_dir: Path, blobs: BlobStore) -> tuple[EvidenceStore, dict]:
             cites=meta.get("cites", []),
             derived_from=meta.get("derived_from", []),
         )
-    return store, case
+    return case
 
 
-def run_case(case_dir: Path, blobs: BlobStore, investigator: ClaudeInvestigator | None = None) -> Verdict:
-    store, case = load_store(case_dir, blobs)
+def run_case(
+    case_dir: Path,
+    store: EvidenceStore,
+    investigator: ClaudeInvestigator | None = None,
+    params: Params = DEFAULT_PARAMS,
+) -> Verdict:
+    case = load_case(case_dir, store)
     recorded = Allegation.model_validate(case["allegation"])
     if investigator is None:
         allegation = recorded
@@ -53,7 +65,7 @@ def run_case(case_dir: Path, blobs: BlobStore, investigator: ClaudeInvestigator 
             doc_edges, doc_figures = investigator.read(allegation, doc)
             edges += doc_edges
             figures += doc_figures
-    return build_verdict(store, allegation, edges, figures)
+    return build_verdict(store, allegation, edges, figures, params)
 
 
 def _dt(value: str | None) -> datetime | None:

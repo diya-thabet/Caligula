@@ -6,7 +6,7 @@ from pathlib import Path
 
 from caligula.case import run_case
 from caligula.models import Verdict
-from caligula.store import BlobStore
+from caligula.store import BlobStore, EvidenceStore, MemoryEvidenceStore
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -17,16 +17,65 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--live", action="store_true", help="use Claude instead of the recorded readings")
     run.add_argument("--blobs", type=Path, default=Path("blobs"), help="content-addressed blob store")
     run.add_argument("--json", action="store_true", help="print the full verdict as JSON")
+    run.add_argument("--db", help="PostgreSQL DSN; default is an in-memory store")
+    cal = sub.add_parser("calibrate", help="score labelled cases and sweep thresholds")
+    cal.add_argument("root", type=Path)
+    cal.add_argument("--blobs", type=Path, default=Path("blobs"))
+    scr = sub.add_parser("screen", help="rank procurement awards by red flags")
+    scr.add_argument("awards_json", type=Path)
     args = parser.parse_args(argv)
+
+    if args.command == "calibrate":
+        return calibrate(args.root, BlobStore(args.blobs))
+    if args.command == "screen":
+        return screen_awards(args.awards_json)
 
     investigator = None
     if args.live:
         from caligula.llm.claude import ClaudeInvestigator
 
         investigator = ClaudeInvestigator()
-    verdict = run_case(args.case_dir, BlobStore(args.blobs), investigator)
+    verdict = run_case(args.case_dir, open_store(args.db, BlobStore(args.blobs)), investigator)
     print(verdict.model_dump_json(indent=2) if args.json else summarize(verdict))
     return 0
+
+
+def calibrate(root: Path, blobs: BlobStore) -> int:
+    from caligula.calibration import evaluate, labelled_cases, sweep
+
+    cases = labelled_cases(root)
+    if not cases:
+        print(f"no labels.json under {root}")
+        return 1
+    print(f"{len(cases)} labelled case(s); current parameters: {evaluate(cases, blobs)}")
+    for params, metrics in sweep(cases, blobs)[:5]:
+        print(f"  strong={params.strong} weak={params.weak} retcon_penalty={params.retconned_penalty}: {metrics}")
+    return 0
+
+
+def screen_awards(path: Path) -> int:
+    import json
+
+    from caligula.redflags import Award, screen
+
+    awards = {a["id"]: Award.model_validate(a) for a in json.loads(path.read_text(encoding="utf-8"))["awards"]}
+    for s in screen(list(awards.values())):
+        a = awards[s.award_id]
+        print(f"{s.score:5.2f}  {a.id}  {a.buyer} -> {a.supplier}  {a.amount_tnd:,.0f} TND  {a.object}")
+        for f in s.flags:
+            print(f"         - {f.code}: {f.detail}")
+    print("\nRed flags are reasons to look, not evidence of wrongdoing.")
+    return 0
+
+
+def open_store(dsn: str | None, blobs: BlobStore) -> EvidenceStore:
+    if not dsn:
+        return MemoryEvidenceStore(blobs)
+    from caligula.pg import PostgresEvidenceStore
+
+    store = PostgresEvidenceStore(dsn, blobs)
+    store.init_schema()
+    return store
 
 
 def summarize(v: Verdict) -> str:
@@ -43,6 +92,7 @@ def summarize(v: Verdict) -> str:
         lines += ["", "Retcon flags:"]
         for f in v.retcon_flags:
             changes = "; ".join(f"{c.kind}: {c.removed} -> {c.added}" for c in f.changes)
+            changes += " (OCR: verify against the scan)" if f.needs_review else ""
             lines.append(
                 f"  {f.canonical_url}: {f.earlier_doc_id} ({f.earlier_observed_at:%Y-%m-%d}) -> "
                 f"{f.later_doc_id} ({f.later_observed_at:%Y-%m-%d}): {changes}"
@@ -57,7 +107,7 @@ def summarize(v: Verdict) -> str:
             f"{'FLAGGED' if f.flagged else 'not flagged'})",
         ]
     if v.rejected_evidence:
-        lines += ["", "Rejected LLM proposals:"]
+        lines += ["", "Rejected evidence:"]
         lines += [f"  {r.item}: {r.reason}" for r in v.rejected_evidence]
     if v.missing_evidence:
         lines += ["", "Missing evidence:"]

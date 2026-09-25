@@ -21,7 +21,9 @@ from caligula.provenance import group_by_cluster, origin_clusters
 from caligula.retcon import detect_retcons
 from caligula.scoring import (
     CONTRADICTED,
+    DEFAULT_PARAMS,
     SUPPORTED,
+    Params,
     detect_financial_anomaly,
     doc_weights,
     evaluate_hypotheses,
@@ -42,6 +44,7 @@ def build_verdict(
     allegation: Allegation,
     edges: list[EvidenceEdge],
     figures: list[FinancialFigure],
+    params: Params = DEFAULT_PARAMS,
 ) -> Verdict:
     edges, rejected_edges = validate_edges(store, allegation, edges)
     figures, rejected_figures = validate_figures(store, figures)
@@ -49,9 +52,9 @@ def build_verdict(
 
     retcons = detect_retcons(store)
     clusters = origin_clusters(store)
-    subclaims = score_subclaims(allegation, edges, doc_weights(store, retcons), clusters)
+    subclaims = score_subclaims(allegation, edges, doc_weights(store, retcons, params), clusters, params)
 
-    financial = detect_financial_anomaly(figures, retcons, clusters)
+    financial = detect_financial_anomaly(figures, retcons, clusters, params)
     if financial and allegation.financial_subclaim:
         figure_clusters = group_by_cluster({f.doc_id for f in financial.figures}, clusters)
         _apply_financial(subclaims[allegation.financial_subclaim], financial.flagged, figure_clusters)
