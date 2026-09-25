@@ -21,9 +21,9 @@ from caligula.domain.services.scoring import (
     SUPPORTED,
     Params,
     detect_financial_anomaly,
-    doc_weights,
     evaluate_hypotheses,
     score_subclaims,
+    weigh_edges,
 )
 from caligula.domain.services.validation import validate_edges, validate_figures
 
@@ -47,7 +47,8 @@ def build_verdict(
 
     retcons = detect_retcons(corpus.documents.values())
     clusters = origin_clusters(corpus.documents)
-    subclaims = score_subclaims(allegation, edges, doc_weights(corpus.documents.values(), retcons, params), clusters, params)
+    weighed = weigh_edges(allegation, edges, dict(corpus.documents), retcons, clusters, params)
+    subclaims = score_subclaims(allegation, weighed, params)
 
     financial = detect_financial_anomaly(figures, retcons, clusters, params)
     if financial and allegation.financial_subclaim:
@@ -73,6 +74,7 @@ def build_verdict(
         financial=financial,
         retcon_flags=retcons,
         rejected_evidence=rejected,
+        weighed=weighed,
         missing_evidence=missing,
         disclaimer=DISCLAIMER,
     )

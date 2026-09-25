@@ -30,7 +30,7 @@ def add_doc(store, doc_id, text, *, url=None, kind=SourceKind.NEWS, day=1, **kw)
         canonical_url=kw.pop("canonical_url", url),
         url=url,
         source_kind=kind,
-        publisher="test",
+        publisher=kw.pop("publisher", "test"),
         observed_at=datetime(2026, 1, day, tzinfo=UTC),
         **kw,
     )

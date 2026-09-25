@@ -6,7 +6,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from caligula.domain.model.evidence import AmountRole, FinancialFigure, RejectedEvidence
+from caligula.domain.model.evidence import AmountRole, FinancialFigure, RejectedEvidence, Relation
 
 
 class FieldChange(BaseModel):
@@ -24,6 +24,17 @@ class RetconFlag(BaseModel):
     changes: list[FieldChange]
     # OCR can misread digits: a flag on OCR text is a lead until a human checks the scan.
     needs_review: bool = False
+
+
+class WeighedEvidence(BaseModel):
+    """A validated evidence item as the scoring counted it."""
+
+    doc_id: str
+    subclaim_id: str
+    relation: Relation
+    cluster: str  # origin cluster: items sharing one count once
+    weight: float
+    interest: str = "none"  # see domain.services.interest.Interest
 
 
 class SubClaimResult(BaseModel):
@@ -64,5 +75,6 @@ class Verdict(BaseModel):
     financial: FinancialAnomaly | None
     retcon_flags: list[RetconFlag]
     rejected_evidence: list[RejectedEvidence]
+    weighed: list[WeighedEvidence]
     missing_evidence: list[str]
     disclaimer: str

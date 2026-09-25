@@ -7,7 +7,6 @@ labelled set of past cases before any score is published (see docs/architecture.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 from dataclasses import dataclass, field, replace
 
 from caligula.domain.model.claims import Allegation
@@ -18,8 +17,9 @@ from caligula.domain.model.verdict import (
     HypothesisResult,
     RetconFlag,
     SubClaimResult,
+    WeighedEvidence,
 )
-from caligula.domain.services.provenance import group_by_cluster
+from caligula.domain.services.interest import Interest, interest, role_of
 
 # Inverse to how easily the accused party can silently change the source.
 SOURCE_WEIGHTS: dict[SourceKind, float] = {
@@ -48,6 +48,10 @@ class Params:
     weak: float = 0.3
     anomaly_ratio: float = 0.20
     anomaly_min_clusters: int = 2
+    # A party conceding a point against its own interest: at least this weight.
+    against_interest_floor: float = 0.8
+    # A party asserting a point that serves it: its weight is multiplied by this.
+    self_serving_factor: float = 0.5
 
     def with_(self, **changes) -> Params:
         return replace(self, **changes)
@@ -56,14 +60,31 @@ class Params:
 DEFAULT_PARAMS = Params()
 
 
-def doc_weights(
-    documents: Iterable[Document], retcons: list[RetconFlag], params: Params = DEFAULT_PARAMS
-) -> dict[str, float]:
+def weigh_edges(
+    allegation: Allegation,
+    edges: list[EvidenceEdge],
+    documents: dict[str, Document],
+    retcons: list[RetconFlag],
+    clusters: dict[str, str],
+    params: Params = DEFAULT_PARAMS,
+) -> list[WeighedEvidence]:
+    """Weight of each validated edge: source kind, then the publisher's interest
+    in this particular point, then the penalty for a rewritten version."""
     retconned = {f.later_doc_id for f in retcons}
-    return {
-        doc.id: params.weights[doc.source_kind] * (params.retconned_penalty if doc.id in retconned else 1.0)
-        for doc in documents
-    }
+    out = []
+    for e in edges:
+        doc = documents[e.doc_id]
+        stake = interest(role_of(doc.publisher, allegation.parties), allegation.bearing_of(e.subclaim_id), e.relation)
+        w = params.weights[doc.source_kind]
+        if stake == Interest.AGAINST_INTEREST:
+            w = max(w, params.against_interest_floor)
+        elif stake == Interest.SELF_SERVING:
+            w *= params.self_serving_factor
+        if doc.id in retconned:
+            w *= params.retconned_penalty
+        out.append(WeighedEvidence(doc_id=e.doc_id, subclaim_id=e.subclaim_id, relation=e.relation,
+                                   cluster=clusters[e.doc_id], weight=round(w, 4), interest=stake.value))
+    return out
 
 
 def _noisy_or(cluster_weights: list[float]) -> float:
@@ -73,35 +94,35 @@ def _noisy_or(cluster_weights: list[float]) -> float:
     return 1.0 - p_none
 
 
+def _by_cluster(items: list[WeighedEvidence]) -> dict[str, list[WeighedEvidence]]:
+    groups: dict[str, list[WeighedEvidence]] = {}
+    for item in items:
+        groups.setdefault(item.cluster, []).append(item)
+    return groups
+
+
 def score_subclaims(
     allegation: Allegation,
-    edges: list[EvidenceEdge],
-    weights: dict[str, float],
-    clusters: dict[str, str],
+    items: list[WeighedEvidence],
     params: Params = DEFAULT_PARAMS,
 ) -> dict[str, SubClaimResult]:
     results = {}
     for claim in allegation.subclaims:
-        by_rel = {
-            rel: {e.doc_id for e in edges if e.subclaim_id == claim.id and e.relation == rel}
-            for rel in (Relation.SUPPORTS, Relation.CONTRADICTS)
-        }
-        sup_groups = group_by_cluster(by_rel[Relation.SUPPORTS], clusters)
-        con_groups = group_by_cluster(by_rel[Relation.CONTRADICTS], clusters)
-        # One independent origin counts once, at the weight of its best document.
-        support = _noisy_or([max(weights[d] for d in g) for g in sup_groups])
-        contra = _noisy_or([max(weights[d] for d in g) for g in con_groups])
+        mine = [i for i in items if i.subclaim_id == claim.id]
+        sup = _by_cluster([i for i in mine if i.relation == Relation.SUPPORTS])
+        con = _by_cluster([i for i in mine if i.relation == Relation.CONTRADICTS])
+        # One independent origin counts once, at the weight of its best item.
+        support = _noisy_or([max(i.weight for i in g) for g in sup.values()])
+        contra = _noisy_or([max(i.weight for i in g) for g in con.values()])
         results[claim.id] = SubClaimResult(
             id=claim.id,
             statement=claim.statement,
             status=_status(support, contra, params),
             support=round(support, 3),
             contradiction=round(contra, 3),
-            supporting_clusters=sup_groups,
-            contradicting_clusters=con_groups,
-            qualifying_docs=sorted(
-                {e.doc_id for e in edges if e.subclaim_id == claim.id and e.relation == Relation.QUALIFIES}
-            ),
+            supporting_clusters=[sorted({i.doc_id for i in g}) for g in sup.values()],
+            contradicting_clusters=[sorted({i.doc_id for i in g}) for g in con.values()],
+            qualifying_docs=sorted({i.doc_id for i in mine if i.relation == Relation.QUALIFIES}),
         )
     return results
 
