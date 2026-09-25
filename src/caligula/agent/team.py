@@ -204,7 +204,8 @@ class InvestigationTeam:
 
     @staticmethod
     def _should_stop(ws: Workspace, rounds: list[RoundSummary]) -> str | None:
-        upcoming = [t for t in ws.tasks if t.status == TaskStatus.OPEN and t.round == ws.round + 1]
+        # New tasks for the next round, plus unfinished ones carried over from this or earlier rounds.
+        upcoming = [t for t in ws.tasks if t.status == TaskStatus.OPEN and t.round <= ws.round + 1]
         if not upcoming:
             return "no_open_tasks"
         challenges_left = any(t.purpose == "challenge" for t in upcoming)

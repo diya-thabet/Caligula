@@ -211,3 +211,24 @@ def test_specialists_only_get_their_tools(store):
     assert ["fetch_telegram_channel", "report"] in toolsets
     reviewer = next(t for t in toolsets if "review_proposal" in t)
     assert "ingest_url" not in reviewer and "fetch_telegram_channel" not in reviewer
+
+
+def test_unfinished_tasks_carry_over(store):
+    ws = WS["ws"] = workspace(store)
+    first_task = lambda: [("complete_task", {"task_id": ws.open_tasks("official")[0].id, "outcome": "found", "note": "n"})]
+    scripts = {
+        # Round 1: closes only one of its tasks, then runs out of budget.
+        ("official", 1): [("__expand__", first_task)] * 5 + [("report", {"summary": "out of budget"})],
+        ("official", 2): [close_all("official", "not_found"), ("report", {"summary": "finished"})],
+        ("reviewer", 1): [("complete_review", {"summary": "r1"})],
+        ("reviewer", 2): [("complete_review", {"summary": "r2"})],
+    }
+    draft_ = PlanDraft(entities=[], window_start=None, window_end=None, budget_weights=[],
+                       tasks=[PlannedTask(specialist="official", objective=f"task {i}", subclaim_ids=[], purpose="explore",
+                                          queries=[], urls=[]) for i in range(8)])
+    plan = normalize_plan(draft_, ws.allegation, 40, ("official",))  # 8 planned + 4 coverage tasks
+    team = InvestigationTeam(client=fake_client({}, {}, scripts), web_search=False, max_rounds=3,
+                             specialists=[Specialist("official", ["list_tasks", "complete_task", "report"], False)])
+    result = team.run(ws, plan=plan)
+    assert [r.round for r in result.rounds] == [1, 2]
+    assert len(result.rounds[0].tasks_closed) == 5 and not ws.open_tasks()
