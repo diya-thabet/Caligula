@@ -21,7 +21,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from caligula.domain.model.claims import Allegation
+from caligula.domain.model.claims import Allegation, HypothesisKind
 from caligula.domain.model.evidence import Relation
 from caligula.domain.model.registers import REGISTERS
 from caligula.domain.services.interest import helps_accused
@@ -29,6 +29,8 @@ from caligula.domain.services.interest import helps_accused
 SPECIALIST_NAMES = ("official", "funders_audit", "web_news", "social", "telegram")
 # Default route for each kind of question when the planner leaves a core sub-claim uncovered.
 FALLBACK_ROUTES = ("official", "funders_audit", "web_news")
+# Where lawful explanations are published: decrees and official justifications, then the press.
+INNOCENT_ROUTES = ("official", "web_news", "funders_audit")
 MIN_BUDGET, MAX_BUDGET = 5, 40
 
 
@@ -133,6 +135,30 @@ def _expected_record_tasks(allegation: Allegation, tasks: list[Task], specialist
     return added
 
 
+def _innocent_tasks(allegation: Allegation, tasks: list[Task], specialists: tuple[str, ...],
+                    fixes: list[str]) -> list[Task]:
+    """A challenge task for every innocent explanation that no task tests yet."""
+    tested = {cid for t in tasks for cid in t.subclaim_ids}
+    claims = {c.id: c for c in allegation.subclaims}
+    route = next((r for r in INNOCENT_ROUTES if r in specialists), None)
+    added: list[Task] = []
+    for h in allegation.hypotheses:
+        if h.kind != HypothesisKind.INNOCENT or route is None:
+            continue
+        for cid in h.predicts:
+            if cid in tested or cid not in claims:
+                continue
+            look_for = "; ".join(claims[cid].verification_questions) or claims[cid].statement
+            added.append(Task(
+                id=f"T{len(tasks) + len(added) + 1}", specialist=route, subclaim_ids=[cid], purpose="challenge",
+                created_by="code",
+                objective=f"Test the innocent explanation {h.id} ({h.statement}) through {cid}: "
+                          f"{claims[cid].statement} Look for: {look_for}. Record what you find either way."))
+            tested.add(cid)
+            fixes.append(f"added {route} task to test innocent explanation {h.id}")
+    return added
+
+
 def normalize_plan(draft: PlanDraft, allegation: Allegation, total_budget: int,
                    specialists: tuple[str, ...] = SPECIALIST_NAMES) -> Plan:
     known = {c.id for c in allegation.subclaims}
@@ -150,6 +176,7 @@ def normalize_plan(draft: PlanDraft, allegation: Allegation, total_budget: int,
                           subclaim_ids=ids, purpose=t.purpose, queries=t.queries, urls=t.urls,
                           expectation_id=expectation))
     tasks += _expected_record_tasks(allegation, tasks, specialists, fixes)
+    tasks += _innocent_tasks(allegation, tasks, specialists, fixes)
 
     claims = {c.id: c for c in allegation.subclaims}
     for cid in allegation.core_subclaims:

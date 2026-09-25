@@ -73,7 +73,10 @@ def build_report(ws: Workspace, verdict: Verdict, review: str | None = None, poc
         out.append(f"| {c.id}{core} | {_cell(c.statement)} | {c.status} | {c.support:.2f} | "
                    f"{c.contradiction:.2f} | {len(c.supporting_clusters)} / {len(c.contradicting_clusters)} |")
     out += ["", "## Hypotheses", ""]
-    out += [f"- **{h.id}** {h.status}: {h.statement} ({'; '.join(h.reasons)})" for h in verdict.hypotheses]
+    kinds = {h.id: h.kind.value for h in a.hypotheses}
+    out += [f"- **{h.id}** ({kinds.get(h.id, 'alternative')}) {h.status}: {h.statement} ({'; '.join(h.reasons)})"
+            for h in verdict.hypotheses]
+    out += [f"- Innocent explanation *{r.explanation_id}* ruled out: {r.reason}" for r in a.ruled_out]
 
     out += ["", "## Anomalies", ""]
     if not verdict.retcon_flags and not (verdict.financial and verdict.financial.flagged):

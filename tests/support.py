@@ -7,6 +7,7 @@ from caligula.adapters.persistence.ledger_jsonl import JsonlLedger
 from caligula.application.investigation.workspace import Mode, Workspace
 from caligula.application.ports.llm import ToolRefusal
 from caligula.domain.model.claims import Allegation
+from caligula.domain.services.innocent import ensure_innocent_explanations
 from conftest import FIXTURE
 
 
@@ -41,6 +42,7 @@ class ScriptedAgentRunner:
 
 
 def workspace(store, mode=Mode.INVESTIGATE, **kw):
+    """The synthetic case as `decompose_case` would hand it over: completed with the innocent explanations."""
     case = load_case(FIXTURE, store)
-    return Workspace(store=store, allegation=Allegation.model_validate(case["allegation"]), mode=mode,
-                     ledger=JsonlLedger(), **kw)
+    allegation, _ = ensure_innocent_explanations(Allegation.model_validate(case["allegation"]))
+    return Workspace(store=store, allegation=allegation, mode=mode, ledger=JsonlLedger(), **kw)

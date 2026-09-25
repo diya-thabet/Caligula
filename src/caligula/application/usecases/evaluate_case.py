@@ -9,7 +9,7 @@ from caligula.application.evidence_store import EvidenceStore
 from caligula.application.ports.llm import ClaimAnalyst
 from caligula.application.usecases.decompose import decompose_case
 from caligula.domain.model.claims import Allegation
-from caligula.domain.model.evidence import EvidenceEdge, FinancialFigure
+from caligula.domain.model.evidence import AbsenceFinding, EvidenceEdge, FinancialFigure
 from caligula.domain.model.verdict import Verdict
 from caligula.domain.services.scoring import DEFAULT_PARAMS, Params
 from caligula.domain.services.verdict import build_verdict
@@ -21,8 +21,9 @@ def evaluate_readings(
     edges: list[EvidenceEdge],
     figures: list[FinancialFigure],
     params: Params = DEFAULT_PARAMS,
+    absences: list[AbsenceFinding] | None = None,
 ) -> Verdict:
-    return build_verdict(store.corpus(), allegation, edges, figures, params)
+    return build_verdict(store.corpus(), allegation, edges, figures, params, absences=absences)
 
 
 def evaluate_with_analyst(

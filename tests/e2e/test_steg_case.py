@@ -20,8 +20,17 @@ def test_synthetic_steg_case_offline(store):
     assert status == {
         "C1": "supported", "C2": "contradicted", "C3": "supported", "C4": "supported",
         "C5": "supported", "C6": "supported", "C7": "unverified", "C8": "unverified",
+        # The operator's emergency (self-serving) against the audit and the decree missing from the JORT.
+        "C9": "contradicted",
+        # Innocent explanations code added and nobody has tested yet.
+        "C10": "unverified", "C11": "unverified", "C12": "unverified",
     }
-    assert {h.id: h.status for h in v.hypotheses} == {"H1": "consistent", "H2": "falsified", "H3": "consistent"}
+    assert {h.id: h.status for h in v.hypotheses} == {
+        "H1": "consistent", "H2": "falsified", "H3": "open", "H4": "falsified",
+        "H5": "open", "H6": "open", "H7": "open",
+    }
+    c9 = {w.doc_id: (w.weight, w.interest) for w in v.weighed if w.subclaim_id == "C9"}
+    assert c9 == {"steg_procedure": (0.25, "self_serving"), "audit": (0.85, "none"), "absence:jort": (0.425, "none")}
     [flag] = v.retcon_flags
     assert flag.changes[0].removed == ["120000000"] and flag.changes[0].added == ["80000000"]
     assert v.financial.reference_amount_tnd == 120e6 and v.financial.flagged

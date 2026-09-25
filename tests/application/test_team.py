@@ -157,7 +157,11 @@ def test_workflow_rounds_review_challenges_and_report(store):
     # sub-claims, to official and web_news.
     expected = {t.expectation_id: (t.specialist, t.purpose) for t in ws.tasks if t.expectation_id}
     assert expected == {"C3.E1": ("official", "support"), "C4.E1": ("funders_audit", "challenge"),
-                        "C5.E1": ("official", "challenge")}
+                        "C5.E1": ("official", "challenge"), "C9.E1": ("official", "challenge"),
+                        "C11.E1": ("official", "challenge"), "C12.E1": ("funders_audit", "challenge")}
+    # Every innocent explanation is tested: through its expected record, or by a task of its own.
+    innocent = {t.subclaim_ids[0]: t.specialist for t in ws.tasks if t.objective.startswith("Test the innocent")}
+    assert innocent == {"C10": "official"}
     added = result.rounds[0].challenge_tasks_added
     challenged = {sid for t in ws.tasks if t.id in added for sid in t.subclaim_ids}
     assert challenged == {"C3", "C6"} and len(added) == 4
@@ -180,6 +184,8 @@ def test_workflow_rounds_review_challenges_and_report(store):
     assert "PROOF OF CONCEPT" in report and "| blocked | business register unreachable |" in report
     assert "✗ supports · `news_jort_b`" in report and "reviewer: repeats the JORT leak" in report
     assert "chain intact" in report
+    assert "- **H4** (innocent) open: The direct award was a lawful emergency procedure." in report
+    assert "Innocent explanation *sole_supplier* ruled out: The award notice" in report
     assert public_reply(result, Mode.INVESTIGATE, store, "Le marché a été attribué").startswith("Caligula a ouvert")
 
 

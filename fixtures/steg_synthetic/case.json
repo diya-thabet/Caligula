@@ -90,6 +90,22 @@
         "verification_questions": [
           "Is there any documented use of the disbursed funds?"
         ]
+      },
+      {
+        "id": "C9",
+        "statement": "A documented emergency legally justified the direct award (gré à gré).",
+        "verification_questions": [
+          "Was decree n° 2026-0412 published in the JORT before the award?",
+          "Did the audit find the emergency justified?"
+        ],
+        "bearing": "for",
+        "expected_records": [
+          {
+            "description": "Decree n° 2026-0412 declaring the emergency, in the JORT",
+            "register_id": "jort",
+            "absence_means": "contradicts"
+          }
+        ]
       }
     ],
     "hypotheses": [
@@ -99,7 +115,8 @@
         "predicts": {
           "C1": true,
           "C2": false
-        }
+        },
+        "kind": "alternative"
       },
       {
         "id": "H2",
@@ -107,7 +124,8 @@
         "predicts": {
           "C1": true,
           "C2": true
-        }
+        },
+        "kind": "alternative"
       },
       {
         "id": "H3",
@@ -116,8 +134,20 @@
           "C3": true,
           "C4": true,
           "C5": true,
-          "C6": true
-        }
+          "C6": true,
+          "C9": false
+        },
+        "kind": "allegation"
+      },
+      {
+        "id": "H4",
+        "statement": "The direct award was a lawful emergency procedure.",
+        "predicts": {
+          "C5": true,
+          "C9": true
+        },
+        "kind": "innocent",
+        "explains": "emergency"
       }
     ],
     "core_subclaims": [
@@ -131,12 +161,22 @@
       {
         "name": "STEG",
         "role": "accused",
-        "aliases": ["Société tunisienne de l'électricité et du gaz"]
+        "aliases": [
+          "Société tunisienne de l'électricité et du gaz"
+        ]
       },
       {
         "name": "Ministère de l'Énergie (fictif)",
         "role": "accused",
-        "aliases": ["Ministry of Energy (fictional)"]
+        "aliases": [
+          "Ministry of Energy (fictional)"
+        ]
+      }
+    ],
+    "ruled_out": [
+      {
+        "explanation_id": "sole_supplier",
+        "reason": "The award notice and the operator's reply invoke urgency only, never exclusivity (jort_award_v1, steg_procedure)."
       }
     ]
   },
@@ -502,10 +542,24 @@
       },
       {
         "doc_id": "jort_award_v1",
-        "subclaim_id": "C9",
+        "subclaim_id": "C99",
         "relation": "supports",
         "quote": "par procédure de gré à gré",
         "rationale": "Unknown sub-claim."
+      },
+      {
+        "doc_id": "steg_procedure",
+        "subclaim_id": "C9",
+        "relation": "supports",
+        "quote": "attribué conformément à la procédure d'urgence prévue par le décret n° 2026-0412",
+        "rationale": "The operator's own justification."
+      },
+      {
+        "doc_id": "audit",
+        "subclaim_id": "C9",
+        "relation": "contradicts",
+        "quote": "n'est pas justifié par une situation d'urgence documentée",
+        "rationale": "The auditor's finding."
       }
     ],
     "figures": [
@@ -538,6 +592,18 @@
         "role": "proven_spend",
         "amount_tnd": 5000000,
         "quote": "aucun engin de chantier"
+      }
+    ],
+    "absences": [
+      {
+        "subclaim_id": "C9",
+        "relation": "contradicts",
+        "register_id": "jort",
+        "query": "décret n° 2026-0412 (all 2026 issues, decrees section)",
+        "searched_at": "2026-08-10T00:00:00Z",
+        "window_start": "2026-01-01T00:00:00Z",
+        "window_end": "2026-02-15T00:00:00Z",
+        "note": "The decree the operator cites is not in the JORT; no capture of the search was stored."
       }
     ]
   }

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
@@ -20,8 +21,9 @@ from caligula.application.usecases.calibration import LabelledCase
 from caligula.application.usecases.evaluate_case import evaluate_readings, evaluate_with_analyst
 from caligula.domain.model.claims import Allegation
 from caligula.domain.model.documents import SourceKind
-from caligula.domain.model.evidence import EvidenceEdge, FinancialFigure
+from caligula.domain.model.evidence import AbsenceFinding, EvidenceEdge, FinancialFigure
 from caligula.domain.model.verdict import Verdict
+from caligula.domain.services.innocent import ensure_innocent_explanations
 from caligula.domain.services.scoring import DEFAULT_PARAMS, Params
 
 
@@ -52,12 +54,25 @@ def load_case(case_dir: Path, store: EvidenceStore) -> dict:
     return case
 
 
-def recorded_readings(case: dict) -> tuple[Allegation, list[EvidenceEdge], list[FinancialFigure]]:
+@dataclass(frozen=True)
+class Readings:
+    """A recorded case: the allegation (completed with the mandatory innocent
+    explanations) and what a reading pass proposed."""
+
+    allegation: Allegation
+    edges: list[EvidenceEdge]
+    figures: list[FinancialFigure]
+    absences: list[AbsenceFinding]
+
+
+def recorded_readings(case: dict) -> Readings:
     readings = case["recorded_readings"]
-    return (
-        Allegation.model_validate(case["allegation"]),
+    allegation, _ = ensure_innocent_explanations(Allegation.model_validate(case["allegation"]))
+    return Readings(
+        allegation,
         [EvidenceEdge.model_validate(e) for e in readings["edges"]],
         [FinancialFigure.model_validate(f) for f in readings["figures"]],
+        [AbsenceFinding.model_validate(a) for a in readings.get("absences", [])],
     )
 
 
@@ -67,18 +82,17 @@ def run_case(
     analyst: ClaimAnalyst | None = None,
     params: Params = DEFAULT_PARAMS,
 ) -> Verdict:
-    case = load_case(case_dir, store)
-    allegation, edges, figures = recorded_readings(case)
+    r = recorded_readings(load_case(case_dir, store))
     if analyst is None:
-        return evaluate_readings(store, allegation, edges, figures, params)
-    return evaluate_with_analyst(store, analyst, allegation.id, allegation.text, params)
+        return evaluate_readings(store, r.allegation, r.edges, r.figures, params, absences=r.absences)
+    return evaluate_with_analyst(store, analyst, r.allegation.id, r.allegation.text, params)
 
 
 def case_workspace(case_dir: Path, store: EvidenceStore) -> Workspace:
     """The recorded case as a workspace (for reports on offline runs)."""
-    allegation, edges, figures = recorded_readings(load_case(case_dir, store))
-    ws = Workspace(store=store, allegation=allegation, mode=Mode.INVESTIGATE, ledger=JsonlLedger())
-    for item in [*edges, *figures]:
+    r = recorded_readings(load_case(case_dir, store))
+    ws = Workspace(store=store, allegation=r.allegation, mode=Mode.INVESTIGATE, ledger=JsonlLedger())
+    for item in [*r.edges, *r.figures, *r.absences]:
         ws.record(item, "recorded")
     return ws
 
