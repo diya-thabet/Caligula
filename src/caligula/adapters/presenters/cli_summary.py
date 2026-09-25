@@ -18,6 +18,14 @@ def summarize(v: Verdict) -> str:
             lines.append(f"     qualified by: {', '.join(c.qualifying_docs)}")
     lines += ["", "Hypotheses:"]
     lines += [f"  {h.id} {h.status:<11} {h.statement}  [{'; '.join(h.reasons)}]" for h in v.hypotheses]
+    for m in v.ach:
+        if len(m.hypotheses) > 1 and m.ranking:
+            against = ", ".join(f"{h} {m.inconsistency[h]:.2f}" for h in m.ranking)
+            untested = f"; untested: {', '.join(m.untested)}" if m.untested else ""
+            lines.append(f"  Least contradicted: {m.ranking[0]} (evidence against: {against}{untested})")
+    if v.depends_on:
+        lines += ["", "Depends on:"]
+        lines += [f"  without {', '.join(d.origin)}: {'; '.join(d.changes)}" for d in v.depends_on]
     if v.retcon_flags:
         lines += ["", "Retcon flags:"]
         for f in v.retcon_flags:

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from caligula.adapters.presenters.analysis import assessment, competing_hypotheses, likelihood_text
 from caligula.application.investigation.plan import TaskStatus
 from caligula.application.investigation.workspace import ProposalStatus, Workspace
 from caligula.domain.model.evidence import AbsenceFinding, EvidenceEdge
@@ -46,10 +47,6 @@ def _absence_line(a: AbsenceFinding) -> str:
             f"({capture})")
 
 
-def _likelihood(v: Verdict) -> str:
-    return f"{v.likelihood_term} ({v.likelihood:.0%})" if v.likelihood is not None else v.likelihood_term
-
-
 def _cell(text: str) -> str:
     return text.replace("|", "\\|").replace("\n", " ")
 
@@ -62,12 +59,13 @@ def build_report(ws: Workspace, verdict: Verdict, review: str | None = None, poc
         out += [POC_BANNER, ""]
     out += [
         f"Generated {datetime.now(UTC):%Y-%m-%d %H:%M} UTC · verdict **{verdict.verdict}** · "
-        f"core facts: {_likelihood(verdict)} · confidence: {verdict.confidence}"
+        f"core facts: {likelihood_text(verdict)} · confidence: {verdict.confidence}"
         + (f" · stopped: {stop_reason}" if stop_reason else ""),
         "", "## Claim", "", a.text, "",
     ]
     if a.parties:
         out += ["Parties: " + "; ".join(f"{p.name} ({p.role.value})" for p in a.parties), ""]
+    out += assessment(verdict, a)
     out += [
         "## Sub-claims", "",
         "| | Statement | Status | Support | Against | Independent sources (for / against) |",
@@ -77,11 +75,7 @@ def build_report(ws: Workspace, verdict: Verdict, review: str | None = None, poc
         core = " (core)" if c.id in a.core_subclaims else ""
         out.append(f"| {c.id}{core} | {_cell(c.statement)} | {c.status} | {c.support:.2f} | "
                    f"{c.contradiction:.2f} | {len(c.supporting_clusters)} / {len(c.contradicting_clusters)} |")
-    out += ["", "## Hypotheses", ""]
-    kinds = {h.id: h.kind.value for h in a.hypotheses}
-    out += [f"- **{h.id}** ({kinds.get(h.id, 'alternative')}) {h.status}: {h.statement} ({'; '.join(h.reasons)})"
-            for h in verdict.hypotheses]
-    out += [f"- Innocent explanation *{r.explanation_id}* ruled out: {r.reason}" for r in a.ruled_out]
+    out += ["", *competing_hypotheses(verdict, a)]
 
     out += ["", "## Anomalies", ""]
     if not verdict.retcon_flags and not (verdict.financial and verdict.financial.flagged):

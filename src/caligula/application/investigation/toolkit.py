@@ -395,9 +395,12 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         return json.dumps(pairs, ensure_ascii=False) if pairs else "No likely matches."
 
     def assess() -> str:
-        """Score the evidence that currently counts. Returns each sub-claim's status,
-        hypotheses, retcon flags, the financial check, missing evidence, supported
-        sub-claims not yet challenged, pending proposals and your remaining budget."""
+        """Score the evidence that currently counts. Returns the verdict, how likely the
+        core facts are and how much confidence the basis deserves (with what caps it),
+        each sub-claim's status, the competing hypotheses ranked by evidence against
+        them (untested ones apart), the origins the conclusion depends on, retcon flags,
+        the financial check, missing evidence, supported sub-claims not yet challenged,
+        pending proposals and your remaining budget."""
         v = ws.verdict()
         out = {
             "verdict": v.verdict,
@@ -408,6 +411,10 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
             "subclaims": {c.id: {"status": c.status, "support": c.support, "contradiction": c.contradiction,
                                  "independent_supporting_sources": len(c.supporting_clusters)} for c in v.by_subclaim},
             "hypotheses": {h.id: h.status for h in v.hypotheses},
+            "competing_hypotheses": [
+                {"least_contradicted_first": m.ranking, "evidence_against": m.inconsistency, "untested": m.untested,
+                 "diagnostic_items": sum(r.diagnostic for r in m.rows)} for m in v.ach if len(m.hypotheses) > 1],
+            "conclusion_depends_on": [{"without": d.origin, "changes": d.changes} for d in v.depends_on],
             "retcon_flags": [f"{f.canonical_url}: {[c.model_dump() for c in f.changes]}" for f in v.retcon_flags],
             "financial": v.financial.model_dump(exclude={"figures"}) if v.financial else None,
             "missing_evidence": v.missing_evidence,

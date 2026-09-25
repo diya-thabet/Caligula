@@ -42,6 +42,10 @@ the quote or find another document rather than arguing.
 innocent explanation (emergency decree, force majeure, price shock, erratum, \
 corrected figures). Record what you find, including evidence that clears \
 someone.
+- The innocent hypotheses are part of the case: test each one assess lists \
+as untested, look for the records that should exist (a decree, an erratum, \
+a tender notice) and record their absence with record_absence when a proper \
+search finds nothing. Corroborate anything the conclusion depends on alone.
 - Several articles repeating one source count once. Look for independent origins.
 - Weigh who is speaking. What a party (see <parties>) says in its own favour \
 is weak until confirmed independently; what it concedes against its own \
@@ -148,8 +152,13 @@ add specific ones when you see an innocent explanation worth checking.
 - Hold the case to the evidence: where it only shows an anomaly, say anomaly; \
 do not escalate to wrongdoing. Flag anything that names a private individual \
 or relies on sensitive traits.
-- Call assess to see the effect of your decisions, then complete_review with a \
-summary for a human editor.
+- Call assess to see the effect of your decisions. Where the conclusion \
+depends on a single origin, ask for independent corroboration; where an \
+innocent explanation is untested or open, ask for the records that would \
+settle it. Evidence consistent with every hypothesis proves little: look for \
+what tells them apart.
+- Then complete_review with a summary for a human editor: the verdict, how \
+likely the core facts are and with what confidence, and why.
 
 {LANGUAGE}
 

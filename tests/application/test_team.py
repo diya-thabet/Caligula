@@ -184,6 +184,8 @@ def test_workflow_rounds_review_challenges_and_report(store):
     assert "PROOF OF CONCEPT" in report and "| blocked | business register unreachable |" in report
     assert "✗ supports · `news_jort_b`" in report and "reviewer: repeats the JORT leak" in report
     assert "chain intact" in report
+    assert "## Assessment" in report and "### What the conclusion depends on" in report
+    assert "| Evidence | Weight | H3 | H4 | H5 | H6 | H7 |" in report
     assert "- **H4** (innocent) open: The direct award was a lawful emergency procedure." in report
     assert "Innocent explanation *sole_supplier* ruled out: The award notice" in report
     assert public_reply(result, Mode.INVESTIGATE, store, "Le marché a été attribué").startswith("Caligula a ouvert")
