@@ -8,6 +8,9 @@ checked **as it is collected**, corroborated independently, and replayable.
 Then it closes the speed gap by reusing facts it has already verified.
 
 Task ids (`A1`, `B3`...) are referenced in commits and pull requests.
+Research-backed proposals (`R1`…`R36`) on reasoning quality, connecting the
+dots and concluding are in [research.md](research.md); the ones chosen get
+scheduled here.
 Priority: **P0** now, **P1** next, **P2** later.
 
 ## Phases
