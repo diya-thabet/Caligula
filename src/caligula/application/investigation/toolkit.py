@@ -117,6 +117,7 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         observed_after: str | None = None,
         observed_before: str | None = None,
         k: int = 8,
+        task_id: str | None = None,
     ) -> str:
         """Search stored documents (hybrid keyword + semantic). Use exact identifiers
         (market numbers, decree numbers, company names) as well as paraphrases.
@@ -130,8 +131,9 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
             observed_after: ISO date; only documents we or an archive observed on/after it.
             observed_before: ISO date; only documents observed on/before it.
             k: Number of results.
+            task_id: The task this search serves, if any (counts towards trying hard enough).
         """
-        ws.add_search(Purpose(purpose), subclaim_id, query)
+        ws.add_search(Purpose(purpose), subclaim_id, query, ctx.name, task_id)
         with ws.lock:  # other agents may be adding documents concurrently
             hits = ws.store.search(
                 query, k=k, kinds=[SourceKind(s) for s in source_kinds] if source_kinds else None,
@@ -151,6 +153,7 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         subclaim_id: str | None = None,
         language: Literal["fr", "en", "ar"] | None = None,
         k: int = 8,
+        task_id: str | None = None,
     ) -> str:
         """Search the web. Results are leads, not evidence: store a page with ingest_url
         (and check the archive for official pages) before you rely on it. Search in
@@ -164,10 +167,11 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
             subclaim_id: The sub-claim this search is about, if any.
             language: Preferred result language.
             k: Number of results.
+            task_id: The task this search serves, if any (counts towards trying hard enough).
         """
         if ws.connectors.search is None:
             raise ToolRefusal("Web search not configured.")
-        ws.add_search(Purpose(purpose), subclaim_id, query)
+        ws.add_search(Purpose(purpose), subclaim_id, query, ctx.name, task_id, "search_web")
         hits = ws.connectors.search.search(query, k=k, language=language)
         return json.dumps([{"url": h.url, "title": h.title, "snippet": h.snippet} for h in hits],
                           ensure_ascii=False) if hits else "No results."
@@ -213,7 +217,8 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         return json.dumps(out, ensure_ascii=False)
 
     @metered
-    def find_archived_captures(url: str, since: str | None = None, until: str | None = None) -> str:
+    def find_archived_captures(url: str, since: str | None = None, until: str | None = None,
+                               task_id: str | None = None) -> str:
         """List Wayback Machine captures of a URL (one per distinct content). Use this
         before trusting any official page: the archive shows what it said earlier.
 
@@ -221,9 +226,11 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
             url: Page or document URL.
             since: Optional year or yyyymmdd lower bound.
             until: Optional year or yyyymmdd upper bound.
+            task_id: The task this search serves, if any (counts towards trying hard enough).
         """
         if ws.connectors.wayback is None:
             raise ToolRefusal("Archive connector not configured.")
+        ws.add_search(Purpose.EXPLORE, None, url, ctx.name, task_id, "find_archived_captures")
         caps = ws.connectors.wayback.captures(url, since=since, until=until)
         return json.dumps([{"timestamp": c.timestamp, "original": c.original, "mimetype": c.mimetype} for c in caps]) \
             if caps else "No captures."
@@ -267,7 +274,7 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         return f"Stored as {doc_id}."
 
     @metered
-    def search_funder_records(query: str, country_code: str = "TN") -> str:
+    def search_funder_records(query: str, country_code: str = "TN", task_id: str | None = None) -> str:
         """Search World Bank project records (commitments, dates, implementing agency).
         Results are stored as foreign-mirror documents: an independent record of money
         that the borrowing ministry cannot edit.
@@ -275,9 +282,11 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         Args:
             query: Project keywords, e.g. "electricity generation capacity".
             country_code: ISO-2 country code.
+            task_id: The task this search serves, if any (counts towards trying hard enough).
         """
         if ws.connectors.funders is None:
             raise ToolRefusal("Funder connector not configured.")
+        ws.add_search(Purpose.EXPLORE, None, query, ctx.name, task_id, "search_funder_records")
         request_url, raw, projects = ws.connectors.funders.search(query, country_code)
         doc_id = store_document(raw, kind=SourceKind.FOREIGN_MIRROR, url=request_url, canonical_url=request_url,
                                 publisher="World Bank", observed_at=datetime.now(UTC), filename="projects.json")
@@ -286,7 +295,8 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         return json.dumps({"doc_id": doc_id, "projects": brief}, ensure_ascii=False)
 
     @metered
-    def fetch_telegram_channel(channel: str, keywords: list[str] | None = None, before: int | None = None) -> str:
+    def fetch_telegram_channel(channel: str, keywords: list[str] | None = None, before: int | None = None,
+                               task_id: str | None = None) -> str:
         """Read recent posts of a PUBLIC Telegram channel (e.g. "@channel" or
         "https://t.me/channel"), store the matching posts, and return their doc_ids.
         Private groups and invite links are refused. Forwarded posts show their origin:
@@ -296,9 +306,12 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
             channel: Public channel name or link.
             keywords: Keep only posts containing one of these words (case-insensitive).
             before: Post id to page back from.
+            task_id: The task this search serves, if any (counts towards trying hard enough).
         """
         if ws.connectors.telegram is None:
             raise ToolRefusal("Telegram connector not configured.")
+        ws.add_search(Purpose.EXPLORE, None, f"{channel} {' '.join(keywords or [])} {before or ''}".strip(),
+                      ctx.name, task_id, "fetch_telegram_channel")
         try:
             page_url, raw_page, posts = ws.connectors.telegram.fetch(channel, before=before)
         except PrivateSourceError as exc:

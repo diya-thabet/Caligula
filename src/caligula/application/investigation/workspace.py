@@ -71,6 +71,19 @@ class Proposal:
     note: str = ""
 
 
+@dataclass(frozen=True)
+class Search:
+    """One attempt to find something: a query, an archive lookup, a register or channel read."""
+
+    purpose: Purpose
+    subclaim_id: str | None
+    query: str
+    agent: str = ""
+    round: int = 0
+    task_id: str | None = None
+    tool: str = "search_evidence"
+
+
 @dataclass
 class Lead:
     """A tip one agent leaves for another during a round (the shared board)."""
@@ -131,7 +144,7 @@ class Workspace:
     round: int = 1
     rejected: list[RejectedEvidence] = field(default_factory=list)
     trace: list[TraceEntry] = field(default_factory=list)
-    searches: list[tuple[Purpose, str | None, str]] = field(default_factory=list)
+    searches: list[Search] = field(default_factory=list)
     budget: int = 0  # default budget for a single-agent run
     summary: str | None = None
 
@@ -197,7 +210,7 @@ class Workspace:
     def coverage(self) -> dict[str, dict]:
         """Per sub-claim: which specialists were tasked, task outcomes, and whether it was challenged."""
         with self.lock:
-            challenged = {sid for purpose, sid, _ in self.searches if purpose == Purpose.CHALLENGE}
+            challenged = {s.subclaim_id for s in self.searches if s.purpose == Purpose.CHALLENGE}
             out = {}
             for c in self.allegation.subclaims:
                 tasks = [t for t in self.tasks if c.id in t.subclaim_ids]
@@ -221,9 +234,23 @@ class Workspace:
                               doc_id=task.doc_ids[0] if task.doc_ids else None,
                               note=f"{task.id}: {task.note}")
 
-    def add_search(self, purpose: Purpose, subclaim_id: str | None, query: str) -> None:
+    def add_search(self, purpose: Purpose, subclaim_id: str | None, query: str, agent: str = "",
+                   task_id: str | None = None, tool: str = "search_evidence") -> None:
         with self.lock:
-            self.searches.append((purpose, subclaim_id, query))
+            self.searches.append(Search(purpose, subclaim_id, query, agent, self.round, task_id, tool))
+
+    def attempts(self, task: Task, agent: str) -> list[Search]:
+        """Distinct searches an agent made for a task: tagged with its id, or, untagged, on
+        one of its sub-claims during the current round."""
+        with self.lock:
+            seen, out = set(), []
+            for s in self.searches:
+                mine = s.agent == agent and (s.task_id == task.id or (
+                    s.task_id is None and s.round == self.round and s.subclaim_id in task.subclaim_ids))
+                if mine and (s.tool, s.query.casefold()) not in seen:
+                    seen.add((s.tool, s.query.casefold()))
+                    out.append(s)
+            return out
 
     def record(self, item: Item, by: str) -> tuple[str | None, str | None]:
         """Validate and record. Returns (rejection reason, proposal id)."""
