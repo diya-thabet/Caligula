@@ -154,6 +154,13 @@ add specific ones when you see an innocent explanation worth checking.
 - Hold the case to the evidence: where it only shows an anomaly, say anomaly; \
 do not escalate to wrongdoing. Flag anything that names a private individual \
 or relies on sensitive traits.
+- When the evidence makes you suspect something the case does not test yet \
+(a rewritten figure hides an overpayment, a subcontractor is linked to the \
+winner), record it with raise_suspicion: say what would confirm it and what \
+would refute it, and code sends specialists to look both ways in the next \
+round. Its status then follows the evidence. The investigation continues \
+while suspicions are open and rounds bring something new; it stops when the \
+case is settled or nothing new comes in.
 - Call assess to see the effect of your decisions. Where the conclusion \
 depends on a single origin, ask for independent corroboration; where an \
 innocent explanation is untested or open, ask for the records that would \

@@ -109,3 +109,24 @@ def assert_invariants(ws, verdict=None):
         if isinstance(p.item, EvidenceEdge):
             assert p.item.quote in report
     return report
+
+
+def scripted_team(scripts, record=None, briefs=None):
+    """A team runner whose agents play `scripts[(agent, round)]`, the round read from their brief
+    (a specialist first called in round 2 plays its round-2 script)."""
+    import re
+
+    from caligula.application.investigation.prompts import SPECIALIST_FOCUS
+
+    record = {} if record is None else record
+    briefs = {} if briefs is None else briefs
+
+    def script_for(system, brief):
+        agent = "reviewer" if system.startswith("You are the reviewer") else next(
+            name for name, focus in SPECIALIST_FOCUS.items() if focus in system)
+        n = int(re.search(r'<your_tasks round="(\d+)">|Round (\d+) of at most', brief).group(1)
+                or re.search(r"Round (\d+) of at most", brief).group(1))
+        briefs[(agent, n)] = brief
+        return scripts.get((agent, n), []), record.setdefault((agent, n), [])
+
+    return ScriptedAgentRunner(script_for)

@@ -200,7 +200,7 @@ def test_workflow_rounds_review_challenges_and_report(store):
     assert_invariants(ws, result.verdict)
 
 
-def test_no_progress_stops_early(store):
+def test_exhausted_stops_early(store):
     ws = WS["ws"] = workspace(store)
     # Every round, the reviewer asks for more and nobody finds anything.
     scripts = {("official", n): [close_all("official", "not_found"), ("report", {"summary": "nothing"})]
@@ -215,7 +215,7 @@ def test_no_progress_stops_early(store):
     team = InvestigationTeam(runner=fake_runner({}, {}, scripts), web_search=False, max_rounds=4,
                              specialists=[Specialist("official", ["list_tasks", "complete_task", "search_evidence", "report"], False)])
     result = team.run(ws, plan=plan)
-    assert result.stop_reason == "no_progress" and len(result.rounds) == 2
+    assert result.stop_reason == "exhausted" and len(result.rounds) == 2
     assert_invariants(ws, result.verdict)
 
 

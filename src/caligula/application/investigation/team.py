@@ -28,6 +28,7 @@ from dataclasses import dataclass, field
 from caligula.application.investigation.brief import case_brief, unknown_citations
 from caligula.application.investigation.plan import MIN_BUDGET, Plan, TaskStatus, normalize_plan
 from caligula.application.investigation.prompts import _COLLECTOR, REVIEWER, SPECIALIST_FOCUS
+from caligula.application.investigation.suspicions import SuspicionStatus
 from caligula.application.investigation.toolkit import build_tools, native_web_search, web_search_tools
 from caligula.application.investigation.workspace import (
     AgentContext,
@@ -36,7 +37,9 @@ from caligula.application.investigation.workspace import (
     Workspace,
 )
 from caligula.application.ports.llm import AgentRunner, ClaimAnalyst
+from caligula.domain.model.intake import IntakeDecision
 from caligula.domain.model.verdict import Verdict
+from caligula.domain.services.intake_policy import decide
 
 READ = ["search_evidence", "read_document", "compare_versions", "compare_names", "assess"]
 WORK = ["list_tasks", "complete_task", "post_lead", "record_evidence", "record_amount", "record_absence", "report"]
@@ -65,6 +68,16 @@ REVIEWER_TOOLS = READ + ["list_proposals", "review_proposal", "record_evidence",
 CHALLENGE_ROUTES = ("official", "web_news")
 
 
+# Why a case stops, as the case file explains it.
+STOP_REASONS = {
+    "settled": "settled: confidence is high and no suspicion is open",
+    "exhausted": "exhausted: the last round brought no new evidence, changed no status and raised no new suspicion",
+    "no_open_tasks": "nothing left to do: every task is closed",
+    "budget": "the tool-call budget is spent",
+    "round_limit": "the round limit was reached with work still open",
+}
+
+
 @dataclass
 class RoundSummary:
     round: int
@@ -74,6 +87,12 @@ class RoundSummary:
     disputed: int
     statuses: dict[str, str]
     challenge_tasks_added: list[str]
+    new_accepted: int = 0
+    suspicions_raised: list[str] = field(default_factory=list)
+    suspicions_changed: dict[str, str] = field(default_factory=dict)  # id -> new status
+    verdict: str = ""
+    confidence: str = ""
+    tool_calls: int = 0  # cumulative
 
 
 @dataclass
@@ -95,7 +114,8 @@ class InvestigationTeam:
         analyst: ClaimAnalyst | None = None,
         reviewer_runner: AgentRunner | None = None,
         specialists: list[Specialist] | None = None,
-        max_rounds: int = 3,
+        max_rounds: int = 6,
+        max_tool_calls: int = 600,
         total_budget: int = 100,
         reviewer_budget: int = 40,
         rubric: str = "",
@@ -107,7 +127,8 @@ class InvestigationTeam:
         self.reviewer_runner = reviewer_runner or runner  # the reviewer may run on another model
         self.analyst = analyst
         self.specialists = {s.name: s for s in (specialists or SPECIALISTS)}
-        self.max_rounds = max_rounds
+        self.max_rounds = max_rounds  # hard caps: the loop otherwise runs until settled or exhausted
+        self.max_tool_calls = max_tool_calls
         self.total_budget = total_budget
         self.reviewer_budget = reviewer_budget
         self.rubric = rubric
@@ -118,7 +139,10 @@ class InvestigationTeam:
     # --- phases ----------------------------------------------------------------
 
     def run(self, ws: Workspace, plan: Plan | None = None) -> TeamResult:
+        """Rounds of collection and review until the case is settled or exhausted, or a hard cap is hit."""
         ws.review_required = True
+        if ws.scope_policy is None and self.analyst is not None:
+            ws.scope_policy = self._scope_policy(ws)
         plan = plan or self.plan(ws)
         self._apply_plan(ws, plan)
         reports: dict[str, list[str]] = defaultdict(list)
@@ -131,6 +155,9 @@ class InvestigationTeam:
             if not active:
                 stop = "no_open_tasks"
                 break
+            if len(ws.trace) >= self.max_tool_calls:
+                stop = "budget"
+                break
             closed_before = {t.id for t in ws.tasks if t.status == TaskStatus.DONE}
             self.emit("collect", f"round {n}: {', '.join(active)}")
             self._collect_round(ws, active, plan.budgets, n, reports)
@@ -138,7 +165,8 @@ class InvestigationTeam:
             self.emit("review", f"round {n}: {sum(p.status == 'pending' for p in ws.proposals)} pending proposals")
             review = self._review(ws, n, reports)
             added += self._queue_challenges(ws, n + 1)
-            rounds.append(self._summarise(ws, n, active, closed_before, added))
+            changed = {s.id: s.status.value for s in ws.resolve_suspicions()}
+            rounds.append(self._summarise(ws, n, active, closed_before, added, rounds, changed))
             self.emit("round", json.dumps(vars(rounds[-1]), ensure_ascii=False))
             stop = self._should_stop(ws, rounds)
             if stop:
@@ -146,9 +174,19 @@ class InvestigationTeam:
             stop = "round_limit"
         verdict = ws.verdict()
         self.emit("verdict", f"{verdict.verdict} ({verdict.likelihood_term}, {verdict.confidence} confidence)")
+        ws.ledger.append("stop", "caligula", reason=stop, rounds=len(rounds))
         return TeamResult(verdict=verdict, review=review, reports=dict(reports),
                           unknown_citations=unknown_citations(review, ws.store), rounds=rounds,
                           stop_reason=stop, plan_fixes=plan.fixes, trace=ws.trace)
+
+    def _scope_policy(self, ws: Workspace):
+        """The intake policy, applied to a suspicion that widens the case."""
+        def check(statement: str) -> IntakeDecision:
+            decision = decide(self.analyst.classify(statement))
+            ws.ledger.append("scope_check", "caligula", statement=statement, decision=decision.decision.value,
+                             reasons=decision.reasons)
+            return decision
+        return check
 
     def plan(self, ws: Workspace) -> Plan:
         if self.analyst is None:
@@ -197,29 +235,38 @@ class InvestigationTeam:
         return added
 
     @staticmethod
-    def _summarise(ws, n, active, closed_before, added) -> RoundSummary:
-        v = ws.verdict(sensitivity=False)
+    def _summarise(ws, n, active, closed_before, added, previous, changed) -> RoundSummary:
+        v = ws.verdict()
+        accepted = sum(p.status == ProposalStatus.ACCEPTED for p in ws.proposals)
         return RoundSummary(
             round=n, specialists=active,
             tasks_closed={t.id: t.outcome.value for t in ws.tasks
                           if t.status == TaskStatus.DONE and t.id not in closed_before},
-            accepted=sum(p.status == ProposalStatus.ACCEPTED for p in ws.proposals),
+            accepted=accepted,
             disputed=sum(p.status == ProposalStatus.DISPUTED for p in ws.proposals),
             statuses={c.id: c.status for c in v.by_subclaim},
             challenge_tasks_added=added,
+            new_accepted=accepted - (previous[-1].accepted if previous else 0),
+            suspicions_raised=[s.id for s in ws.suspicions if s.round == n],
+            suspicions_changed=changed,
+            verdict=v.verdict, confidence=v.confidence, tool_calls=len(ws.trace),
         )
 
-    @staticmethod
-    def _should_stop(ws: Workspace, rounds: list[RoundSummary]) -> str | None:
+    def _should_stop(self, ws: Workspace, rounds: list[RoundSummary]) -> str | None:
+        last = rounds[-1]
+        open_suspicions = [s for s in ws.suspicions if s.status == SuspicionStatus.OPEN]
+        if last.confidence == "high" and not open_suspicions:
+            return "settled"
         # New tasks for the next round, plus unfinished ones carried over from this or earlier rounds.
         upcoming = [t for t in ws.tasks if t.status == TaskStatus.OPEN and t.round <= ws.round + 1]
         if not upcoming:
             return "no_open_tasks"
-        challenges_left = any(t.purpose == "challenge" for t in upcoming)
-        if len(rounds) >= 2 and not challenges_left:
-            last, prev = rounds[-1], rounds[-2]
-            if last.statuses == prev.statuses and last.accepted == prev.accepted:
-                return "no_progress"
+        if len(rounds) >= 2:
+            unchanged = last.statuses == rounds[-2].statuses and not last.new_accepted
+            if unchanged and not last.suspicions_changed and not last.suspicions_raised:
+                return "exhausted"
+        if last.tool_calls >= self.max_tool_calls:
+            return "budget"
         return None
 
     # --- agents ----------------------------------------------------------------
@@ -252,6 +299,8 @@ class InvestigationTeam:
         queued = [f"{t.id} {t.specialist} ({t.purpose}): {t.objective[:100]}"
                   for t in ws.tasks if t.status == TaskStatus.OPEN and t.round > n]
         leads = [f"{lead.by}: {lead.note}" for lead in ws.leads_for("reviewer")]
+        suspicions = [{"id": s.id, "statement": s.statement, "status": s.status.value, "tested_by": s.subclaim_id,
+                       "raised_in_round": s.round} for s in ws.suspicions]
         last = n == self.max_rounds
         brief = (
             case_brief(ws, self.reviewer_budget)
@@ -260,6 +309,7 @@ class InvestigationTeam:
             + f"\n\n<closed_tasks>\n{json.dumps(closed, ensure_ascii=False, indent=1)}\n</closed_tasks>"
             + f"\n\n<already_queued_for_next_round>\n{json.dumps(queued, ensure_ascii=False)}\n</already_queued_for_next_round>"
             + f"\n\n<leads_for_you>\n{json.dumps(leads, ensure_ascii=False)}\n</leads_for_you>"
+            + f"\n\n<suspicions>\n{json.dumps(suspicions, ensure_ascii=False)}\n</suspicions>"
             + f"\n\n<specialist_reports>\n{json.dumps(latest, ensure_ascii=False, indent=1)}\n</specialist_reports>"
         )
         self.reviewer_runner.run(system, tools, brief, self.reviewer_budget + 10, lambda: ctx.done)

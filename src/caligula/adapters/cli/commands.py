@@ -34,7 +34,7 @@ def investigate(args: argparse.Namespace) -> int:
     from caligula.adapters.persistence.ledger_jsonl import JsonlLedger
     from caligula.adapters.presenters.public_reply import public_reply
     from caligula.application.investigation.single_agent import InvestigatorAgent
-    from caligula.application.investigation.team import InvestigationTeam
+    from caligula.application.investigation.team import STOP_REASONS, InvestigationTeam
     from caligula.application.investigation.workspace import Mode, Workspace
     from caligula.application.usecases.decompose import decompose_case
     from caligula.application.usecases.intake import admit
@@ -60,16 +60,17 @@ def investigate(args: argparse.Namespace) -> int:
     allegation, added = decompose_case(llm, args.id, args.claim)
     for note in added:
         print(f"  + {note}")
-    ws = Workspace(store=store, allegation=allegation, mode=mode, connectors=live_connectors(search), ledger=ledger)
+    ws = Workspace(store=store, allegation=allegation, mode=mode, connectors=live_connectors(search), ledger=ledger,
+                   poc=args.poc)
     if args.team:
         rubric = args.rubric.read_text(encoding="utf-8") if args.rubric else ""
         team = InvestigationTeam(runner=models.collectors, reviewer_runner=models.reviewer, analyst=llm,
                                  web_search=not args.no_web,
-                                 rubric=rubric, max_rounds=args.rounds,
+                                 rubric=rubric, max_rounds=args.rounds, max_tool_calls=args.max_tool_calls,
                                  on_event=lambda phase, detail: print(f"[{phase}] {detail}", flush=True))
         result = team.run(ws)
         narrative = result.review
-        print(f"\nStopped after {len(result.rounds)} round(s): {result.stop_reason}")
+        print(f"\nStopped after {len(result.rounds)} round(s): {STOP_REASONS[result.stop_reason]}")
     else:
         result = InvestigatorAgent(models.collectors, web_search=not args.no_web).run(ws)
         narrative = result.summary

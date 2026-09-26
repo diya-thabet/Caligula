@@ -44,7 +44,10 @@ def main(argv: list[str] | None = None) -> int:
     inv.add_argument("--blobs", type=Path, default=Path("blobs"))
     inv.add_argument("--db", help="PostgreSQL DSN; default is an in-memory store")
     inv.add_argument("--team", action="store_true", help="parallel source specialists + reviewer")
-    inv.add_argument("--rounds", type=int, default=3, help="maximum collection rounds in team mode")
+    inv.add_argument("--rounds", type=int, default=8,
+                     help="hard cap on collection rounds in team mode (the loop stops earlier when the case is "
+                          "settled or exhausted)")
+    inv.add_argument("--max-tool-calls", type=int, default=600, help="hard cap on tool calls across all agents")
     inv.add_argument("--rubric", type=Path, help="expert review rubric (text file) for the reviewer")
     inv.add_argument("--ledger", type=Path, default=Path("ledger.jsonl"), help="evidence ledger file")
     inv.add_argument("--legal-approved", metavar="NAME", help="lawyer who approved the scope, when intake requires it")
