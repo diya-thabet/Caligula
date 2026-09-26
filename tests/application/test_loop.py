@@ -2,11 +2,12 @@
 settled, exhausted, or a hard cap is hit, and says which."""
 
 from caligula.adapters.persistence.ledger_jsonl import JsonlLedger
-from caligula.application.investigation.plan import Plan, Task
-from caligula.application.investigation.team import STOP_REASONS, InvestigationTeam, Specialist
+from caligula.application.investigation.plan import Plan, Task, round_budget
+from caligula.application.investigation.team import STOP_REASONS, InvestigationTeam, Specialist, priority_subclaims
 from caligula.application.investigation.workspace import Mode, Workspace
 from caligula.domain.model.claims import Allegation, SubClaim
 from caligula.domain.model.documents import SourceKind
+from caligula.domain.model.evidence import EvidenceEdge, Relation
 from caligula.domain.model.intake import ClaimType, Intake, SubjectType
 from conftest import add_doc
 from support import assert_invariants, scripted_team, workspace
@@ -69,12 +70,17 @@ def test_a_suspicion_is_tested_in_the_next_round_and_resolved_by_the_evidence(st
         ("reviewer", 2): [accept_all(ws), done("S1 confirmed")],
     }
     briefs = {}
-    team = InvestigationTeam(runner=scripted_team(scripts, briefs=briefs), specialists=TEAM, web_search=False,
-                             max_rounds=6)
+    runner = scripted_team(scripts, briefs=briefs)
+    team = InvestigationTeam(runner=runner, specialists=TEAM, web_search=False, max_rounds=6)
     result = team.run(ws, plan=plan(task("official", ["C3"])))
 
     # The reviewer sees its suspicions; the specialists get the tasks that test them.
     assert '"id": "S1"' in briefs[("reviewer", 2)] and "Try to confirm suspicion S1" in briefs[("official", 2)]
+    # Round 2 is targeted (half of 30), plus 4 per priority task: the suspicion test and the
+    # challenge of C3, a core sub-claim resting on one origin.
+    budgets = [c["max_iterations"] - 15 for c in runner.calls
+               if "Try to confirm suspicion" in c["brief"] and not c["system"].startswith("You are the reviewer")]
+    assert budgets == [15 + 2 * 4]
     [s] = ws.suspicions
     assert (s.status, s.resolved_round) == ("confirmed", 2)
     assert result.rounds[0].suspicions_raised == ["S1"]
@@ -153,3 +159,24 @@ def test_team_applies_the_legal_policy_to_suspicions_that_widen_the_case(store):
     [s] = ws.suspicions
     assert s.status == "rejected" and not s.task_ids
     assert [e.data["decision"] for e in ws.ledger.entries if e.action == "scope_check"] == ["refuse"]
+
+
+def test_follow_up_budgets():
+    assert round_budget(30, 1, priority_tasks=5) == 30  # the first round follows the plan
+    assert round_budget(30, 2, priority_tasks=0) == 15
+    assert round_budget(30, 3, priority_tasks=2) == 23
+    assert round_budget(30, 2, priority_tasks=20) == 40  # capped
+    assert round_budget(6, 2, priority_tasks=0) == 5  # floor
+
+
+def test_priority_goes_to_open_suspicions_innocent_explanations_and_single_origins(store):
+    ws = workspace(store)
+    # No evidence yet: every innocent test (C9-C12) and every core sub-claim (C3-C6) needs effort.
+    assert priority_subclaims(ws) == {"C3", "C4", "C5", "C6", "C9", "C10", "C11", "C12"}
+    for doc, quote in (("audit", "n'est pas justifié par une situation d'urgence documentée"),):
+        ws.record(EvidenceEdge(doc_id=doc, subclaim_id="C9", relation=Relation.CONTRADICTS, quote=quote), "t")
+    for doc, quote in (("jort_award_v1", "par procédure de gré à gré"),
+                       ("tuneps_search", "Aucun avis d'appel d'offres publié")):
+        ws.record(EvidenceEdge(doc_id=doc, subclaim_id="C5", relation=Relation.SUPPORTS, quote=quote), "t")
+    # The emergency explanation is refuted; C5 now rests on two origins.
+    assert priority_subclaims(ws) == {"C3", "C4", "C6", "C10", "C11", "C12"}

@@ -26,7 +26,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
 from caligula.application.investigation.brief import case_brief, unknown_citations
-from caligula.application.investigation.plan import MIN_BUDGET, Plan, TaskStatus, normalize_plan
+from caligula.application.investigation.plan import MIN_BUDGET, Plan, TaskStatus, normalize_plan, round_budget
 from caligula.application.investigation.prompts import _COLLECTOR, REVIEWER, SPECIALIST_FOCUS
 from caligula.application.investigation.suspicions import SuspicionStatus
 from caligula.application.investigation.toolkit import build_tools, native_web_search, web_search_tools
@@ -37,6 +37,7 @@ from caligula.application.investigation.workspace import (
     Workspace,
 )
 from caligula.application.ports.llm import AgentRunner, ClaimAnalyst
+from caligula.domain.model.claims import HypothesisKind
 from caligula.domain.model.intake import IntakeDecision
 from caligula.domain.model.verdict import Verdict
 from caligula.domain.services.intake_policy import decide
@@ -76,6 +77,19 @@ STOP_REASONS = {
     "budget": "the tool-call budget is spent",
     "round_limit": "the round limit was reached with work still open",
 }
+
+
+def priority_subclaims(ws: Workspace) -> set[str]:
+    """Where more effort pays: sub-claims testing an open suspicion or an innocent explanation
+    not yet refuted, and core sub-claims that rest on a single origin."""
+    v = ws.verdict(sensitivity=False)
+    status = {h.id: h.status for h in v.hypotheses}
+    out = {s.subclaim_id for s in ws.suspicions if s.status == SuspicionStatus.OPEN and s.subclaim_id}
+    out |= {cid for h in ws.allegation.hypotheses if h.kind == HypothesisKind.INNOCENT
+            and status.get(h.id) != "falsified" for cid in h.predicts}
+    out |= {c.id for c in v.by_subclaim if c.id in ws.allegation.core_subclaims
+            and len(c.supporting_clusters if c.status != "contradicted" else c.contradicting_clusters) < 2}
+    return out
 
 
 @dataclass
@@ -203,12 +217,12 @@ class InvestigationTeam:
             ws.add_task(**t.model_dump(exclude={"id", "status", "outcome", "note", "doc_ids"}))
 
     def _collect_round(self, ws, active, budgets, n, reports) -> None:
+        priority = priority_subclaims(ws) if n > 1 else set()
         with ThreadPoolExecutor(max_workers=self.parallel) as pool:
             futures = {}
             for name in active:
-                budget = budgets.get(name, MIN_BUDGET * 3)
-                if n > 1:  # later rounds are targeted follow-ups
-                    budget = max(MIN_BUDGET, budget // 2)
+                urgent = sum(1 for t in ws.open_tasks(name) if t.suspicion_id or set(t.subclaim_ids) & priority)
+                budget = round_budget(budgets.get(name, MIN_BUDGET * 3), n, urgent)
                 futures[name] = pool.submit(self._collect, ws, self.specialists[name], budget)
             for name, fut in futures.items():
                 reports[name].append(fut.result())

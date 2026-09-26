@@ -32,6 +32,8 @@ FALLBACK_ROUTES = ("official", "funders_audit", "web_news")
 # Where lawful explanations are published: decrees and official justifications, then the press.
 INNOCENT_ROUTES = ("official", "web_news", "funders_audit")
 MIN_BUDGET, MAX_BUDGET = 5, 40
+# Extra tool calls per priority task in follow-up rounds: one task's worth of searching.
+PRIORITY_BONUS = 4
 
 
 class TaskStatus(StrEnum):
@@ -102,6 +104,14 @@ class Plan:
     tasks: list[Task]
     budgets: dict[str, int]
     fixes: list[str] = field(default_factory=list)  # what code changed in the draft, for the trace
+
+
+def round_budget(base: int, round_: int, priority_tasks: int) -> int:
+    """A specialist's tool budget for a round. Follow-up rounds are targeted, so they
+    get half the first round's budget, plus extra for the tasks that matter most."""
+    if round_ == 1:
+        return base
+    return min(MAX_BUDGET, max(MIN_BUDGET, base // 2) + PRIORITY_BONUS * priority_tasks)
 
 
 def _dt(value: str | None) -> datetime | None:
