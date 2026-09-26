@@ -113,10 +113,16 @@ def assert_invariants(ws, verdict=None):
         purposes = sorted(t.purpose for t in ws.tasks if t.id in s.task_ids)
         assert purposes == ["challenge", "support"], s.id
         assert s.status == expected.get(statuses[s.subclaim_id], "open"), s.id
-    # 10. The case file builds and has its sections; every quoted edge appears in it.
+    # 10. The case file builds, has its sections in the analytic order (judgment first, annexes
+    #     after), and every quoted edge appears in it.
     report = build_report(ws, v)
-    for section in ("## Assessment", "## Sub-claims", "## Competing hypotheses", "## Timeline", "## Integrity"):
-        assert section in report, section
+    sections = ["## Bottom line", "## Claim", "## Key judgments", "## Alternatives considered", "## Key assumptions",
+                "## What the conclusion depends on", "## Gaps and collection requests",
+                "## Indicators that would change the assessment", "## Limits of this assessment", "# Annexes",
+                "## Sub-claims", "## Competing hypotheses", "## Timeline", "## Integrity"]
+    positions = [report.find(f"\n{s}\n") for s in sections]
+    assert -1 not in positions, [s for s, p in zip(sections, positions, strict=True) if p == -1]
+    assert positions == sorted(positions), "sections out of order"
     for p in ws.proposals:
         if isinstance(p.item, EvidenceEdge):
             assert p.item.quote in report

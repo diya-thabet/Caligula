@@ -1,14 +1,23 @@
 """Case file in Markdown, built by code from the workspace (no model involved).
 
-Everything in it traces to a stored document, a task outcome or a ledger
-entry, so an editor can check any line.
+The judgment comes first, in the analytic order (see `analytic.py`); the
+annexes hold the detail it rests on. Everything traces to a stored document,
+a task outcome or a ledger entry, so an editor can check any line.
 """
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from caligula.adapters.presenters.analysis import assessment, competing_hypotheses, likelihood_text
+from caligula.adapters.presenters.analysis import competing_hypotheses, dependencies, likelihood_text
+from caligula.adapters.presenters.analytic import (
+    alternatives,
+    bottom_line,
+    gaps,
+    indicators,
+    key_assumptions,
+    key_judgments,
+)
 from caligula.adapters.presenters.evolution import evolution, suspicions
 from caligula.application.investigation.plan import TaskStatus
 from caligula.application.investigation.team import RoundSummary
@@ -63,23 +72,32 @@ def build_report(ws: Workspace, verdict: Verdict, review: str | None = None, poc
         f"Generated {datetime.now(UTC):%Y-%m-%d %H:%M} UTC · verdict **{verdict.verdict}** · "
         f"core facts: {likelihood_text(verdict)} · confidence: {verdict.confidence}"
         + (f" · stopped: {stop_reason}" if stop_reason else ""),
-        "", "## Claim", "", a.text, "",
+        "", *bottom_line(ws, verdict, stop_reason), "## Claim", "", a.text, "",
     ]
     if a.parties:
         out += ["Parties: " + "; ".join(f"{p.name} ({p.role.value})" for p in a.parties), ""]
-    out += assessment(verdict, a)
-    out += [
-        "## Sub-claims", "",
-        "| | Statement | Status | Support | Against | Independent sources (for / against) |",
-        "|---|---|---|---|---|---|",
+    out += [*key_judgments(ws, verdict), *alternatives(verdict, ws), *key_assumptions(ws, verdict),
+            *dependencies(verdict), *gaps(ws, verdict), *indicators(ws, verdict)]
+    out += ["## Limits of this assessment", ""]
+    if verdict.rejected_evidence:
+        out.append(f"- {len(verdict.rejected_evidence)} proposed item(s) rejected by validation "
+                   "(quotes not found, dates incompatible, unknown sub-claims).")
+    out.append(f"- {verdict.disclaimer}")
+    if review:
+        out += ["", "## Reviewer summary", "", review]
+
+    out += ["", "---", "", "# Annexes", "", "The detail every judgment above rests on.", "",
+            "## Sub-claims", "",
+            "| | Statement | Status | Support | Against | Independent sources (for / against) |",
+            "|---|---|---|---|---|---|",
     ]
     for c in verdict.by_subclaim:
         core = " (core)" if c.id in a.core_subclaims else ""
         out.append(f"| {c.id}{core} | {_cell(c.statement)} | {c.status} | {c.support:.2f} | "
                    f"{c.contradiction:.2f} | {len(c.supporting_clusters)} / {len(c.contradicting_clusters)} |")
-    out += ["", *competing_hypotheses(verdict, a)]
+    out += ["", *competing_hypotheses(verdict)]
 
-    out += ["", "## Anomalies", ""]
+    out += ["## Anomalies", ""]
     if not verdict.retcon_flags and not (verdict.financial and verdict.financial.flagged):
         out.append("None detected by code.")
     for f in verdict.retcon_flags:
@@ -93,10 +111,12 @@ def build_report(ws: Workspace, verdict: Verdict, review: str | None = None, poc
                    f"{fin.reference_amount_tnd:,.0f} TND vs proven/benchmark {fin.proven_spend_tnd:,.0f} TND, "
                    f"gap {fin.discrepancy_tnd:,.0f} TND ({fin.discrepancy_ratio:.0%}), "
                    f"{fin.independent_clusters} independent origins")
-        for f in fin.figures:
+        figures = fin.figures + [f for f in ws.figures if f not in fin.figures]
+        for f in figures:
             eid = ws.evidence_id(f)
+            unused = "" if f in fin.figures else " · *not used by the check (see the rewritten record above)*"
             out.append(f"  - {f'**{eid}** ' if eid else ''}{f.role} {f.amount_tnd:,.0f} TND · "
-                       f"{_doc_line(ws, f.doc_id)}: « {f.quote} »")
+                       f"{_doc_line(ws, f.doc_id)}: « {f.quote} »{unused}")
 
     out += ["", "## Evidence by sub-claim", ""]
     clusters = origin_clusters(ws.store.documents)
@@ -176,18 +196,6 @@ def build_report(ws: Workspace, verdict: Verdict, review: str | None = None, poc
             out.append(f"| {t.id} (r{t.round}, {t.created_by}) | {t.specialist} | {t.purpose} | "
                        f"{_cell(t.objective[:140])} | {outcome} | {_cell(t.note[:160])} |")
 
-    unchallenged = ws.unchallenged(verdict)
-    out += ["", "## Limits of this assessment", ""]
-    if unchallenged:
-        out.append(f"- Supported but not yet challenged: {', '.join(unchallenged)}.")
-    out += [f"- Missing: {m}" for m in verdict.missing_evidence]
-    if verdict.rejected_evidence:
-        out.append(f"- {len(verdict.rejected_evidence)} proposed item(s) rejected by validation "
-                   "(quotes not found, dates incompatible, unknown sub-claims).")
-    out.append(f"- {verdict.disclaimer}")
-
-    if review:
-        out += ["", "## Reviewer summary", "", review]
     broken = ws.ledger.verify()
     out += ["", "## Integrity", "",
             f"- Documents in store: {len(ws.store.documents)}; ledger entries: {len(ws.ledger.entries)}; "
