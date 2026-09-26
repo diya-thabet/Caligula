@@ -152,7 +152,8 @@ def build_report(ws: Workspace, verdict: Verdict, review: str | None = None, poc
     for f in verdict.retcon_flags:
         events.append((f.later_observed_at, f"**rewritten version observed**: `{f.later_doc_id}` differs from "
                                             f"`{f.earlier_doc_id}`"))
-    out += [f"- {when:%Y-%m-%d} {what}" for when, what in sorted(events, key=lambda x: x[0])] or ["(no dated evidence)"]
+    # Sorted on text too: same-day events must come out in the same order on every run.
+    out += [f"- {when:%Y-%m-%d} {what}" for when, what in sorted(events)] or ["(no dated evidence)"]
 
     if ws.tasks:
         out += ["", "## Collection tasks", "", "| Task | Specialist | Purpose | Objective | Outcome | Note |",
