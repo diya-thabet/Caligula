@@ -57,6 +57,7 @@ class Task(BaseModel):
     round: int = 1
     created_by: str = "planner"
     expectation_id: str | None = None  # an expected record this task searches for ("C5.E1")
+    suspicion_id: str | None = None  # the suspicion this task tries to confirm or refute ("S1")
     status: TaskStatus = TaskStatus.OPEN
     outcome: Outcome | None = None
     note: str = ""

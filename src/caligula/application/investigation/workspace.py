@@ -18,6 +18,7 @@ from enum import StrEnum
 
 from caligula.application.evidence_store import EvidenceStore
 from caligula.application.investigation.plan import EntityHint, Outcome, Task, TaskStatus
+from caligula.application.investigation.suspicions import Suspicion, resolve
 from caligula.application.ports.sources import (
     ArchiveSource,
     FunderRecords,
@@ -139,6 +140,7 @@ class Workspace:
     proposals: list[Proposal] = field(default_factory=list)
     tasks: list[Task] = field(default_factory=list)
     leads: list[Lead] = field(default_factory=list)
+    suspicions: list[Suspicion] = field(default_factory=list)
     entities: list[EntityHint] = field(default_factory=list)
     window: tuple[datetime | None, datetime | None] = (None, None)  # period under investigation
     round: int = 1
@@ -221,6 +223,18 @@ class Workspace:
                     or any(t.purpose == "challenge" and t.status == TaskStatus.DONE for t in tasks),
                 }
             return out
+
+    def known_entities(self) -> list[str]:
+        return [n for e in self.entities for n in [e.name, *e.aliases]]
+
+    def resolve_suspicions(self, verdict: Verdict | None = None) -> list[Suspicion]:
+        """Update suspicions from the sub-claims that test them; log and return those that changed."""
+        with self.lock:
+            v = verdict or self.verdict(sensitivity=False)
+            changed = resolve(self.suspicions, {c.id: c.status for c in v.by_subclaim}, self.round)
+            for s in changed:
+                self.ledger.append("suspicion_status", "caligula", id=s.id, status=s.status.value, round=self.round)
+            return changed
 
     def absence_for(self, task: Task, searched_at: datetime) -> AbsenceFinding | None:
         """The absence finding implied by a task that searched for an expected record and found nothing."""
