@@ -1,15 +1,8 @@
 from types import SimpleNamespace
 
 from caligula.adapters.fixtures.case_directory import load_case, run_case
-from caligula.adapters.llm.claude_analyst import (
-    ClaudeAnalyst,
-    _Amount,
-    _Decomposition,
-    _Edge,
-    _Hypothesis,
-    _Prediction,
-    _Reading,
-)
+from caligula.adapters.llm.analyst_base import AmountOut, Decomposition, EdgeOut, HypothesisOut, Prediction, Reading
+from caligula.adapters.llm.claude_analyst import ClaudeAnalyst
 from caligula.domain.model.claims import SubClaim
 from conftest import FIXTURE
 
@@ -79,23 +72,23 @@ class FakeMessages:
 
 def test_live_mode_output_goes_through_same_validation(store):
     load_case(FIXTURE, store)
-    decomposition = _Decomposition(
+    decomposition = Decomposition(
         subject="s", claim_type="procurement",
         subclaims=[SubClaim(id="C1", statement="outage happened")],
-        hypotheses=[_Hypothesis(id="H1", statement="h", kind="allegation", explains=None,
-                                predictions=[_Prediction(subclaim_id="C1", predicted_true=True),
-                                             _Prediction(subclaim_id="C99", predicted_true=True)])],
+        hypotheses=[HypothesisOut(id="H1", statement="h", kind="allegation", explains=None,
+                                predictions=[Prediction(subclaim_id="C1", predicted_true=True),
+                                             Prediction(subclaim_id="C99", predicted_true=True)])],
         core_subclaims=["C1", "C99"], financial_subclaim="C98", parties=[], ruled_out=[],
     )
     readings = []
     for doc in store.documents.values():
         if doc.id == "nightlights":
-            readings.append(_Reading(edges=[_Edge(subclaim_id="C1", relation="supports", quote="Baisse de radiance nocturne de 62 %", rationale="")], amounts=[]))
+            readings.append(Reading(edges=[EdgeOut(subclaim_id="C1", relation="supports", quote="Baisse de radiance nocturne de 62 %", rationale="")], amounts=[]))
         elif doc.id == "steg_communique":
-            readings.append(_Reading(edges=[_Edge(subclaim_id="C1", relation="supports", quote="invented sentence", rationale="")],
-                                     amounts=[_Amount(role="allocated", amount_tnd=1.0, quote="4 870 MW")]))
+            readings.append(Reading(edges=[EdgeOut(subclaim_id="C1", relation="supports", quote="invented sentence", rationale="")],
+                                     amounts=[AmountOut(role="allocated", amount_tnd=1.0, quote="4 870 MW")]))
         else:
-            readings.append(_Reading(edges=[], amounts=[]))
+            readings.append(Reading(edges=[], amounts=[]))
     messages = FakeMessages([decomposition, *readings])
     investigator = ClaudeAnalyst(client=SimpleNamespace(beta=SimpleNamespace(messages=messages)))
 
