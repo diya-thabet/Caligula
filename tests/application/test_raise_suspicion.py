@@ -81,3 +81,23 @@ def test_in_poc_mode_legal_review_proceeds_but_is_logged(store):
     [s] = ws.suspicions
     assert s.status == "open" and s.note.startswith("PoC: wider scope not reviewed by a lawyer")
     assert any(e.action == "poc_unreviewed" and e.data["suspicion"] == "S1" for e in ws.ledger.entries)
+
+
+def test_a_lawyer_approves_or_refuses_a_wider_scope(store):
+    ws = workspace(store, poc=False)
+    ws.scope_policy = _policy(Decision.LEGAL_REVIEW)
+    raise_(ws, statement="Omega Conseil received subcontracts", entities=["Société Omega Conseil"],
+           confirm_specialist="funders_audit", bearing="against")
+    raise_(ws, statement="Delta SARL received subcontracts", entities=["Delta SARL"])
+    approved = ws.decide_scope("S1", True, "Maître Fictive", note="public contract, documented payments")
+    assert approved.status == "open" and approved.note.startswith("scope approved by Maître Fictive")
+    confirm, refute = (next(t for t in ws.tasks if t.id == tid) for tid in approved.task_ids)
+    assert (confirm.specialist, refute.specialist, confirm.created_by) == ("funders_audit", "web_news",
+                                                                          "Maître Fictive")
+    refused = ws.decide_scope("S2", False, "Maître Fictive")
+    assert refused.status == "rejected" and not refused.task_ids
+    assert [(e.action, e.actor) for e in ws.ledger.entries if e.action.startswith("legal_")] == [
+        ("legal_approval", "Maître Fictive"), ("legal_refusal", "Maître Fictive")]
+    with pytest.raises(ValueError):
+        ws.decide_scope("S1", True, "Maître Fictive")  # already decided
+    assert_invariants(ws)

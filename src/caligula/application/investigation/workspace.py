@@ -20,7 +20,7 @@ from enum import StrEnum
 from caligula.application.evidence_store import EvidenceStore
 from caligula.application.investigation.control import RunControl
 from caligula.application.investigation.plan import EntityHint, Outcome, Task, TaskStatus
-from caligula.application.investigation.suspicions import Suspicion, resolve
+from caligula.application.investigation.suspicions import Suspicion, SuspicionStatus, resolve
 from caligula.application.ports.sources import (
     ArchiveSource,
     FunderRecords,
@@ -267,6 +267,37 @@ class Workspace:
                         h.predicts[cid] = bearing == Bearing.AGAINST
             self.ledger.append("subclaim", by, id=cid, statement=statement, bearing=bearing.value)
             return cid
+
+    def activate_suspicion(self, s: Suspicion, by: str) -> None:
+        """Tie a suspicion to a sub-claim (created if needed) and queue one task to confirm it
+        and one to refute it for the next round."""
+        with self.lock:
+            s.subclaim_id = s.subclaim_id or self.add_subclaim(s.statement, Bearing(s.bearing),
+                                                                [s.confirm_by, s.refute_by], by)
+            for purpose, who, look_for in (("support", s.confirm_specialist, s.confirm_by),
+                                           ("challenge", s.refute_specialist, s.refute_by)):
+                verb = "confirm" if purpose == "support" else "refute"
+                t = self.add_task(specialist=who, purpose=purpose, subclaim_ids=[s.subclaim_id],
+                                  round=self.round + 1, created_by=by, suspicion_id=s.id,
+                                  objective=f"Try to {verb} suspicion {s.id} ({s.statement}). Look for: {look_for}")
+                s.task_ids.append(t.id)
+
+    def decide_scope(self, suspicion_id: str, approve: bool, by: str, note: str = "") -> Suspicion:
+        """A lawyer's decision on a suspicion held because it widens the case to new people or
+        companies: approved, it is tested like any other; rejected, nobody investigates it."""
+        with self.lock:
+            s = next((s for s in self.suspicions if s.id == suspicion_id), None)
+            if s is None or s.status != SuspicionStatus.AWAITING_SCOPE:
+                raise ValueError(f"no suspicion {suspicion_id} awaiting a scope decision")
+            self.ledger.append("legal_approval" if approve else "legal_refusal", by, suspicion=s.id,
+                               scope=s.statement, entities=s.new_entities, note=note)
+            s.note = f"scope {'approved' if approve else 'refused'} by {by}" + (f": {note}" if note else "")
+            if approve:
+                s.status = SuspicionStatus.OPEN
+                self.activate_suspicion(s, by)
+            else:
+                s.status = SuspicionStatus.REJECTED
+            return s
 
     def known_entities(self) -> list[str]:
         return [n for e in self.entities for n in [e.name, *e.aliases]]

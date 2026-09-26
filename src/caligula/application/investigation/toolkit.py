@@ -27,7 +27,7 @@ from caligula.application.investigation.workspace import (
 )
 from caligula.application.ports.llm import Tool, ToolRefusal
 from caligula.application.ports.sources import ExtractedText, PrivateSourceError
-from caligula.domain.model.claims import Bearing, Party, PartyRole
+from caligula.domain.model.claims import Party, PartyRole
 from caligula.domain.model.documents import SourceKind
 from caligula.domain.model.evidence import AbsenceFinding, AmountRole, EvidenceEdge, FinancialFigure, Relation
 from caligula.domain.model.intake import Decision, IntakeDecision
@@ -700,7 +700,8 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         new = unknown_entities(entities or [], ws.allegation, ws.known_entities())
         s = Suspicion(id=f"S{len(ws.suspicions) + 1}", statement=statement, subclaim_id=subclaim_id,
                       raised_by=ctx.name, round=ws.round, confirm_by=confirm_by, refute_by=refute_by,
-                      new_entities=new)
+                      new_entities=new, confirm_specialist=confirm_specialist,
+                      refute_specialist=refute_specialist, bearing=bearing)
         if new:
             decision = ws.scope_policy(statement) if ws.scope_policy else IntakeDecision(
                 Decision.LEGAL_REVIEW, ["new people or companies, and no policy check available"])
@@ -720,14 +721,7 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
             return f"{s.id} rejected by the legal policy ({s.note}); nobody will investigate it."
         if s.status == SuspicionStatus.AWAITING_SCOPE:
             return f"{s.id} involves {', '.join(new)}, outside the case: it waits for a lawyer to approve the scope."
-        s.subclaim_id = subclaim_id or ws.add_subclaim(statement, Bearing(bearing), [confirm_by, refute_by], ctx.name)
-        for purpose, who, look_for in (("support", confirm_specialist, confirm_by),
-                                       ("challenge", refute_specialist, refute_by)):
-            verb = "confirm" if purpose == "support" else "refute"
-            t = ws.add_task(specialist=who, purpose=purpose, subclaim_ids=[s.subclaim_id], round=ws.round + 1,
-                            created_by=ctx.name, suspicion_id=s.id,
-                            objective=f"Try to {verb} suspicion {s.id} ({statement}). Look for: {look_for}")
-            s.task_ids.append(t.id)
+        ws.activate_suspicion(s, ctx.name)
         return (f"{s.id} recorded, tested by {s.subclaim_id}; tasks {s.task_ids[0]} (confirm, {confirm_specialist}) "
                 f"and {s.task_ids[1]} (refute, {refute_specialist}) queued for the next round.")
 

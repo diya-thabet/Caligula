@@ -42,6 +42,10 @@ class Suspicion:
     confirm_by: str
     refute_by: str
     new_entities: list[str] = field(default_factory=list)
+    # How to test it: who looks each way, and whether it incriminates ("against") or clears ("for").
+    confirm_specialist: str = "official"
+    refute_specialist: str = "web_news"
+    bearing: str = "against"
     task_ids: list[str] = field(default_factory=list)
     status: SuspicionStatus = SuspicionStatus.OPEN
     resolved_round: int | None = None
