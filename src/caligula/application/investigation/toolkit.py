@@ -85,6 +85,9 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         def wrapper(**kwargs):
             if ws.finished or ctx.done:
                 raise ToolRefusal("Your part of the investigation is finished; no further tool calls.")
+            if not ws.control.checkpoint():  # waits here while the investigator has paused the run
+                ctx.done = True
+                raise ToolRefusal("The investigator stopped the investigation. Stop now.")
             if ctx.budget <= 0:
                 raise ToolRefusal("Tool budget exhausted. Wrap up now (report, finish or complete_review).")
             spend()

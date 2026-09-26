@@ -18,6 +18,7 @@ from datetime import datetime
 from enum import StrEnum
 
 from caligula.application.evidence_store import EvidenceStore
+from caligula.application.investigation.control import RunControl
 from caligula.application.investigation.plan import EntityHint, Outcome, Task, TaskStatus
 from caligula.application.investigation.suspicions import Suspicion, resolve
 from caligula.application.ports.sources import (
@@ -162,6 +163,11 @@ class Workspace:
     poc: bool = True
     # Legal policy for a statement that widens the case (new people or companies); None: always legal review.
     scope_policy: Callable[[str], IntakeDecision] | None = None
+    # Pause, resume and stop, from outside the run (see control.py).
+    control: RunControl = field(default_factory=RunControl)
+    # Called with (kind, data) as the investigation moves: each tool call ("tool") and phase
+    # changes the team reports. For live views; nothing the engine decides depends on them.
+    listeners: list[Callable[[str, dict], None]] = field(default_factory=list)
 
     def __post_init__(self):
         self.budget = self.budget or BUDGETS[self.mode]
@@ -173,7 +179,17 @@ class Workspace:
 
     def log(self, agent: str, tool: str, args: dict, outcome: str) -> None:
         with self.lock:
-            self.trace.append(TraceEntry(len(self.trace) + 1, agent, tool, args, outcome))
+            entry = TraceEntry(len(self.trace) + 1, agent, tool, args, outcome)
+            self.trace.append(entry)
+        self.emit("tool", {"step": entry.step, "agent": agent, "tool": tool, "args": args, "outcome": outcome,
+                           "round": self.round})
+
+    def emit(self, kind: str, data: dict) -> None:
+        for listener in list(self.listeners):
+            try:
+                listener(kind, data)
+            except Exception:  # a broken view must not break the investigation
+                pass
 
     def add_party(self, party: Party, by: str) -> Party:
         """Declare a party with a stake in the case, or add aliases to a known one."""

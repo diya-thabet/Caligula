@@ -78,6 +78,7 @@ STOP_REASONS = {
     "no_open_tasks": "nothing left to do: every task is closed",
     "budget": "the tool-call budget is spent",
     "round_limit": "the round limit was reached with work still open",
+    "stopped": "stopped by the investigator",
 }
 
 
@@ -171,6 +172,9 @@ class InvestigationTeam:
         stop = "round_limit"
         for n in range(1, self.max_rounds + 1):
             ws.round = n
+            if not ws.control.checkpoint():
+                stop = "stopped"
+                break
             active = [s for s in self.specialists if ws.open_tasks(s)]
             if not active:
                 stop = "no_open_tasks"
@@ -181,6 +185,9 @@ class InvestigationTeam:
             closed_before = {t.id for t in ws.tasks if t.status == TaskStatus.DONE}
             self.emit("collect", f"round {n}: {', '.join(active)}")
             self._collect_round(ws, active, plan.budgets, n, reports)
+            if ws.control.stopped:
+                stop = "stopped"
+                break
             added = self._queue_challenges(ws, n + 1)
             self.emit("review", f"round {n}: {sum(p.status == 'pending' for p in ws.proposals)} pending proposals")
             review = self._review(ws, n, reports)
@@ -188,7 +195,7 @@ class InvestigationTeam:
             changed = {s.id: s.status.value for s in ws.resolve_suspicions()}
             rounds.append(self._summarise(ws, n, active, closed_before, added, rounds, changed))
             self.emit("round", json.dumps(vars(rounds[-1]), ensure_ascii=False))
-            stop = self._should_stop(ws, rounds)
+            stop = "stopped" if ws.control.stopped else self._should_stop(ws, rounds)
             if stop:
                 break
             stop = "round_limit"
