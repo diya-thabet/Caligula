@@ -82,7 +82,8 @@ def investigate(args: argparse.Namespace) -> int:
     print(f"\nPublic reply:\n{public_reply(result, mode, store, args.claim)}")
     write_report(args.report or Path("out") / f"{args.id}.md",
                  build_report(ws, result.verdict, narrative, poc=args.poc,
-                              stop_reason=getattr(result, "stop_reason", None)))
+                              stop_reason=getattr(result, "stop_reason", None),
+                              rounds=getattr(result, "rounds", None)))
     broken = ledger.verify()
     print(f"\nLedger: {len(ledger.entries)} entries, head {ledger.head[:16]}, "
           f"{'intact' if broken is None else f'BROKEN at entry {broken}'}")

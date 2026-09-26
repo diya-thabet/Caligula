@@ -2,6 +2,7 @@
 settled, exhausted, or a hard cap is hit, and says which."""
 
 from caligula.adapters.persistence.ledger_jsonl import JsonlLedger
+from caligula.adapters.presenters.markdown_report import build_report
 from caligula.application.investigation.plan import Plan, Task, round_budget
 from caligula.application.investigation.team import STOP_REASONS, InvestigationTeam, Specialist, priority_subclaims
 from caligula.application.investigation.workspace import Mode, Workspace
@@ -91,6 +92,11 @@ def test_a_suspicion_is_tested_in_the_next_round_and_resolved_by_the_evidence(st
     # Both tests of S1 and the automatic challenge of C3 ran in round 2: nothing is left to do.
     assert result.stop_reason == "no_open_tasks" and len(result.rounds) == 2
     assert any(e.action == "stop" and e.data["reason"] == "no_open_tasks" for e in ws.ledger.entries)
+    report = build_report(ws, result.verdict, result.review, stop_reason=result.stop_reason, rounds=result.rounds)
+    assert f"| S1 | {retcon} | round 1 | {s.subclaim_id} | confirmed (round 2) | T2, T3 | – |" in report
+    assert "| 1 | official | 1 found | 1 | S1 | – |" in report
+    assert "| 2 | official, web_news | 2 found, 2 not_found | 1 | – | S1 confirmed |" in report
+    assert "Stopped after 2 round(s): nothing left to do: every task is closed." in report
     assert_invariants(ws, result.verdict)
 
 

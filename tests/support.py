@@ -102,7 +102,18 @@ def assert_invariants(ws, verdict=None):
     # 8. Dependencies name origins the evidence actually used.
     used = {w.doc_id for w in v.weighed} | ({f.doc_id for f in v.financial.figures} if v.financial else set())
     assert all(set(d.origin) <= used for d in v.depends_on)
-    # 9. The case file builds and has its sections; every quoted edge appears in it.
+    # 9. Suspicions: every active one is tested both ways and its status follows its sub-claim;
+    #    rejected or held ones get no work.
+    statuses = {c.id: c.status for c in v.by_subclaim}
+    expected = {"supported": "confirmed", "contradicted": "refuted"}
+    for s in ws.suspicions:
+        if s.status in ("rejected", "awaiting_scope"):
+            assert not s.task_ids and s.subclaim_id is None, s.id
+            continue
+        purposes = sorted(t.purpose for t in ws.tasks if t.id in s.task_ids)
+        assert purposes == ["challenge", "support"], s.id
+        assert s.status == expected.get(statuses[s.subclaim_id], "open"), s.id
+    # 10. The case file builds and has its sections; every quoted edge appears in it.
     report = build_report(ws, v)
     for section in ("## Assessment", "## Sub-claims", "## Competing hypotheses", "## Timeline", "## Integrity"):
         assert section in report, section

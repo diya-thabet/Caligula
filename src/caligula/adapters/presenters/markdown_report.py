@@ -9,7 +9,9 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from caligula.adapters.presenters.analysis import assessment, competing_hypotheses, likelihood_text
+from caligula.adapters.presenters.evolution import evolution, suspicions
 from caligula.application.investigation.plan import TaskStatus
+from caligula.application.investigation.team import RoundSummary
 from caligula.application.investigation.workspace import ProposalStatus, Workspace
 from caligula.domain.model.evidence import AbsenceFinding, EvidenceEdge
 from caligula.domain.model.registers import REGISTERS
@@ -52,7 +54,7 @@ def _cell(text: str) -> str:
 
 
 def build_report(ws: Workspace, verdict: Verdict, review: str | None = None, poc: bool = True,
-                 stop_reason: str | None = None) -> str:
+                 stop_reason: str | None = None, rounds: list[RoundSummary] | None = None) -> str:
     a = ws.allegation
     out: list[str] = [f"# Case {a.id}", ""]
     if poc:
@@ -155,6 +157,9 @@ def build_report(ws: Workspace, verdict: Verdict, review: str | None = None, poc
     # Sorted on text too: same-day events must come out in the same order on every run.
     out += [f"- {when:%Y-%m-%d} {what}" for when, what in sorted(events)] or ["(no dated evidence)"]
 
+    story = [*suspicions(ws), *evolution(rounds or [], stop_reason)]
+    if story:
+        out += ["", *story]
     if ws.tasks:
         out += ["", "## Collection tasks", "", "| Task | Specialist | Purpose | Objective | Outcome | Note |",
                 "|---|---|---|---|---|---|"]
