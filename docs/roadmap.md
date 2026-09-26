@@ -98,7 +98,7 @@ capture ──► verification pipeline (code, per document, in parallel) ──
 |---|---|---|
 | E1 | Verified fact base: fact-checks first answer from facts already verified (seconds), then refresh in the background | Median fact-check on a known topic under 30 s |
 | E2 | Job queue and workers for rounds and verification | Many cases in parallel |
-| E3 | Prompt caching and model routing per task (planner vs readers) | Cost per case tracked and reduced |
+| E3 | Prompt caching and model routing per task (planner vs readers); per-role models done (`--analyst-llm`, `--collector-llm`, `--reviewer-llm`) | Cost per case tracked and reduced |
 
 ## F. Channels and review (P2)
 

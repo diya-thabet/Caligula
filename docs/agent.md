@@ -98,14 +98,14 @@ flowchart TD
 
 ### 3. Inside an agent (tool loop)
 
-The same `AgentRunner` port (Claude adapter: `adapters/llm/claude_runner.py`) runs the single investigator, each
+The same `AgentRunner` port (adapters: `adapters/llm/claude_runner.py`, `adapters/llm/openai_compat.py`) runs the single investigator, each
 specialist and the reviewer; only the tool set, the brief and the wrap-up
 tool differ.
 
 ```mermaid
 flowchart TD
-    B["Brief: case, entities, your tasks, leads"] --> M[/"Claude turn"/]
-    WEBS[/"web_search<br/>server tool, discovery only"/] -.-> M
+    B["Brief: case, entities, your tasks, leads"] --> M[/"Model turn"/]
+    WEBS[/"web search: search_web tool (our connector)<br/>or the provider's own, discovery only"/] -.-> M
     M -- "tool calls" --> G{"Metered gate<br/>agent done? budget left?"}
     G -- no --> ERR["ToolError back to the model"]
     ERR --> M

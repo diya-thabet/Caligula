@@ -8,8 +8,10 @@ Caligula is a political analytics platform designed to track, measure, and expla
 
 Under the hood, Caligula is an evidence engine for public-interest allegations,
 starting with procurement and public-funds cases in Tunisia. It never asks an
-LLM whether something is true. Claude breaks an allegation into checkable
-sub-claims and reads documents; code then verifies every quote, hashes every
+LLM whether something is true. A language model (Claude, or any
+OpenAI-compatible model, hosted or running on your own server) breaks an
+allegation into checkable sub-claims and reads documents; code then verifies
+every quote, hashes every
 source, detects official records that were rewritten after the fact, collapses
 articles that all trace back to one source, and computes the verdict.
 
@@ -35,11 +37,28 @@ caligula screen fixtures/awards_synthetic.json
 # Score labelled cases and sweep the thresholds
 caligula calibrate fixtures
 
-# Agent (needs ANTHROPIC_API_KEY or an `ant auth login` profile)
+# Agents on Claude (needs ANTHROPIC_API_KEY or an `ant auth login` profile)
 caligula investigate "Le taux de chômage est tombé à 12 % en 2026" --mode factcheck
 caligula investigate "$(jq -r .allegation.text fixtures/steg_synthetic/case.json)" \
     --mode investigate --team --case-dir fixtures/steg_synthetic
+
+# Agents on any OpenAI-compatible API, with our own web search
+export CALIGULA_BASE_URL=https://api.mistral.ai/v1 CALIGULA_API_KEY=...
+caligula investigate "..." --llm openai:MODEL --search brave          # BRAVE_API_KEY
+
+# ...or on a local open model (Ollama here), so case data stays on your server
+caligula investigate "..." --llm openai:qwen3:32b@http://localhost:11434/v1 --search searxng
+
+# Mixed: local collectors, a stronger hosted reviewer
+caligula investigate "..." --team --collector-llm openai:qwen3:32b@http://localhost:11434/v1 \
+    --reviewer-llm claude --search searxng
 ```
+
+Model specs are `claude[:MODEL]` or `openai:MODEL[@BASE_URL]`; defaults come
+from `CALIGULA_LLM`, `CALIGULA_BASE_URL`, `CALIGULA_API_KEY` and
+`CALIGULA_SEARCH` (SearXNG address in `CALIGULA_SEARXNG_URL`). Weaker models
+propose more material that code rejects and may miss evidence; they cannot
+make anything count that fails validation.
 
 OCR needs `tesseract-ocr` with the `fra` and `eng` models (`ara` optional) and `poppler-utils`.
 

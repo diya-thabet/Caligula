@@ -30,10 +30,14 @@ scenario). This document records what we kept, what we changed, and why.
    result. V1 is one Python package. Postgres + pgvector replaces the
    in-memory store in V2 behind the same `EvidenceStore` interface. Kafka and a
    JVM API come back only if ingestion volume or a team needs them.
-3. **Claude as the LLM**, called through the official SDK with structured
-   outputs (`client.beta.messages.parse`) and server-side refusal fallbacks
-   (`fallbacks="default"`). No LangGraph in V1: the loop is short and explicit.
-   V3's iterative search loop will use the SDK's tool runner.
+3. **Any model provider.** The workflow depends on two ports, `ClaimAnalyst`
+   and `AgentRunner`. Adapters: Claude (official SDK: structured outputs,
+   tool runner, server-side refusal fallbacks and web search) and any
+   OpenAI-compatible API (hosted, or open models self-hosted with vLLM or
+   Ollama, which keeps case data on our servers). Web search is a port of its
+   own (SearXNG, Brave) so it does not depend on the model provider. Each role
+   (analyst, collectors, reviewer) can run on a different model. No
+   LangGraph: the loop is short and explicit.
 4. **Two hashes, field-level diffs.** SHA-256 of raw bytes proves chain of
    custody but changes on any re-render (PDF metadata, HTML template), so on
    its own it would flag almost everything. A second hash over normalized text
@@ -99,12 +103,13 @@ src/caligula/
 │                               single_agent, team
 └── adapters/
     ├── persistence/            memory, postgres (+ schema.sql), blob_fs, ledger_jsonl, search
-    ├── sources/                wayback, worldbank, web, telegram
+    ├── sources/                wayback, worldbank, web, web_search, telegram
     ├── media/                  text_extraction (PDF, OCR), image_sanitizer
-    ├── llm/                    claude_analyst, claude_runner, claude_tools
+    ├── llm/                    analyst_base (prompts, schemas), claude_analyst, claude_runner,
+    │                           openai_compat, tool_schema
     ├── presenters/             markdown_report, analysis, public_reply, cli_summary
     ├── fixtures/               case_directory
-    └── cli/                    main (argument parsing), bootstrap (composition root)
+    └── cli/                    main (argument parsing), bootstrap and models (composition root)
 ```
 
 | Layer | May import | Must not import |
@@ -270,8 +275,9 @@ What has been built so far. The forward-looking backlog, with task ids, is in
 
 ## Not verified yet
 
-- The live paths (`--live`, `investigate`) have only run against a scripted
-  stand-in for Claude; the first real run needs API credentials.
+- The live paths (`--live`, `investigate`) have only run against scripted
+  stand-ins (Claude SDK objects, a mock OpenAI-compatible server); the first
+  real run needs a model API key or a local model server.
 - JORT, TUNEPS, RNE, Wayback, World Bank and Telegram were unreachable from the build
   environment, so the connectors are tested against mocked responses only.
 - The embedder is a character n-gram baseline; a neural multilingual embedder
