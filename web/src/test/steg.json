@@ -2074,6 +2074,299 @@
    }
   },
   "/cases/{id}/claims": {
+   "ach": [
+    {
+     "hypotheses": [
+      "H1",
+      "H2"
+     ],
+     "inconsistency": {
+      "H1": 0.0,
+      "H2": 1.4
+     },
+     "ranking": [
+      "H1",
+      "H2"
+     ],
+     "rows": [
+      {
+       "diagnostic": false,
+       "doc_ids": [
+        "news_outage",
+        "steg_communique"
+       ],
+       "kind": "edge",
+       "ratings": {
+        "H1": "C",
+        "H2": "C"
+       },
+       "relation": "supports",
+       "subclaim_id": "C1",
+       "weight": 0.5
+      },
+      {
+       "diagnostic": false,
+       "doc_ids": [
+        "nightlights"
+       ],
+       "kind": "edge",
+       "ratings": {
+        "H1": "C",
+        "H2": "C"
+       },
+       "relation": "supports",
+       "subclaim_id": "C1",
+       "weight": 0.7
+      },
+      {
+       "diagnostic": true,
+       "doc_ids": [
+        "ins_peak"
+       ],
+       "kind": "edge",
+       "ratings": {
+        "H1": "C",
+        "H2": "I"
+       },
+       "relation": "contradicts",
+       "subclaim_id": "C2",
+       "weight": 0.7
+      },
+      {
+       "diagnostic": true,
+       "doc_ids": [
+        "weather"
+       ],
+       "kind": "edge",
+       "ratings": {
+        "H1": "C",
+        "H2": "I"
+       },
+       "relation": "contradicts",
+       "subclaim_id": "C2",
+       "weight": 0.7
+      }
+     ],
+     "untested": []
+    },
+    {
+     "hypotheses": [
+      "H3",
+      "H4",
+      "H5",
+      "H6",
+      "H7"
+     ],
+     "inconsistency": {
+      "H3": 0.25,
+      "H4": 1.275,
+      "H5": 0.0,
+      "H6": 0.0,
+      "H7": 0.0
+     },
+     "ranking": [
+      "H3",
+      "H4"
+     ],
+     "rows": [
+      {
+       "diagnostic": false,
+       "doc_ids": [
+        "jort_award_v1",
+        "news_jort_b",
+        "news_jort_c",
+        "news_jort_d"
+       ],
+       "kind": "edge",
+       "ratings": {
+        "H3": "C",
+        "H4": "N",
+        "H5": "N",
+        "H6": "N",
+        "H7": "N"
+       },
+       "relation": "supports",
+       "subclaim_id": "C3",
+       "weight": 0.75
+      },
+      {
+       "diagnostic": false,
+       "doc_ids": [
+        "worldbank"
+       ],
+       "kind": "edge",
+       "ratings": {
+        "H3": "C",
+        "H4": "N",
+        "H5": "N",
+        "H6": "N",
+        "H7": "N"
+       },
+       "relation": "supports",
+       "subclaim_id": "C3",
+       "weight": 0.8
+      },
+      {
+       "diagnostic": false,
+       "doc_ids": [
+        "site_report"
+       ],
+       "kind": "edge",
+       "ratings": {
+        "H3": "C",
+        "H4": "N",
+        "H5": "N",
+        "H6": "N",
+        "H7": "N"
+       },
+       "relation": "supports",
+       "subclaim_id": "C4",
+       "weight": 0.6
+      },
+      {
+       "diagnostic": false,
+       "doc_ids": [
+        "sentinel"
+       ],
+       "kind": "edge",
+       "ratings": {
+        "H3": "C",
+        "H4": "N",
+        "H5": "N",
+        "H6": "N",
+        "H7": "N"
+       },
+       "relation": "supports",
+       "subclaim_id": "C4",
+       "weight": 0.7
+      },
+      {
+       "diagnostic": false,
+       "doc_ids": [
+        "jort_award_v1"
+       ],
+       "kind": "edge",
+       "ratings": {
+        "H3": "C",
+        "H4": "C",
+        "H5": "N",
+        "H6": "N",
+        "H7": "N"
+       },
+       "relation": "supports",
+       "subclaim_id": "C5",
+       "weight": 0.75
+      },
+      {
+       "diagnostic": false,
+       "doc_ids": [
+        "tuneps_search"
+       ],
+       "kind": "edge",
+       "ratings": {
+        "H3": "C",
+        "H4": "C",
+        "H5": "N",
+        "H6": "N",
+        "H7": "N"
+       },
+       "relation": "supports",
+       "subclaim_id": "C5",
+       "weight": 0.75
+      },
+      {
+       "diagnostic": false,
+       "doc_ids": [
+        "audit"
+       ],
+       "kind": "edge",
+       "ratings": {
+        "H3": "C",
+        "H4": "C",
+        "H5": "N",
+        "H6": "N",
+        "H7": "N"
+       },
+       "relation": "supports",
+       "subclaim_id": "C5",
+       "weight": 0.85
+      },
+      {
+       "diagnostic": true,
+       "doc_ids": [
+        "steg_procedure"
+       ],
+       "kind": "edge",
+       "ratings": {
+        "H3": "I",
+        "H4": "C",
+        "H5": "N",
+        "H6": "N",
+        "H7": "N"
+       },
+       "relation": "supports",
+       "subclaim_id": "C9",
+       "weight": 0.25
+      },
+      {
+       "diagnostic": true,
+       "doc_ids": [
+        "audit"
+       ],
+       "kind": "edge",
+       "ratings": {
+        "H3": "C",
+        "H4": "I",
+        "H5": "N",
+        "H6": "N",
+        "H7": "N"
+       },
+       "relation": "contradicts",
+       "subclaim_id": "C9",
+       "weight": 0.85
+      },
+      {
+       "diagnostic": true,
+       "doc_ids": [
+        "absence:jort"
+       ],
+       "kind": "absence",
+       "ratings": {
+        "H3": "C",
+        "H4": "I",
+        "H5": "N",
+        "H6": "N",
+        "H7": "N"
+       },
+       "relation": "contradicts",
+       "subclaim_id": "C9",
+       "weight": 0.425
+      },
+      {
+       "diagnostic": false,
+       "doc_ids": [
+        "financial-check"
+       ],
+       "kind": "financial",
+       "ratings": {
+        "H3": "C",
+        "H4": "N",
+        "H5": "N",
+        "H6": "N",
+        "H7": "N"
+       },
+       "relation": "supports",
+       "subclaim_id": "C6",
+       "weight": 0.9
+      }
+     ],
+     "untested": [
+      "H5",
+      "H6",
+      "H7"
+     ]
+    }
+   ],
    "depends_on": [
     {
      "changes": [

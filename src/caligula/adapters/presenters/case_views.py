@@ -164,7 +164,8 @@ def claims(case: Case) -> Json:
     } for h in v.hypotheses]
     return {"subclaims": subclaims, "hypotheses": hypotheses,
             "ruled_out": [r.model_dump() for r in a.ruled_out],
-            "depends_on": [d.model_dump() for d in v.depends_on]}
+            "depends_on": [d.model_dump() for d in v.depends_on],
+            "ach": [m.model_dump(mode="json") for m in v.ach]}
 
 
 def _source(doc: Document) -> Json:

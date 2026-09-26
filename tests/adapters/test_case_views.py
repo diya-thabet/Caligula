@@ -41,6 +41,10 @@ def test_claim_cards_carry_their_judgment_and_evidence_ids(store):
     h4 = next(h for h in c["hypotheses"] if h["id"] == "H4")
     assert (h4["kind"], h4["status"], h4["untested"]) == ("innocent", "falsified", False)
     assert c["ruled_out"][0]["explanation_id"] == "sole_supplier"
+    [_, main] = c["ach"]
+    assert main["ranking"][:2] == ["H3", "H4"] and main["untested"] == ["H5", "H6", "H7"]
+    c9 = [r for r in main["rows"] if r["subclaim_id"] == "C9"]
+    assert all(r["diagnostic"] for r in c9) and c9[0]["ratings"]["H4"] in ("C", "I")
 
 
 def test_evidence_opens_on_its_exact_quote_and_source(store):
