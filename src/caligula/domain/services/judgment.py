@@ -67,31 +67,58 @@ def _origins(c: SubClaimResult) -> int:
     return len(c.contradicting_clusters) if c.status == CONTRADICTED else 0
 
 
+def _weaknesses(c: SubClaimResult, v: Verdict, allegation: Allegation, params: Params) -> tuple[list[str], list[str]]:
+    """What caps confidence in one sub-claim's status: (low, moderate) reasons."""
+    if c.status == UNVERIFIED:
+        return [f"{c.id} has no evidence"], []
+    if c.status == PARTIAL:
+        return [f"{c.id}: evidence too weak to settle it"], []
+    if c.status == CONTESTED:
+        return [], [f"{c.id}: credible evidence on both sides"]
+    moderate = []
+    if c.status in (SUPPORTED, CONTRADICTED) and _origins(c) < 2:
+        moderate.append(f"{c.id} rests on a single independent origin")
+    side = Relation.CONTRADICTS if c.status == CONTRADICTED else Relation.SUPPORTS
+    weights = [i.weight for i in v.weighed if i.subclaim_id == c.id and i.relation == side]
+    if c.id == allegation.financial_subclaim and v.financial is not None and v.financial.flagged:
+        weights.append(params.financial_check_weight)
+    if weights and max(weights) < params.weak_source:
+        moderate.append(f"{c.id} rests only on weak or self-serving sources")
+    return [], moderate
+
+
+def subclaim_judgment(
+    c: SubClaimResult, v: Verdict, allegation: Allegation, params: Params = DEFAULT_PARAMS,
+    unchallenged: Iterable[str] = (),
+) -> tuple[float | None, str, Level, list[str]]:
+    """One key judgment: how likely the sub-claim is true, and how much confidence that deserves."""
+    if c.support == 0 and c.contradiction == 0:
+        p, term = None, CANNOT_ASSESS
+    else:
+        p = round(0.5 + (c.support - c.contradiction) / 2, 3)
+        term = estimative_term(p)
+    low, moderate = _weaknesses(c, v, allegation, params)
+    moderate += [f"one origin decides it: without {', '.join(d.origin)}, {change}"
+                 for d in v.depends_on for change in d.changes if change.startswith(f"{c.id} ")]
+    if c.id in unchallenged:
+        moderate.append(f"{c.id} supported but never challenged")
+    if low:
+        return p, term, Level.LOW, low + moderate
+    if moderate:
+        return p, term, Level.MODERATE, moderate
+    return p, term, Level.HIGH, ["strong, independent origins; nothing found against it"]
+
+
 def confidence(
     v: Verdict, allegation: Allegation, params: Params = DEFAULT_PARAMS, unchallenged: Iterable[str] = ()
 ) -> tuple[Level, list[str]]:
     low: list[str] = []
     moderate: list[str] = []
-    core = [c for c in v.by_subclaim if c.id in allegation.core_subclaims]
-    financial_check = v.financial is not None and v.financial.flagged
-    for c in core:
-        if c.status == UNVERIFIED:
-            low.append(f"{c.id} has no evidence")
-            continue
-        if c.status == PARTIAL:
-            low.append(f"{c.id}: evidence too weak to settle it")
-            continue
-        if c.status == CONTESTED:
-            moderate.append(f"{c.id}: credible evidence on both sides")
-            continue
-        if c.status in (SUPPORTED, CONTRADICTED) and _origins(c) < 2:
-            moderate.append(f"{c.id} rests on a single independent origin")
-        side = Relation.CONTRADICTS if c.status == CONTRADICTED else Relation.SUPPORTS
-        weights = [i.weight for i in v.weighed if i.subclaim_id == c.id and i.relation == side]
-        if c.id == allegation.financial_subclaim and financial_check:
-            weights.append(params.financial_check_weight)
-        if weights and max(weights) < params.weak_source:
-            moderate.append(f"{c.id} rests only on weak or self-serving sources")
+    for c in v.by_subclaim:
+        if c.id in allegation.core_subclaims:
+            lo, mo = _weaknesses(c, v, allegation, params)
+            low += lo
+            moderate += mo
     for d in v.depends_on:
         if d.changes_verdict:
             moderate.append(f"the verdict would change without {', '.join(d.origin)}")

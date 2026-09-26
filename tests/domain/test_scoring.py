@@ -156,3 +156,27 @@ def test_likelihood_and_confidence_are_separate_statements(store):
                       [*edges, edge("blog", "C3", "price was inflated")], [])
     assert (v.likelihood, v.likelihood_term, v.confidence) == (0.566, "likely", "low")
     assert v.confidence_reasons == ["C3: evidence too weak to settle it"]
+
+
+def test_each_key_judgment_has_its_own_likelihood_and_confidence(store):
+    from caligula.domain.services.judgment import subclaim_judgment
+
+    add_doc(store, "mirror", "the award happened", kind=SourceKind.FOREIGN_MIRROR)
+    add_doc(store, "audit", "audit: the award happened", kind=SourceKind.AUDIT)
+    add_doc(store, "blog", "the price was inflated", kind=SourceKind.SOCIAL)
+    edges = [edge("mirror", "C1", "award happened"), edge("audit", "C1", "award happened"),
+             edge("blog", "C3", "price was inflated")]
+    a = allegation(core=["C1", "C3"])
+    v = build_verdict(store.corpus(), a, edges, [])
+    c1, c2, c3 = v.by_subclaim
+    assert subclaim_judgment(c1, v, a) == (0.985, "almost certain", "high",
+                                           ["strong, independent origins; nothing found against it"])
+    assert subclaim_judgment(c1, v, a, unchallenged=["C1"])[2:] == ("moderate", ["C1 supported but never challenged"])
+    assert subclaim_judgment(c2, v, a) == (None, "cannot be assessed", "low", ["C2 has no evidence"])
+    assert subclaim_judgment(c3, v, a)[2:] == ("low", ["C3: evidence too weak to settle it",
+                                                       "one origin decides it: without blog, C3 partially_supported "
+                                                       "-> unverified"])
+    # When one origin decides a sub-claim, its judgment says so.
+    v = build_verdict(store.corpus(), a, [edge("mirror", "C1", "award happened")], [])
+    _, _, level, reasons = subclaim_judgment(v.by_subclaim[0], v, a)
+    assert level == "moderate" and "one origin decides it: without mirror, C1 supported -> unverified" in reasons
