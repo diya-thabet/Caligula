@@ -52,7 +52,7 @@ flowchart TD
     NORM --> ROUND[["Collection round n<br/>(graph 2)"]]
     ROUND --> STOP{"Stop rule"}
     STOP -- "continue with n + 1" --> ROUND
-    STOP -- "no_open_tasks, no_progress, round_limit" --> VER
+    STOP -- "settled, exhausted, no_open_tasks,<br/>budget, round_limit" --> VER
     SINGLE --> VER["Verdict, code, from accepted evidence only<br/>competing hypotheses, sensitivity,<br/>likelihood and confidence"]
     VER --> REP["Case file out/CASE.md<br/>presenters/markdown_report.py"]
     REP --> REPLY{"Public reply policy"}
@@ -66,7 +66,7 @@ flowchart TD
 flowchart TD
     START(["Round n"]) --> ACT{"Specialists with open tasks<br/>of round n or earlier?"}
     ACT -- none --> NONE(["stop: no_open_tasks"])
-    ACT -- some --> FORK{{"Fan out<br/>budget: planned in round 1, half later"}}
+    ACT -- some --> FORK{{"Fan out<br/>budget: planned in round 1; later half,<br/>+4 per priority task"}}
     FORK --> PAR
     subgraph PAR["Specialists in parallel (only those with open tasks)"]
         direction LR
@@ -79,22 +79,46 @@ flowchart TD
     PAR <-. "store, propose, close tasks, leads" .-> WS[("Shared workspace<br/>documents, proposals, tasks, leads, ledger")]
     PAR --> JOIN{{"All specialists reported"}}
     JOIN --> CH1["Queue challenge tasks for round n+1<br/>supported and unchallenged sub-claims<br/>routed to official and web_news"]
-    CH1 --> REV[["Reviewer<br/>accept or dispute each proposal<br/>request_collection: tasks for round n+1"]]
-    REV <-. "decisions, new tasks" .-> WS
+    CH1 --> REV[["Reviewer, deep reasoning<br/>accept or dispute each proposal<br/>request_collection: tasks for round n+1<br/>raise_suspicion: a confirm task and a refute task"]]
+    REV <-. "decisions, new tasks, suspicions" .-> WS
+    REV -- "suspicion with new people<br/>or companies" --> SCOPE{"Legal policy<br/>on the wider scope"}
+    SCOPE -- "refuse / lawyer needed" --> HELD(["rejected or awaiting_scope:<br/>no work"])
     REV --> CH2["Queue challenge tasks<br/>for sub-claims the review made supported"]
-    CH2 --> SUM["Round summary<br/>statuses, accepted, disputed, tasks closed"]
+    CH2 --> RES["Resolve suspicions from the evidence<br/>supported: confirmed, contradicted: refuted"]
+    RES --> SUM["Round summary<br/>new evidence, statuses, suspicions,<br/>verdict, confidence, tool calls"]
     SUM --> RULE{"Stop rule"}
+    RULE -- "confidence high,<br/>no open suspicion" --> S0(["settled"])
     RULE -- "no open task for rounds up to n+1" --> S1(["no_open_tasks"])
-    RULE -- "2 rounds unchanged, no challenge pending" --> S2(["no_progress"])
+    RULE -- "nothing new, nothing changed,<br/>no suspicion raised or resolved" --> S2(["exhausted"])
+    RULE -- "tool calls >= cap" --> S4(["budget"])
     RULE -- "n = max_rounds" --> S3(["round_limit"])
     RULE -- otherwise --> NEXT(["Round n+1"])
 ```
 
-| Stop reason | Condition (checked after the review) |
+The loop runs until the case is settled or exhausted; the rest are hard
+caps. A new suspicion always earns another round.
+
+| Stop reason | Condition (checked after the review, in this order) |
 |---|---|
+| `settled` | confidence is high and no suspicion is open, even if follow-up work is queued |
 | `no_open_tasks` | no open task for the next round, new or carried over |
-| `no_progress` | two consecutive rounds with the same sub-claim statuses and accepted count, and no challenge task pending |
-| `round_limit` | `max_rounds` reached (default 3); tasks still open appear as "not run" in the case file |
+| `exhausted` | from round 2: no new accepted evidence, no sub-claim status changed, no suspicion raised or resolved |
+| `budget` | tool calls across all agents reached `--max-tool-calls` (default 600) |
+| `round_limit` | `--rounds` reached (default 8); tasks still open appear as "not run" in the case file |
+
+**Suspicions.** When the evidence makes the reviewer suspect something the
+case does not test yet, `raise_suspicion` records it with what would confirm
+it and what would refute it. Code ties it to a sub-claim (existing or new),
+queues one task each way for the next round, and resolves its status from
+that sub-claim's score after every review: the reviewer's opinion never
+settles it. At most four per review. One that brings in people or companies
+outside the claim goes through the intake policy first.
+
+**Effort where it matters.** Follow-up rounds give each specialist half its
+first-round budget plus four calls per priority task: tasks testing an open
+suspicion, an innocent explanation not yet refuted, or a core sub-claim that
+rests on one origin. The reviewer runs with deep reasoning (Claude effort
+`xhigh`).
 
 ### 3. Inside an agent (tool loop)
 
@@ -221,6 +245,12 @@ Whatever the models do:
   ranking of hypotheses, what the conclusion depends on, the likelihood and
   the confidence all come from code; models only change them by adding or
   disputing evidence.
+- **Persistence before "not found".** A task closes `not_found`, and an
+  absence is recorded, only after three different searches by that agent for
+  it; searches the workspace cannot see (the provider's built-in search) are
+  declared and logged as such.
+- **Suspicions are tested both ways** and resolved by the evidence; widening
+  the case to new people or companies needs the legal policy's approval.
 - **Budgets.** Each tool call spends the agent's budget; at zero only the
   wrap-up tools work.
 - **Citations.** `[doc_id]` citations in summaries are checked against the
@@ -237,8 +267,8 @@ Whatever the models do:
 | Decomposer | 1 model call | sub-claims, hypotheses, core set, parties, bearing, expected records | invent ids or registers later used by code (filtered); skip an innocent explanation (code adds it) |
 | Planner | 1 model call | entities, window, tasks, budget weights | leave a core sub-claim on one kind of source |
 | Specialists (x5) | tool loops, parallel | what to search, fetch, propose; task outcomes | make evidence count; use other specialists' tools |
-| Reviewer | tool loop | accept / dispute; new tasks; declare parties | collect; close with pending proposals; rate evidence against hypotheses (code does) |
-| Orchestrator | code | rounds, budgets, challenge tasks, stopping | be overridden by any model |
+| Reviewer | tool loop, deep reasoning | accept / dispute; new tasks; declare parties; raise suspicions | collect; close with pending proposals; rate evidence against hypotheses or settle a suspicion (code does); widen the scope without the legal policy |
+| Orchestrator | code | rounds, budgets and priorities, challenge tasks, suspicion status, stopping | be overridden by any model |
 | Validator / scorer | code | what is valid, statuses, verdict | be skipped |
 | Report | code | the case file | include anything not traceable |
 

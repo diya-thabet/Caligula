@@ -27,3 +27,18 @@ A test enforces the dependency rule; run `pytest` before every commit.
 - `tests/adapters`: one adapter at a time, against mocks or local services
   (Postgres tests run when `CALIGULA_TEST_DSN` is set).
 - `tests/e2e`: the synthetic cases end to end.
+
+Guards against hidden regressions:
+
+- `support.assert_invariants(ws)`: properties every run must satisfy (counted
+  evidence is valid and exactly the accepted proposals, the ledger is intact,
+  the verdict obeys its rules, ACH ratings follow predictions, suspicions are
+  tested both ways...). Call it at the end of every new workflow test.
+- `tests/e2e/golden/steg_case_file.md`: the offline case file, compared line by
+  line. When a change to it is intended, regenerate with
+  `UPDATE_GOLDEN=1 pytest tests/e2e/test_golden_case_file.py` and commit the
+  golden file with the change, so the diff shows in review.
+- `tests/e2e/test_determinism.py`: the verdict must be identical across Python
+  hash seeds; anything built from a set must be sorted before it is output.
+- Scripted agents (`support.ScriptedAgentRunner`, `support.scripted_team`)
+  drive the real tools; `scripted_team` keys scripts by the round in the brief.
