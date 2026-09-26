@@ -161,7 +161,7 @@ def key_assumptions(ws: Workspace, v: Verdict) -> list[str]:
     p = ws.params
     out = ["## Key assumptions", ""]
     used = {w.doc_id for w in v.weighed if w.kind == "edge"}
-    kinds = sorted({ws.store.get(d).source_kind for d in used}, key=lambda k: -p.weights[k])
+    kinds = sorted({ws.store.get(d).source_kind for d in used}, key=lambda k: (-p.weights[k], k.value))
     if kinds:
         out.append("- Sources are weighed by how easily their publisher can silently change them: "
                    + ", ".join(f"{k} {p.weights[k]:.2f}" for k in kinds) + ".")
