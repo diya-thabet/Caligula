@@ -20,11 +20,12 @@ parameter so expert-written rubrics can replace the default without code.
 from __future__ import annotations
 
 import json
-from collections import defaultdict
+from collections import Counter, defaultdict
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
+from caligula.application.investigation.attribution import check_summary
 from caligula.application.investigation.brief import case_brief, unknown_citations
 from caligula.application.investigation.plan import MIN_BUDGET, Plan, TaskStatus, normalize_plan, round_budget
 from caligula.application.investigation.prompts import _COLLECTOR, REVIEWER, SPECIALIST_FOCUS
@@ -36,7 +37,8 @@ from caligula.application.investigation.workspace import (
     TraceEntry,
     Workspace,
 )
-from caligula.application.ports.llm import AgentRunner, ClaimAnalyst
+from caligula.application.ports.llm import AgentRunner, AttributionJudge, ClaimAnalyst
+from caligula.domain.model.attribution import AttributionReport
 from caligula.domain.model.claims import HypothesisKind
 from caligula.domain.model.intake import IntakeDecision
 from caligula.domain.model.verdict import Verdict
@@ -119,6 +121,8 @@ class TeamResult:
     stop_reason: str
     plan_fixes: list[str] = field(default_factory=list)
     trace: list[TraceEntry] = field(default_factory=list)
+    # The final summary checked sentence by sentence; its published() text is what an editor sees.
+    attribution: AttributionReport | None = None
 
 
 class InvestigationTeam:
@@ -136,6 +140,7 @@ class InvestigationTeam:
         web_search: bool = True,
         parallel: int = 5,
         on_event: Callable[[str, str], None] | None = None,
+        judge: AttributionJudge | None = None,
     ):
         self.runner = runner
         self.reviewer_runner = reviewer_runner or runner  # the reviewer may run on another model
@@ -149,6 +154,7 @@ class InvestigationTeam:
         self.web_search = web_search
         self.parallel = parallel
         self.emit = on_event or (lambda phase, detail: None)
+        self.judge = judge  # reads the final summary sentence by sentence; code checks it either way
 
     # --- phases ----------------------------------------------------------------
 
@@ -189,9 +195,10 @@ class InvestigationTeam:
         verdict = ws.verdict()
         self.emit("verdict", f"{verdict.verdict} ({verdict.likelihood_term}, {verdict.confidence} confidence)")
         ws.ledger.append("stop", "caligula", reason=stop, rounds=len(rounds))
+        review = self._finalise_summary(ws, review, verdict)
         return TeamResult(verdict=verdict, review=review, reports=dict(reports),
-                          unknown_citations=unknown_citations(review, ws.store), rounds=rounds,
-                          stop_reason=stop, plan_fixes=plan.fixes, trace=ws.trace)
+                          unknown_citations=unknown_citations(review, ws), rounds=rounds,
+                          stop_reason=stop, plan_fixes=plan.fixes, trace=ws.trace, attribution=ws.attribution)
 
     def _scope_policy(self, ws: Workspace):
         """The intake policy, applied to a suspicion that widens the case."""
@@ -282,6 +289,37 @@ class InvestigationTeam:
         if last.tool_calls >= self.max_tool_calls:
             return "budget"
         return None
+
+    def _finalise_summary(self, ws: Workspace, review: str | None, verdict: Verdict) -> str | None:
+        """The judge reads the final summary; sentences it does not find in their evidence go back to
+        the reviewer once, and whatever still fails is removed from the published text."""
+        if not review:
+            return review
+        report = check_summary(ws, review, self.judge, verdict)
+        if report.failures and self.judge is not None:
+            self.emit("citations", f"{len(report.failures)} sentence(s) sent back to the reviewer")
+            review = self._rewrite(ws, review, report) or review
+            report = check_summary(ws, review, self.judge, verdict)
+        ws.attribution = report
+        counts = Counter(s.status.value for s in report.sentences)
+        ws.ledger.append("attribution", "caligula", statuses=dict(sorted(counts.items())),
+                         removed=[s.text for s in report.failures], judged=self.judge is not None)
+        self.emit("citations", ", ".join(f"{n} {status}" for status, n in sorted(counts.items())))
+        return review
+
+    def _rewrite(self, ws: Workspace, review: str, report: AttributionReport) -> str | None:
+        # Already sent back once: complete_review accepts the rewrite, which the judge then reads.
+        ctx = AgentContext(name="reviewer", budget=3, summary_returned=True)
+        tools = build_tools(ws, ctx, ["assess", "complete_review"])
+        problems = "\n".join(f"- « {s.text} »: {'; '.join(s.reasons)}" for s in report.failures)
+        brief = (case_brief(ws, ctx.budget)
+                 + f"\n\n<your_summary>\n{review}\n</your_summary>"
+                 + f"\n\n<sentences_not_backed_by_their_evidence>\n{problems}\n</sentences_not_backed_by_their_evidence>"
+                 + "\n\nRewrite the summary so that every sentence says only what its cited evidence says "
+                   "(assess lists counted_evidence), or drop those sentences, then call complete_review. "
+                   "Sentences that still fail will be removed.")
+        self.reviewer_runner.run(REVIEWER, tools, brief, 8, lambda: ctx.done, deep=True)
+        return ctx.report
 
     # --- agents ----------------------------------------------------------------
 

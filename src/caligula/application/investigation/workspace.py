@@ -29,6 +29,7 @@ from caligula.application.ports.sources import (
     WebSearch,
 )
 from caligula.application.ports.storage import Ledger
+from caligula.domain.model.attribution import AttributionReport
 from caligula.domain.model.claims import Allegation, Bearing, HypothesisKind, Party, SubClaim
 from caligula.domain.model.evidence import AbsenceFinding, EvidenceEdge, FinancialFigure, RejectedEvidence
 from caligula.domain.model.intake import IntakeDecision
@@ -114,6 +115,7 @@ class AgentContext:
     budget: int
     done: bool = False
     report: str | None = None
+    summary_returned: bool = False  # its summary was sent back once for failing the citation check
 
 
 @dataclass
@@ -154,6 +156,8 @@ class Workspace:
     searches: list[Search] = field(default_factory=list)
     budget: int = 0  # default budget for a single-agent run
     summary: str | None = None
+    # The latest summary's sentence-level citation check.
+    attribution: AttributionReport | None = None
     # Proof-of-concept mode: work needing legal review proceeds, marked internal (see usecases/intake.py).
     poc: bool = True
     # Legal policy for a statement that widens the case (new people or companies); None: always legal review.

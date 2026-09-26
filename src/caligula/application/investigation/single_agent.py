@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from caligula.application.investigation.attribution import check_summary
 from caligula.application.investigation.brief import case_brief, unknown_citations
 from caligula.application.investigation.prompts import SYSTEM
 from caligula.application.investigation.toolkit import (
@@ -24,7 +25,7 @@ from caligula.application.investigation.toolkit import (
     web_search_tools,
 )
 from caligula.application.investigation.workspace import TraceEntry, Workspace
-from caligula.application.ports.llm import AgentRunner
+from caligula.application.ports.llm import AgentRunner, AttributionJudge
 from caligula.domain.model.verdict import Verdict
 
 
@@ -38,16 +39,19 @@ class InvestigationResult:
 
 
 class InvestigatorAgent:
-    def __init__(self, runner: AgentRunner, web_search: bool = True):
+    def __init__(self, runner: AgentRunner, web_search: bool = True, judge: AttributionJudge | None = None):
         self.runner = runner
         self.web_search = web_search
+        self.judge = judge
 
     def run(self, ws: Workspace) -> InvestigationResult:
         tools = build_tools(ws, names=SINGLE_AGENT_TOOLS + web_search_tools(ws, self.web_search))
         stop_reason = self.runner.run(SYSTEM[ws.mode], tools, case_brief(ws, ws.budget),
                                       max_iterations=ws.budget + 20, done=lambda: ws.finished,
                                       web_search=native_web_search(ws, self.web_search))
+        if ws.summary:  # the judge reads the final summary; failing sentences are left out of what is published
+            ws.attribution = check_summary(ws, ws.summary, self.judge)
         return InvestigationResult(
-            verdict=ws.verdict(), summary=ws.summary, unknown_citations=unknown_citations(ws.summary, ws.store),
+            verdict=ws.verdict(), summary=ws.summary, unknown_citations=unknown_citations(ws.summary, ws),
             trace=ws.trace, stop_reason=stop_reason,
         )

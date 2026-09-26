@@ -16,6 +16,7 @@ from functools import wraps
 from itertools import pairwise
 from typing import Literal
 
+from caligula.application.investigation.attribution import check_summary
 from caligula.application.investigation.plan import Outcome
 from caligula.application.investigation.suspicions import Suspicion, SuspicionStatus, unknown_entities
 from caligula.application.investigation.workspace import (
@@ -755,13 +756,28 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
                         urls=urls or [], round=ws.round + 1, created_by=ctx.name)
         return f"Task {t.id} queued for {specialist} in the next round."
 
+    def _check_citations(summary: str) -> None:
+        """Send a summary back, once, when sentences fail the checks in code (the judge model
+        runs on the final summary). With the budget spent, it is accepted and filtered."""
+        report = check_summary(ws, summary)
+        if report.failures and not ctx.summary_returned and ctx.budget > 0:
+            ctx.summary_returned = True
+            ws.log(ctx.name, "citation_check", {}, f"{len(report.failures)} sentence(s) sent back")
+            problems = "\n".join(f"- « {s.text} »: {'; '.join(s.reasons)}" for s in report.failures)
+            raise ToolRefusal("Some sentences are not backed by the evidence they cite. Rewrite them, citing the "
+                              "evidence ids that carry each fact (assess lists counted_evidence), or drop them; "
+                              f"what still fails will be removed:\n{problems}")
+        ws.attribution = report
+
     def complete_review(summary: str) -> str:
         """Close this round's review. Refused while proposals are pending (unless your
         budget is spent). Challenge tasks for supported sub-claims are queued
         automatically; add your own with request_collection when you see a specific
         innocent explanation worth checking. The summary is for a human editor: the
         anomalies, the evidence for each, contradictions, and what is still needed.
-        Cite documents as [doc_id]; do not name or accuse individuals.
+        Cite evidence ids ([E3], [E3, E7]) in every sentence that states a fact; each
+        sentence is checked against what it cites and sent back once if it says more.
+        Do not name or accuse individuals.
 
         Args:
             summary: Review summary.
@@ -769,6 +785,7 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         pending = [p.id for p in ws.proposals if p.status == ProposalStatus.PENDING]
         if pending and ctx.budget > 0:
             raise ToolRefusal(f"Not finished: proposals {pending} are still pending.")
+        _check_citations(summary)
         ctx.done, ctx.report = True, summary
         ws.log(ctx.name, "complete_review", {}, summary[:300])
         return "Review closed. Reply with a one-line acknowledgement only."
@@ -778,7 +795,8 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
     def finish(summary: str) -> str:
         """End the investigation. Refused while any supported sub-claim has not been
         challenged by at least one search with purpose "challenge" (unless the budget
-        is spent). The summary must cite documents as [doc_id] and must not name or
+        is spent). Every sentence that states a fact must cite evidence ids ([E3]) and
+        is checked against them; the summary must not name or
         accuse individuals.
 
         Args:
@@ -790,6 +808,7 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
                 f"Not finished: sub-claims {pending} are supported but no challenge search has "
                 "looked for evidence against them (emergency decrees, force majeure, price shocks, corrections)."
             )
+        _check_citations(summary)
         ws.summary = summary
         ws.log(ctx.name, "finish", {}, "done")
         return "Investigation closed. Reply with a one-line acknowledgement only."

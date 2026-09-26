@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import re
 
-from caligula.application.evidence_store import EvidenceStore
 from caligula.application.investigation.workspace import Workspace
 
 
@@ -29,6 +28,7 @@ def case_brief(ws: Workspace, budget: int) -> str:
     )
 
 
-def unknown_citations(text: str | None, store: EvidenceStore) -> list[str]:
-    cited = set(re.findall(r"\[([\w.:-]+)\]", text or ""))
-    return sorted(c for c in cited if store.get(c) is None)
+def unknown_citations(text: str | None, ws: Workspace) -> list[str]:
+    """Cited ids that are neither stored documents nor evidence ids of the case."""
+    cited = {ref.strip() for group in re.findall(r"\[([^\[\]]+)\]", text or "") for ref in group.split(",")}
+    return sorted(c for c in cited if c and ws.store.get(c) is None and c not in ws.evidence_ids)

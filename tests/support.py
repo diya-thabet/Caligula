@@ -131,7 +131,8 @@ def assert_invariants(ws, verdict=None):
 
 def scripted_team(scripts, record=None, briefs=None):
     """A team runner whose agents play `scripts[(agent, round)]`, the round read from their brief
-    (a specialist first called in round 2 plays its round-2 script)."""
+    (a specialist first called in round 2 plays its round-2 script); the reviewer's final rewrite
+    plays `scripts[("reviewer", "rewrite")]`."""
     import re
 
     from caligula.application.investigation.prompts import SPECIALIST_FOCUS
@@ -142,6 +143,9 @@ def scripted_team(scripts, record=None, briefs=None):
     def script_for(system, brief):
         agent = "reviewer" if system.startswith("You are the reviewer") else next(
             name for name, focus in SPECIALIST_FOCUS.items() if focus in system)
+        if "<your_summary>" in brief:  # the reviewer asked to rewrite sentences the judge did not find backed
+            briefs[(agent, "rewrite")] = brief
+            return scripts.get((agent, "rewrite"), []), record.setdefault((agent, "rewrite"), [])
         n = int(re.search(r'<your_tasks round="(\d+)">|Round (\d+) of at most', brief).group(1)
                 or re.search(r"Round (\d+) of at most", brief).group(1))
         briefs[(agent, n)] = brief

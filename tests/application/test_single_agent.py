@@ -38,15 +38,20 @@ def test_agent_builds_case_and_must_challenge_before_finishing(store):
           for c in ("C3", "C4", "C5", "C6")],
         ev("steg_procedure", "C5", "conformément à la procédure d'urgence", "qualifies"),
         ("assess", {}),
+        # Refused once: documents are cited, not evidence items.
         ("finish", {"summary": "Award [jort_award_v1] was rewritten [jort_award_v2]; see [nowhere]."}),
+        ("finish", {"summary": "The award was made by direct agreement [E5]. It was worth 120 million TND "
+                               "[E8]; see [nowhere]."}),
         ("search_evidence", {"query": "after finish", "purpose": "explore"}),  # refused
     ]
     record, calls = [], []
     result = agent_for(script, record, calls).run(ws)
 
     errors = [(name, out) for name, err, out in record if err]
-    assert [e[0] for e in errors] == ["record_evidence", "finish", "search_evidence"]
+    assert [e[0] for e in errors] == ["record_evidence", "finish", "finish", "search_evidence"]
     assert "editable source" in errors[0][1] and "C3" in errors[1][1]
+    assert "cites documents, not evidence items: jort_award_v1, jort_award_v2" in errors[2][1]
+    assert [s.status for s in ws.attribution.sentences] == ["unjudged", "unjudged"]
     assert result.verdict.verdict == "high_suspicion"
     assert result.unknown_citations == ["nowhere"]
     assessed = json.loads(next(out for name, _, out in record if name == "assess"))
@@ -71,7 +76,7 @@ def test_factcheck_reply_cites_sources(store):
     script = [
         ("record_evidence", {"doc_id": "ins_peak", "subclaim_id": "C2", "relation": "contradicts", "quote": "2026 : 4 870 MW (+0,8 % par rapport à 2025)", "rationale": "r"}),
         ("record_evidence", {"doc_id": "weather", "subclaim_id": "C2", "relation": "contradicts", "quote": "Aucun épisode de chaleur exceptionnel", "rationale": "r"}),
-        ("finish", {"summary": "Demand did not surge [ins_peak]."}),
+        ("finish", {"summary": "Demand did not surge [E1, E2]."}),
     ]
     ws.allegation.core_subclaims = ["C2"]
     result = agent_for(script, [], []).run(ws)

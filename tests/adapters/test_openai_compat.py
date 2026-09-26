@@ -69,12 +69,12 @@ def test_runner_drives_the_real_tools_until_the_agent_finishes(store):
         ({"content": None, "tool_calls": [call(4, "finish", summary="too early")]}, "tool_calls"),
         ({"content": None, "tool_calls": [
             call(5, "search_evidence", query="procédure d'urgence", purpose="challenge", subclaim_id="C5"),
-            call(6, "finish", summary="Audit [audit].")]}, "tool_calls"),
+            call(6, "finish", summary="The audit finds no documented emergency [E1].")]}, "tool_calls"),
     ]
     client, requests = server(replies)
     result = InvestigatorAgent(OpenAICompatRunner(client), web_search=False).run(ws)
 
-    assert result.stop_reason == "done" and ws.summary == "Audit [audit]."
+    assert result.stop_reason == "done" and ws.summary == "The audit finds no documented emergency [E1]."
     assert [e.doc_id for e in ws.edges] == ["audit"]
     tools = {t["function"]["name"] for t in requests[0]["tools"]}
     assert {"record_evidence", "finish", "assess"} <= tools
