@@ -79,6 +79,8 @@ describe("the activity tracker", () => {
     expect(within(round).getByText("reviewer")).toBeInTheDocument();
     const calls = within(round).getAllByTestId("tool-call").map((c) => c.textContent);
     expect(calls.some((t) => t?.includes("refused by code: Rejected: quote not found"))).toBe(true);
+    const history = await screen.findByRole("region", { name: "How the case evolved" });
+    expect(history).toHaveTextContent("Stopped after 1 round(s): the round limit was reached with work still open.");
     const progress = screen.getByRole("region", { name: "Progress" });
     expect(progress).toHaveTextContent("in review — the round limit was reached");
     expect(progress).toHaveTextContent("round 1 closed: 0 task(s) done, 1 new evidence item(s); partially supported, low confidence");

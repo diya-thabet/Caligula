@@ -2,12 +2,13 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Chip } from "./Chip";
 
-// Evidence ids (E13) become chips; expected-record ids (C5.E1) do not. Raw HTML in the Markdown is
-// never rendered: case files quote scraped pages.
-const EVIDENCE = /(?<![.\w])(E\d+)\b/g;
+// Evidence ids (E13), bare or cited in brackets ([E3, E7]), become chips; expected-record ids
+// (C5.E1) do not. Raw HTML in the Markdown is never rendered: case files quote scraped pages.
+const EVIDENCE = /\[(E\d+(?:\s*,\s*E\d+)*)\]|(?<![.\w[])(E\d+)\b/g;
 
 export function linkEvidence(markdown: string): string {
-  return markdown.replace(EVIDENCE, "[$1](#evidence:$1)");
+  return markdown.replace(EVIDENCE, (_, group: string | undefined, bare: string | undefined) =>
+    (group ? group.split(/\s*,\s*/) : [bare!]).map((id) => `[${id}](#evidence:${id})`).join(" "));
 }
 
 export function Markdown({ text }: { text: string }) {

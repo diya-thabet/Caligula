@@ -98,11 +98,21 @@ export interface HypothesisCard {
 
 export interface Dependency { origin: string[]; changes: string[]; changes_verdict: boolean }
 
+export interface AchRow {
+  subclaim_id: string; relation: Relation; kind: "edge" | "absence" | "financial"; doc_ids: string[];
+  weight: number; ratings: Record<string, "C" | "I" | "N">; diagnostic: boolean;
+}
+
+export interface AchMatrix {
+  hypotheses: string[]; rows: AchRow[]; inconsistency: Record<string, number>; ranking: string[]; untested: string[];
+}
+
 export interface ClaimsView {
   subclaims: SubclaimCard[];
   hypotheses: HypothesisCard[];
   ruled_out: { explanation_id: string; reason: string }[];
   depends_on?: Dependency[];
+  ach?: AchMatrix[];
 }
 
 export interface Source {

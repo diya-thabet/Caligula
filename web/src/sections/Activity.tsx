@@ -46,6 +46,30 @@ function ToolCall({ e }: { e: CaseEvent }) {
   );
 }
 
+/** How the case evolved, round by round: the record of what changed the assessment. */
+function History({ caseId }: { caseId: string }) {
+  const q = useQuery({ queryKey: ["case", caseId, "history"], queryFn: () => api.history(caseId) });
+  if (!q.data || q.data.rounds.length === 0) return null;
+  const h = q.data;
+  return (
+    <section className="stack" aria-label="How the case evolved" style={{ gap: 6 }}>
+      <h3>How the case evolved</h3>
+      <div className="table-wrap"><table>
+        <thead><tr><th>Round</th><th>Specialists</th><th>Tasks done</th><th>New evidence</th><th>Suspicions</th><th>Assessment after</th></tr></thead>
+        <tbody>{h.rounds.map((r) => (
+          <tr key={r.round}>
+            <td>{r.round}</td><td className="small">{r.specialists.join(", ")}</td>
+            <td className="small">{Object.keys(r.tasks_closed).length}</td><td>{r.new_evidence}</td>
+            <td className="small">{[...r.suspicions_raised.map((s) => `${s} raised`),
+              ...Object.entries(r.suspicions_resolved).map(([s, st]) => `${s} ${st}`)].join(", ") || "–"}</td>
+            <td className="small">{r.verdict.replaceAll("_", " ")}, {r.confidence} confidence</td>
+          </tr>))}
+        </tbody></table></div>
+      {h.stop_explained && <div className="small">Stopped after {h.rounds.length} round(s): {h.stop_explained}.</div>}
+    </section>
+  );
+}
+
 export function Activity() {
   const c = useCaseContext();
   const q = useQuery({
@@ -68,6 +92,7 @@ export function Activity() {
               <span className="spacer" />
               <label className="row"><input type="checkbox" checked={ledger} onChange={(e) => setLedger(e.target.checked)} /> show ledger entries</label>
             </div>
+            <History caseId={c.id} />
             <section className="card stack" style={{ gap: 4 }} aria-label="Progress">
               <b>Progress</b>
               {others.length === 0 && <span className="faint">Nothing yet.</span>}

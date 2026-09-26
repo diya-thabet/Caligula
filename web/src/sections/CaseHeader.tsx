@@ -73,7 +73,7 @@ export function CaseHeader({ c }: { c: CaseOverview }) {
           <span className="kv"><span className="k">parties</span>
             {c.parties.map((p) => `${p.name} (${p.role})`).join("; ")}</span>)}
         {c.rounds > 0 && <span className="kv"><span className="k">rounds</span>{c.rounds}</span>}
-        {c.counts && <span className="kv"><span className="k">tool calls</span>{c.counts.tool_calls}</span>}
+        {c.counts && c.counts.tool_calls > 0 && <span className="kv"><span className="k">tool calls</span>{c.counts.tool_calls}</span>}
         <span className="kv"><span className="k">opened by</span>{c.created_by}</span>
         <span className="kv"><span className="k">last activity</span>{ago(c.last_activity)}</span>
         {c.stop_reason && <span className="kv"><span className="k">stopped</span>{STOPS[c.stop_reason] ?? c.stop_reason}</span>}

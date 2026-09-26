@@ -20,4 +20,9 @@ describe("evidence ids in Markdown", () => {
     expect(linkEvidence("For: E13, E14 (C5.E1) and EE1 or E2x")).toBe(
       "For: [E13](#evidence:E13), [E14](#evidence:E14) (C5.E1) and EE1 or E2x");
   });
+
+  it("lose their citation brackets", () => {
+    expect(linkEvidence("Worth 120M [E19]. Awarded [E13, E14].")).toBe(
+      "Worth 120M [E19](#evidence:E19). Awarded [E13](#evidence:E13) [E14](#evidence:E14).");
+  });
 });
