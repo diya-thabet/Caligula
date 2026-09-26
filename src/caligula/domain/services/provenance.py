@@ -49,4 +49,5 @@ def group_by_cluster(doc_ids: Iterable[str], clusters: dict[str, str]) -> list[l
     groups: dict[str, list[str]] = {}
     for doc_id in doc_ids:
         groups.setdefault(clusters[doc_id], []).append(doc_id)
-    return [sorted(g) for g in groups.values()]
+    # Sorted: callers often pass sets, whose order changes between runs.
+    return sorted(sorted(g) for g in groups.values())
