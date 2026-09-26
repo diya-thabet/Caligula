@@ -93,6 +93,10 @@ def build_report(ws: Workspace, verdict: Verdict, review: str | None = None, poc
                    f"{fin.reference_amount_tnd:,.0f} TND vs proven/benchmark {fin.proven_spend_tnd:,.0f} TND, "
                    f"gap {fin.discrepancy_tnd:,.0f} TND ({fin.discrepancy_ratio:.0%}), "
                    f"{fin.independent_clusters} independent origins")
+        for f in fin.figures:
+            eid = ws.evidence_id(f)
+            out.append(f"  - {f'**{eid}** ' if eid else ''}{f.role} {f.amount_tnd:,.0f} TND · "
+                       f"{_doc_line(ws, f.doc_id)}: « {f.quote} »")
 
     out += ["", "## Evidence by sub-claim", ""]
     clusters = origin_clusters(ws.store.documents)
@@ -101,8 +105,12 @@ def build_report(ws: Workspace, verdict: Verdict, review: str | None = None, poc
         same = sorted(d for d in siblings if d != doc_id and clusters[d] == clusters[doc_id])
         return f" · same origin as {', '.join(f'`{d}`' for d in same)}" if same else ""
 
-    def mark(status: str) -> str:
-        return {"accepted": "✓", "disputed": "✗", "pending": "?"}[status]
+    counted = ws.counted()
+
+    def mark(status: str, item) -> str:
+        tag = {"accepted": "✓", "disputed": "✗", "pending": "?"}[status]
+        eid = next((e for e, known in counted.items() if known == item), None)
+        return f"{tag} **{eid}**" if eid and status == "accepted" else tag
 
     for c in a.subclaims:
         props = [p for p in ws.proposals if isinstance(p.item, EvidenceEdge) and p.item.subclaim_id == c.id]
@@ -116,15 +124,15 @@ def build_report(ws: Workspace, verdict: Verdict, review: str | None = None, poc
         for p in props:
             e = p.item
             note = f" — reviewer: {p.note}" if p.note and p.status != ProposalStatus.PENDING else ""
-            out.append(f"- {mark(p.status)} {e.relation} · {_doc_line(ws, e.doc_id)} · proposed by {p.by}: "
+            out.append(f"- {mark(p.status, e)} {e.relation} · {_doc_line(ws, e.doc_id)} · proposed by {p.by}: "
                        f"« {e.quote} »{_stake_note(ws, e)}{origin_note(e.doc_id, siblings)}{note}")
         for e in direct:
-            out.append(f"- ✓ {e.relation} · {_doc_line(ws, e.doc_id)}: « {e.quote} »"
+            out.append(f"- {mark('accepted', e)} {e.relation} · {_doc_line(ws, e.doc_id)}: « {e.quote} »"
                        f"{_stake_note(ws, e)}{origin_note(e.doc_id, siblings)}")
         for p in absent:
             note = f" — reviewer: {p.note}" if p.note and p.status != ProposalStatus.PENDING else ""
-            out.append(f"- {mark(p.status)} {_absence_line(p.item)} · proposed by {p.by}{note}")
-        out += [f"- ✓ {_absence_line(f)}" for f in absent_direct]
+            out.append(f"- {mark(p.status, p.item)} {_absence_line(p.item)} · proposed by {p.by}{note}")
+        out += [f"- {mark('accepted', f)} {_absence_line(f)}" for f in absent_direct]
         out.append("")
 
     expected = a.expected()

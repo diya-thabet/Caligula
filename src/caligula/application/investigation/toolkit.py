@@ -58,6 +58,15 @@ def _date(value: str | None) -> datetime | None:
     return d if d.tzinfo else d.replace(tzinfo=UTC)
 
 
+def _describe(item: EvidenceEdge | FinancialFigure | AbsenceFinding) -> str:
+    """One line per counted evidence item, for agents choosing what to cite."""
+    if isinstance(item, EvidenceEdge):
+        return f"{item.subclaim_id} {item.relation} [{item.doc_id}]: « {item.quote[:120]} »"
+    if isinstance(item, FinancialFigure):
+        return f"amount {item.role} {item.amount_tnd:,.0f} TND [{item.doc_id}]: « {item.quote[:120]} »"
+    return f"{item.subclaim_id} {item.relation} (absence): nothing in {item.register_id} for « {item.query[:120]} »"
+
+
 def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[str] | None = None) -> list[Tool]:
     """Tools bound to one agent. `ctx` defaults to a single agent using the workspace budget."""
     single = ctx is None
@@ -357,8 +366,9 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
             raise ToolRefusal(f"Rejected: {reason}")
         if proposal_id and ctx.name == "reviewer":
             ws.review(proposal_id, True, "recorded by reviewer", ctx.name)
-            return "Accepted."
-        return f"Proposed as {proposal_id}; the reviewer decides whether it counts." if proposal_id else "Accepted."
+        if proposal_id and ctx.name != "reviewer":
+            return f"Proposed as {proposal_id}; the reviewer decides whether it counts."
+        return f"Accepted as evidence {ws.evidence_id(item)}."
 
     @metered
     def record_evidence(
@@ -456,7 +466,8 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         return json.dumps(pairs, ensure_ascii=False) if pairs else "No likely matches."
 
     def assess() -> str:
-        """Score the evidence that currently counts. Returns the verdict, how likely the
+        """Score the evidence that currently counts. Returns the counted evidence by id (cite
+        these ids, e.g. [E3], in summaries), the verdict, how likely the
         core facts are and how much confidence the basis deserves (with what caps it),
         each sub-claim's status, the competing hypotheses ranked by evidence against
         them (untested ones apart), the origins the conclusion depends on, retcon flags,
@@ -480,6 +491,7 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
                            for s in ws.suspicions],
             "retcon_flags": [f"{f.canonical_url}: {[c.model_dump() for c in f.changes]}" for f in v.retcon_flags],
             "financial": v.financial.model_dump(exclude={"figures"}) if v.financial else None,
+            "counted_evidence": {eid: _describe(item) for eid, item in ws.counted().items()},
             "missing_evidence": v.missing_evidence,
             "not_yet_challenged": ws.unchallenged(v),
             "coverage": ws.coverage(),
@@ -586,16 +598,19 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
             status: Which proposals to list.
         """
         rows = []
+        counted = ws.counted()
         for p in ws.proposals:
             if p.status != status:
                 continue
+            eid = ws.evidence_id(p.item)
+            ref = {"evidence_id": eid} if eid in counted else {}
             if isinstance(p.item, AbsenceFinding):
-                rows.append({"id": p.id, "by": p.by, "absence": p.item.model_dump(mode="json", exclude_none=True),
+                rows.append({"id": p.id, **ref, "by": p.by, "absence": p.item.model_dump(mode="json", exclude_none=True),
                              "register_completeness": ws.params.completeness.get(p.item.register_id),
                              "note": p.note})
                 continue
             d = ws.store.get(p.item.doc_id)
-            row = {"id": p.id, "by": p.by, **p.item.model_dump(mode="json"), "doc_kind": d.source_kind,
+            row = {"id": p.id, **ref, "by": p.by, **p.item.model_dump(mode="json"), "doc_kind": d.source_kind,
                    "doc_publisher": d.publisher, "doc_observed_at": d.observed_at.date().isoformat(), "note": p.note}
             if isinstance(p.item, EvidenceEdge):
                 row["publisher_interest"] = interest(role_of(d.publisher, ws.allegation.parties),
@@ -619,7 +634,8 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
             p = ws.review(proposal_id, decision == "accept", note, ctx.name)
         except KeyError as exc:
             raise ToolRefusal(f"No proposal {proposal_id}.") from exc
-        return f"{p.id} {p.status}."
+        return f"{p.id} {p.status}" + (f": counts as evidence {ws.evidence_id(p.item)}." if p.status == "accepted"
+                                       else ".")
 
     @metered
     def register_party(name: str, role: Literal["accused", "complainant"], aliases: list[str] | None = None) -> str:

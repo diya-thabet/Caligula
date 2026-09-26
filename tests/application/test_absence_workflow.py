@@ -60,7 +60,7 @@ def test_not_found_on_expected_record_is_proposed_as_absence(store):
     [item] = ws.verdict().weighed
     assert (item.kind, item.subclaim_id, item.weight, item.doc_id) == ("absence", "C5", 0.8, "tuneps_search")
     report = build_report(ws, ws.verdict())
-    assert ("✓ absence (supports) · TUNEPS: public procurement notices and awards: nothing found for "
+    assert ("✓ **E1** absence (supports) · TUNEPS: public procurement notices and awards: nothing found for "
             "« extension centrale Rades-Fictive » (capture `tuneps_search`)") in report
     assert "| C5.E1 TUNEPS tender notice for the Rades-Fictive extension | tuneps | supports C5 | T1 not_found | yes |" \
         in report
@@ -101,7 +101,7 @@ def test_ad_hoc_absence_with_the_tool(store):
     search_hard(agent)
     out = agent["record_absence"](
         subclaim_id="C5", register_id="jort", relation="supports", query="décret procédure d'urgence 2026-0412")
-    assert out == "Accepted."
+    assert out == "Accepted as evidence E1."
     assert ws.verdict().weighed[0].weight == 0.425  # JORT 0.85, halved: no capture stored
 
 

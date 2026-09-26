@@ -79,7 +79,7 @@ def test_runner_drives_the_real_tools_until_the_agent_finishes(store):
     tools = {t["function"]["name"] for t in requests[0]["tools"]}
     assert {"record_evidence", "finish", "assess"} <= tools
     results = [m["content"] for m in requests[1]["messages"] if m["role"] == "tool"]
-    assert results[0] == "Accepted." and results[1].startswith("Error: Rejected: quote not found")
+    assert results[0] == "Accepted as evidence E1." and results[1].startswith("Error: Rejected: quote not found")
     assert results[2] == "Error: Unknown tool no_such_tool"
     # The code-enforced challenge phase works the same with any provider.
     assert "Error: Not finished" in [m["content"] for m in requests[2]["messages"] if m["role"] == "tool"][-1]

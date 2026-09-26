@@ -96,45 +96,48 @@ Leading: **H3** (evidence against: H3 0.25 · H4 1.27; untested: H5, H6, H7)
 
 - **Record rewritten**: https://jort.example.tn/2026/017 between 2026-03-01 (`jort_award_v1`) and 2026-09-20 (`jort_award_v2`): amount_tnd ['120000000'] → ['80000000']
 - **Financial check** (flagged): allocated 120,000,000 TND vs proven/benchmark 60,000,000 TND, gap 60,000,000 TND (50%), 3 independent origins
+  - **E19** allocated 120,000,000 TND · `jort_award_v1` Wayback Machine (archive, 2026-02-20): « pour un montant de 120 000 000 TND »
+  - **E22** benchmark 60,000,000 TND · `benchmark` Wayback Machine (archive, 2024-11-05): « pour un montant de 60 000 000 TND »
+  - **E21** disbursed 110,000,000 TND · `worldbank` Bailleur international (fictif) (foreign_mirror, 2026-06-30): « Montant décaissé au 30/06/2026 : 110 000 000 TND (équivalent). »
 
 ## Evidence by sub-claim
 
 ### C1. A major power outage occurred on 21/07/2026.
 
-- ✓ supports · `steg_communique` STEG (official_live, 2026-07-21): « une coupure d'électricité a touché plusieurs gouvernorats le 21/07/2026 » · same origin as `news_outage`
-- ✓ supports · `news_outage` Le Quotidien Fictif (news, 2026-07-22): « plusieurs gouvernorats privés d'électricité le 21/07/2026 » · same origin as `steg_communique`
-- ✓ supports · `nightlights` NASA Black Marble (analyse) (osint, 2026-07-23): « Baisse de radiance nocturne de 62 % sur le Grand Tunis »
+- ✓ **E1** supports · `steg_communique` STEG (official_live, 2026-07-21): « une coupure d'électricité a touché plusieurs gouvernorats le 21/07/2026 » · same origin as `news_outage`
+- ✓ **E2** supports · `news_outage` Le Quotidien Fictif (news, 2026-07-22): « plusieurs gouvernorats privés d'électricité le 21/07/2026 » · same origin as `steg_communique`
+- ✓ **E3** supports · `nightlights` NASA Black Marble (analyse) (osint, 2026-07-23): « Baisse de radiance nocturne de 62 % sur le Grand Tunis »
 
 ### C2. Peak electricity demand in 2026 rose significantly (more than 5%) over 2025.
 
-- ✓ contradicts · `ins_peak` INS (fictif) (statistics, 2026-09-01): « 2026 : 4 870 MW (+0,8 % par rapport à 2025) »
-- ✓ contradicts · `weather` Station Tunis-Carthage (osint, 2026-07-22): « Aucun épisode de chaleur exceptionnel par rapport à l'été 2025. »
+- ✓ **E4** contradicts · `ins_peak` INS (fictif) (statistics, 2026-09-01): « 2026 : 4 870 MW (+0,8 % par rapport à 2025) »
+- ✓ **E5** contradicts · `weather` Station Tunis-Carthage (osint, 2026-07-22): « Aucun épisode de chaleur exceptionnel par rapport à l'été 2025. »
 
 ### C3. A funded capacity-expansion project (market 2026-017) existed before the outage.
 
-- ✓ supports · `jort_award_v1` Wayback Machine (archive, 2026-02-20): « Marché n° 2026-017 : extension de 450 MW de la centrale de Rades-Fictive. » · same origin as `news_jort_b`, `news_jort_c`, `news_jort_d`
-- ✓ supports · `worldbank` Bailleur international (fictif) (foreign_mirror, 2026-06-30): « Composante 2 : extension de capacité, centrale de Rades-Fictive (marché n° 2026-017). »
-- ✓ supports · `news_jort_b` Média fictif b (news, 2026-03-02): « le marché n° 2026-017 de 120 000 000 TND a été attribué » · same origin as `jort_award_v1`, `news_jort_c`, `news_jort_d`
-- ✓ supports · `news_jort_c` Média fictif c (news, 2026-03-02): « le marché n° 2026-017 de 120 000 000 TND a été attribué » · same origin as `jort_award_v1`, `news_jort_b`, `news_jort_d`
-- ✓ supports · `news_jort_d` Média fictif d (news, 2026-03-03): « le marché n° 2026-017 de 120 000 000 TND a été attribué » · same origin as `jort_award_v1`, `news_jort_b`, `news_jort_c`
+- ✓ **E6** supports · `jort_award_v1` Wayback Machine (archive, 2026-02-20): « Marché n° 2026-017 : extension de 450 MW de la centrale de Rades-Fictive. » · same origin as `news_jort_b`, `news_jort_c`, `news_jort_d`
+- ✓ **E7** supports · `worldbank` Bailleur international (fictif) (foreign_mirror, 2026-06-30): « Composante 2 : extension de capacité, centrale de Rades-Fictive (marché n° 2026-017). »
+- ✓ **E8** supports · `news_jort_b` Média fictif b (news, 2026-03-02): « le marché n° 2026-017 de 120 000 000 TND a été attribué » · same origin as `jort_award_v1`, `news_jort_c`, `news_jort_d`
+- ✓ **E9** supports · `news_jort_c` Média fictif c (news, 2026-03-02): « le marché n° 2026-017 de 120 000 000 TND a été attribué » · same origin as `jort_award_v1`, `news_jort_b`, `news_jort_d`
+- ✓ **E10** supports · `news_jort_d` Média fictif d (news, 2026-03-03): « le marché n° 2026-017 de 120 000 000 TND a été attribué » · same origin as `jort_award_v1`, `news_jort_b`, `news_jort_c`
 
 ### C4. No capacity has been added on the project site since the award.
 
-- ✓ supports · `site_report` Contributeur anonyme (contributor, 2026-08-10): « terrain nu, aucun engin de chantier, aucune fondation visible »
-- ✓ supports · `sentinel` Copernicus Sentinel-2 (analyse) (osint, 2026-09-05): « aucun changement de surface bâtie détecté »
+- ✓ **E11** supports · `site_report` Contributeur anonyme (contributor, 2026-08-10): « terrain nu, aucun engin de chantier, aucune fondation visible »
+- ✓ **E12** supports · `sentinel` Copernicus Sentinel-2 (analyse) (osint, 2026-09-05): « aucun changement de surface bâtie détecté »
 
 ### C5. The contract was awarded without a competitive tender.
 
-- ✓ supports · `jort_award_v1` Wayback Machine (archive, 2026-02-20): « par procédure de gré à gré »
-- ✓ supports · `tuneps_search` Wayback Machine (archive, 2026-02-15): « Aucun avis d'appel d'offres publié entre le 01/01/2025 et le 15/02/2026 pour cet objet. »
-- ✓ supports · `audit` Cour des comptes (fictif) (audit, 2026-09-15): « Le recours au gré à gré pour le marché n° 2026-017 n'est pas justifié par une situation d'urgence documentée. »
-- ✓ qualifies · `steg_procedure` STEG (official_live, 2026-09-18): « attribué conformément à la procédure d'urgence prévue par le décret n° 2026-0412 » · *self-serving: the publisher is a party and this helps it*
+- ✓ **E13** supports · `jort_award_v1` Wayback Machine (archive, 2026-02-20): « par procédure de gré à gré »
+- ✓ **E14** supports · `tuneps_search` Wayback Machine (archive, 2026-02-15): « Aucun avis d'appel d'offres publié entre le 01/01/2025 et le 15/02/2026 pour cet objet. »
+- ✓ **E15** supports · `audit` Cour des comptes (fictif) (audit, 2026-09-15): « Le recours au gré à gré pour le marché n° 2026-017 n'est pas justifié par une situation d'urgence documentée. »
+- ✓ **E16** qualifies · `steg_procedure` STEG (official_live, 2026-09-18): « attribué conformément à la procédure d'urgence prévue par le décret n° 2026-0412 » · *self-serving: the publisher is a party and this helps it*
 
 ### C9. A documented emergency legally justified the direct award (gré à gré).
 
-- ✓ supports · `steg_procedure` STEG (official_live, 2026-09-18): « attribué conformément à la procédure d'urgence prévue par le décret n° 2026-0412 » · *self-serving: the publisher is a party and this helps it*
-- ✓ contradicts · `audit` Cour des comptes (fictif) (audit, 2026-09-15): « n'est pas justifié par une situation d'urgence documentée »
-- ✓ absence (contradicts) · Journal Officiel (JORT): decrees, orders and official notices: nothing found for « décret n° 2026-0412 (all 2026 issues, decrees section) » (no capture stored)
+- ✓ **E17** supports · `steg_procedure` STEG (official_live, 2026-09-18): « attribué conformément à la procédure d'urgence prévue par le décret n° 2026-0412 » · *self-serving: the publisher is a party and this helps it*
+- ✓ **E18** contradicts · `audit` Cour des comptes (fictif) (audit, 2026-09-15): « n'est pas justifié par une situation d'urgence documentée »
+- ✓ **E23** absence (contradicts) · Journal Officiel (JORT): decrees, orders and official notices: nothing found for « décret n° 2026-0412 (all 2026 issues, decrees section) » (no capture stored)
 
 ## Expected records
 

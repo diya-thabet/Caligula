@@ -140,6 +140,9 @@ class Workspace:
     figures: list[FinancialFigure] = field(default_factory=list)
     absences: list[AbsenceFinding] = field(default_factory=list)
     proposals: list[Proposal] = field(default_factory=list)
+    # Evidence ids ("E1", "E2"...), given to an item the first time it counts and never reused,
+    # so a summary can cite the exact quote or search it relies on.
+    evidence_ids: dict[str, Item] = field(default_factory=dict)
     tasks: list[Task] = field(default_factory=list)
     leads: list[Lead] = field(default_factory=list)
     suspicions: list[Suspicion] = field(default_factory=list)
@@ -301,8 +304,8 @@ class Workspace:
                 self.ledger.append("rejection", by, item=item.model_dump(mode="json"), reason=rejected[0].reason)
                 return rejected[0].reason, None
             if not self.review_required:
-                self._accept(item)
-                self.ledger.append("evidence", by, item=item.model_dump(mode="json"))
+                eid = self._accept(item)
+                self.ledger.append("evidence", by, id=eid, item=item.model_dump(mode="json"))
                 return None, None
             if any(p.item == item for p in self.proposals):
                 return None, next(p.id for p in self.proposals if p.item == item)
@@ -316,10 +319,24 @@ class Workspace:
             return self.edges
         return self.absences if isinstance(item, AbsenceFinding) else self.figures
 
-    def _accept(self, item: Item) -> None:
+    def _accept(self, item: Item) -> str:
         target = self._target(item)
         if item not in target:
             target.append(item)
+        eid = self.evidence_id(item)
+        if eid is None:
+            eid = f"E{len(self.evidence_ids) + 1}"
+            self.evidence_ids[eid] = item
+        return eid
+
+    def evidence_id(self, item: Item) -> str | None:
+        with self.lock:
+            return next((eid for eid, known in self.evidence_ids.items() if known == item), None)
+
+    def counted(self) -> dict[str, Item]:
+        """Evidence that counts now, by id (an item accepted then disputed keeps its id but no longer counts)."""
+        with self.lock:
+            return {eid: item for eid, item in self.evidence_ids.items() if item in self._target(item)}
 
     def review(self, proposal_id: str, accept: bool, note: str, reviewer: str) -> Proposal:
         with self.lock:
@@ -330,9 +347,8 @@ class Workspace:
                 self._target(p.item).remove(p.item)
             p.status = ProposalStatus.ACCEPTED if accept else ProposalStatus.DISPUTED
             p.note = note
-            if accept:
-                self._accept(p.item)
-            self.ledger.append("review", reviewer, id=p.id, status=p.status.value, note=note)
+            eid = self._accept(p.item) if accept else self.evidence_id(p.item)
+            self.ledger.append("review", reviewer, id=p.id, status=p.status.value, note=note, evidence_id=eid)
             return p
 
     def verdict(self, sensitivity: bool = True) -> Verdict:
