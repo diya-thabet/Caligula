@@ -91,23 +91,25 @@ Hexagonal (ports and adapters). The rule: **dependencies point inwards**.
 ```
 src/caligula/
 ├── domain/                     pure: no I/O, no SDK, no clock
-│   ├── model/                  documents, claims, evidence, registers, verdict, intake, procurement
+│   ├── model/                  documents, claims, evidence, registers, verdict, attribution,
+│   │                           intake, procurement
 │   └── services/               text, extraction, retcon, provenance, validation,
 │                               interest, absence, scoring, innocent, ach,
-│                               sensitivity, judgment, verdict, names, privacy,
+│                               sensitivity, judgment, verdict, attribution, names, privacy,
 │                               intake_policy, red_flags, ledger_chain
 ├── application/
 │   ├── ports/                  repository, blobs, ledger, sources, extraction, llm
 │   ├── usecases/               intake, decompose, evaluate_case, calibration, publication
-│   └── investigation/          workspace, plan, toolkit, prompts, brief,
-│                               single_agent, team
+│   └── investigation/          workspace, plan, toolkit, prompts, brief, suspicions,
+│                               attribution, single_agent, team
 └── adapters/
     ├── persistence/            memory, postgres (+ schema.sql), blob_fs, ledger_jsonl, search
     ├── sources/                wayback, worldbank, web, web_search, telegram
     ├── media/                  text_extraction (PDF, OCR), image_sanitizer
     ├── llm/                    analyst_base (prompts, schemas), claude_analyst, claude_runner,
     │                           openai_compat, tool_schema
-    ├── presenters/             markdown_report, analysis, public_reply, cli_summary
+    ├── presenters/             markdown_report, analytic, analysis, evolution, public_reply,
+    │                           cli_summary
     ├── fixtures/               case_directory
     └── cli/                    main (argument parsing), bootstrap and models (composition root)
 ```
@@ -226,6 +228,12 @@ conclusion is and how solid its basis is are two statements
   sources; a verdict that one origin could overturn (sensitivity analysis);
   an innocent explanation untested, open or fitting the evidence; a
   supported sub-claim nobody tried to refute.
+
+Each key judgment (one per sub-claim) gets its own likelihood and confidence
+in the same way, and the case file puts them first, in the analytic order:
+bottom line, key judgments, alternatives, key assumptions, what the
+conclusion depends on, gaps, indicators that would change the assessment;
+the detail follows in annexes (`adapters/presenters/analytic.py`).
 
 Competing hypotheses (`domain/services/ach.py`) are compared as Heuer's ACH
 does: evidence that fits every hypothesis is not diagnostic, and the leading

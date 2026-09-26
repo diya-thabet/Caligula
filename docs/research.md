@@ -311,6 +311,16 @@ are only checked for *existence*.
 > cited quotes support the sentence. Unsupported sentences are removed or
 > flagged before anything reaches an editor.
 >
+> *Implemented: R21 `adapters/presenters/analytic.py` (bottom line, key
+> judgments with their own likelihood and confidence, alternatives, key
+> assumptions, dependencies, gaps, indicators; detail in annexes). R23
+> `domain/services/attribution.py` (checks in code: citations of evidence
+> ids, figures, references, names), `application/investigation/attribution.py`
+> (judge model on what passes; its "supported" stands only if it quotes the
+> words that carry the claim). Summaries are sent back once by code, once by
+> the judge, then failing sentences are removed. Human spot checks use the
+> sentence table in the case file; the judge's accuracy is not measured yet.*
+>
 > **R24. Signposts per case.** Each open case keeps indicators to watch (a
 > contract amendment, a new JORT decree, an audit report). A monitor re-opens
 > the case when one appears.
@@ -419,7 +429,7 @@ unit of effort, given what already exists.
 |---|---|---|
 | 1 | R4, R5, R7 (**done**) | Small changes, big effect on fairness and reasoning: mandatory innocent hypotheses, expected-evidence searches (absence as scored evidence), interest of the source |
 | 2 | R2, R3, R8 (**done**) | ACH matrix, sensitivity, likelihood versus confidence: the core of "concluding" properly |
-| 3 | R21, R23 | The case file an editor, a lawyer or a court can rely on |
+| 3 | R21, R23 (**done**) | The case file an editor, a lawyer or a court can rely on |
 | 4 | R10, R11, R13 | Connecting the dots: FollowTheMoney entities, cross-referencing, timeline anomalies |
 | 5 | R1 (with D1) | Measure all of the above, and the comparison with Grok |
 | 6 | R25, R26, R27 | Stronger challenge once the matrix exists to receive it |

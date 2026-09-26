@@ -54,7 +54,10 @@ flowchart TD
     STOP -- "continue with n + 1" --> ROUND
     STOP -- "settled, exhausted, no_open_tasks,<br/>budget, round_limit" --> VER
     SINGLE --> VER["Verdict, code, from accepted evidence only<br/>competing hypotheses, sensitivity,<br/>likelihood and confidence"]
-    VER --> REP["Case file out/CASE.md<br/>presenters/markdown_report.py"]
+    VER --> CITE{"Summary: each sentence<br/>checked in code, then by the judge"}
+    CITE -- "failures (once)" --> RW["Reviewer rewrites<br/>with the reasons"]
+    RW --> CITE
+    CITE -- "checked" --> REP["Case file out/CASE.md, analytic order<br/>failing sentences removed<br/>presenters/markdown_report.py"]
     REP --> REPLY{"Public reply policy"}
     REPLY -- "fact-check, not accusatory" --> PUB(["Short reply with sources"])
     REPLY -- "investigation or high_suspicion" --> HOLD(["Held: publication gate<br/>editor, lawyer, right of reply"])
@@ -253,8 +256,15 @@ Whatever the models do:
   the case to new people or companies needs the legal policy's approval.
 - **Budgets.** Each tool call spends the agent's budget; at zero only the
   wrap-up tools work.
-- **Citations.** `[doc_id]` citations in summaries are checked against the
-  store; unknown ones are reported.
+- **Citations, sentence by sentence.** Every item that counts gets an
+  evidence id (E1, E2...). A summary cites those ids in each factual
+  sentence; code checks that the ids count, that every figure is in a cited
+  quote (or vouched for by the financial check), every reference in the
+  cited documents and every name in the cited sources. A judge model then
+  reads each sentence against its quotes, and its "supported" stands only if
+  it quotes the words that carry the claim. A summary is sent back once by
+  code at `complete_review`/`finish`, once more after the judge; what still
+  fails is removed from the published text and listed in the case file.
 - **Prompt injection is contained.** A page that says "ignore your
   instructions" can at most make a model *propose* something; nothing counts
   unless it passes validation and, in team mode, review.

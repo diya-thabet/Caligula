@@ -120,7 +120,9 @@ capture ──► verification pipeline (code, per document, in parallel) ──
 | R3 | Sensitivity: what the conclusion depends on | Done |
 | R8 | Likelihood (estimative words) and confidence (with reasons) reported separately | Done |
 | R25 (partly) | Investigate until settled: reviewer suspicions tested both ways, stop when settled or exhausted, persistence before "not found", priority budgets, deep reasoning for the reviewer | Done |
-| R21, R23 | Case file in the analytic format; sentence-level citation check | Next |
+| R21 | Case file in the analytic order: bottom line, key judgments (likelihood and confidence each), alternatives, assumptions, dependencies, gaps, indicators; detail in annexes | Done |
+| R23 | Evidence ids; each summary sentence checked in code (citations, figures, names) then by a judge model; sent back, then removed if unsupported | Done |
+| R23b | Measure the judge: a labelled set of sentence/quote pairs from real cases (with D1) | Next |
 | R10, R11, R13 | Entities (FollowTheMoney), cross-referencing, timeline anomalies | Later, with C1-C3 |
 
 ## Suggested order

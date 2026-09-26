@@ -33,12 +33,19 @@ Guards against hidden regressions:
 - `support.assert_invariants(ws)`: properties every run must satisfy (counted
   evidence is valid and exactly the accepted proposals, the ledger is intact,
   the verdict obeys its rules, ACH ratings follow predictions, suspicions are
-  tested both ways...). Call it at the end of every new workflow test.
+  tested both ways, the case file's sections come in the analytic order, a
+  checked summary publishes no failing sentence...). Call it at the end of
+  every new workflow test.
 - `tests/e2e/golden/steg_case_file.md`: the offline case file, compared line by
   line. When a change to it is intended, regenerate with
   `UPDATE_GOLDEN=1 pytest tests/e2e/test_golden_case_file.py` and commit the
   golden file with the change, so the diff shows in review.
-- `tests/e2e/test_determinism.py`: the verdict must be identical across Python
-  hash seeds; anything built from a set must be sorted before it is output.
+- `tests/e2e/test_determinism.py`: the verdict and the case file must be
+  identical across Python hash seeds; anything built from a set must be
+  sorted, on a total key, before it is output.
 - Scripted agents (`support.ScriptedAgentRunner`, `support.scripted_team`)
-  drive the real tools; `scripted_team` keys scripts by the round in the brief.
+  drive the real tools; `scripted_team` keys scripts by the round in the brief
+  (and `("reviewer", "rewrite")` for the final summary rewrite).
+- Attribution faults are tested by planting them (a wrong figure, a person
+  the sources do not name, an uncited fact, a withdrawn id); add a planted
+  case for every new check.
