@@ -6,7 +6,7 @@ import { ago } from "../components/Query";
 import { CaseStatusBadge, ConfidenceMeter, VerdictBadge } from "../components/status";
 import { useUser } from "../hooks";
 
-const STOPS: Record<string, string> = {
+export const STOPS: Record<string, string> = {
   settled: "settled: confidence is high and no suspicion is open",
   exhausted: "exhausted: the last round brought nothing new",
   no_open_tasks: "nothing left to do",

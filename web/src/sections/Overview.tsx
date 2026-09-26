@@ -6,6 +6,7 @@ import { Query } from "../components/Query";
 import { useCaseView } from "../hooks";
 import { usePanel } from "../panel";
 import { useCaseContext } from "./CaseLayout";
+import { LegalCheckpoint } from "./LegalCheckpoint";
 
 /** Alerts from computed facts: rewritten records, contested claims, single origins. */
 function Alerts({ caseId }: { caseId: string }) {
@@ -43,7 +44,8 @@ export function Overview() {
   const c = useCaseContext();
   const q = useCaseView(c.id, "analysis", api.analysis);
   return (
-    <div>
+    <div className="stack">
+      <LegalCheckpoint />
       <Alerts caseId={c.id} />
       <Query q={q}>
         {({ sections }) => sections.length === 0 ? (

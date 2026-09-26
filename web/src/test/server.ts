@@ -5,6 +5,9 @@ import steg from "./steg.json";
 
 export const CASE_ID: string = steg.case_id;
 export const views = steg.views as Record<string, any>;
+// Cases at other checkpoints, by id: C-PLAN (plan awaiting approval), C-LEGAL (held for a lawyer),
+// C-RAN (a finished scripted run).
+export const live = steg.live as Record<string, Record<string, any>>;
 
 export interface Write { method: string; path: string; body: any; user: string | null }
 
@@ -30,6 +33,8 @@ export function fakeApi(onWrite: (w: Write) => { status?: number; body: any } = 
       return new Response("# Case\n\n## Bottom line\n\nHigh suspicion [E13].", { headers: { "content-type": "text/markdown" } });
     }
     if (path in views) return json(200, views[path]);
+    const m = path.match(/^\/cases\/(C-[A-Z]+)(.*)$/);
+    if (m && live[m[1]] && m[2] in live[m[1]]) return json(200, live[m[1]][m[2]]);
     return json(404, { detail: `no fake for ${path}` });
   });
   vi.stubGlobal("fetch", fetchMock);
