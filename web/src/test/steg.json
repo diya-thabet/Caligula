@@ -1,0 +1,2724 @@
+{
+ "case_id": "STEG-2026-07-21-SYNTHETIC",
+ "views": {
+  "/approvals": [
+   {
+    "about": "case file ready for review",
+    "case_id": "STEG-2026-07-21-SYNTHETIC",
+    "case_title": "Synthetic scenario (all entities fictional). The 21/07/2026 outage was caused by a production deficit. A state-funded 45",
+    "kind": "sign_off",
+    "role": "editor"
+   }
+  ],
+  "/cases": [
+   {
+    "assessment": {
+     "confidence": "moderate",
+     "confidence_reasons": [
+      "the verdict would change without benchmark",
+      "the verdict would change without sentinel",
+      "innocent explanation H5 not yet tested",
+      "innocent explanation H6 not yet tested",
+      "innocent explanation H7 not yet tested",
+      "C3 supported but never challenged",
+      "C4 supported but never challenged",
+      "C5 supported but never challenged",
+      "C6 supported but never challenged"
+     ],
+     "final": true,
+     "likelihood": 0.867,
+     "likelihood_term": "very likely",
+     "verdict": "high_suspicion"
+    },
+    "claim": "Synthetic scenario (all entities fictional). The 21/07/2026 outage was caused by a production deficit. A state-funded 450 MW expansion (market 2026-017) was awarded without competitive tender to Société Zeta Travaux at an inflated price, nothing was built, and funds were misappropriated through a link between the contractor and the signing official.",
+    "claim_type": "corruption_procurement",
+    "counts": {
+     "documents": 17,
+     "evidence": 23,
+     "open_suspicions": 0,
+     "open_tasks": 0,
+     "pending_proposals": 0,
+     "tool_calls": 0
+    },
+    "created_at": "2026-09-26T10:00:00+00:00",
+    "created_by": "replay",
+    "id": "STEG-2026-07-21-SYNTHETIC",
+    "last_activity": "2026-09-26T10:00:00+00:00",
+    "mode": "investigate",
+    "note": "imported for review",
+    "parties": [
+     {
+      "aliases": [
+       "Société tunisienne de l'électricité et du gaz"
+      ],
+      "name": "STEG",
+      "role": "accused"
+     },
+     {
+      "aliases": [
+       "Ministry of Energy (fictional)"
+      ],
+      "name": "Ministère de l'Énergie (fictif)",
+      "role": "accused"
+     }
+    ],
+    "pending_approvals": [
+     {
+      "about": "case file ready for review",
+      "kind": "sign_off",
+      "role": "editor"
+     }
+    ],
+    "poc": true,
+    "rounds": 0,
+    "sign_off": null,
+    "status": "in_review",
+    "stop_reason": null,
+    "title": "Synthetic scenario (all entities fictional). The 21/07/2026 outage was caused by a production deficit. A state-funded 45"
+   }
+  ],
+  "/cases/{id}": {
+   "assessment": {
+    "confidence": "moderate",
+    "confidence_reasons": [
+     "the verdict would change without benchmark",
+     "the verdict would change without sentinel",
+     "innocent explanation H5 not yet tested",
+     "innocent explanation H6 not yet tested",
+     "innocent explanation H7 not yet tested",
+     "C3 supported but never challenged",
+     "C4 supported but never challenged",
+     "C5 supported but never challenged",
+     "C6 supported but never challenged"
+    ],
+    "final": true,
+    "likelihood": 0.867,
+    "likelihood_term": "very likely",
+    "verdict": "high_suspicion"
+   },
+   "claim": "Synthetic scenario (all entities fictional). The 21/07/2026 outage was caused by a production deficit. A state-funded 450 MW expansion (market 2026-017) was awarded without competitive tender to Société Zeta Travaux at an inflated price, nothing was built, and funds were misappropriated through a link between the contractor and the signing official.",
+   "claim_type": "corruption_procurement",
+   "counts": {
+    "documents": 17,
+    "evidence": 23,
+    "open_suspicions": 0,
+    "open_tasks": 0,
+    "pending_proposals": 0,
+    "tool_calls": 0
+   },
+   "created_at": "2026-09-26T10:00:00+00:00",
+   "created_by": "replay",
+   "id": "STEG-2026-07-21-SYNTHETIC",
+   "last_activity": "2026-09-26T10:00:00+00:00",
+   "mode": "investigate",
+   "note": "imported for review",
+   "parties": [
+    {
+     "aliases": [
+      "Société tunisienne de l'électricité et du gaz"
+     ],
+     "name": "STEG",
+     "role": "accused"
+    },
+    {
+     "aliases": [
+      "Ministry of Energy (fictional)"
+     ],
+     "name": "Ministère de l'Énergie (fictif)",
+     "role": "accused"
+    }
+   ],
+   "pending_approvals": [
+    {
+     "about": "case file ready for review",
+     "kind": "sign_off",
+     "role": "editor"
+    }
+   ],
+   "poc": true,
+   "rounds": 0,
+   "sign_off": null,
+   "status": "in_review",
+   "stop_reason": null,
+   "title": "Synthetic scenario (all entities fictional). The 21/07/2026 outage was caused by a production deficit. A state-funded 45"
+  },
+  "/cases/{id}/analysis": {
+   "final": true,
+   "sections": [
+    {
+     "markdown": "**High suspicion.** The core facts (C3, C4, C5, C6) are, taken together, very likely (87%) true, with **moderate** confidence.\n\n- Least contradicted explanation: **H3**, Expansion funds were diverted through a non-competitive award.\n- Innocent explanation(s) refuted: H4.\n- Innocent explanation(s) not yet settled: H5, H6, H7.\n- The verdict rests on single origins: it would change without `benchmark` or without `sentinel`.\n- No evidence yet on: C7, C8, C10, C11, C12.",
+     "title": "Bottom line"
+    },
+    {
+     "markdown": "One per sub-claim that is core or has evidence: how likely it is true, how much confidence the basis deserves, and the evidence behind it (ids refer to the annex *Evidence by sub-claim*).\n\n### C3 (core). A funded capacity-expansion project (market 2026-017) existed before the outage.\n\n**supported** · almost certain (98%) true · confidence **moderate**\n\n- For: E6, E7, E8, E9, E10 (2 independent origin(s))\n- Against: none\n- Confidence capped by: C3 supported but never challenged\n\n### C4 (core). No capacity has been added on the project site since the award.\n\n**supported** · very likely (94%) true · confidence **moderate**\n\n- For: E11, E12 (2 independent origin(s))\n- Against: none\n- Confidence capped by: one origin decides it: without sentinel, C4 supported → partially_supported; C4 supported but never challenged\n\n### C5 (core). The contract was awarded without a competitive tender.\n\n**supported** · almost certain (over 99%) true · confidence **moderate**\n\n- For: E13, E14, E15 (3 independent origin(s))\n- Against: none\n- Qualifying: E16\n- Confidence capped by: C5 supported but never challenged\n\n### C6 (core). The committed amount exceeds the cost of comparable works by more than 20%.\n\n**supported** · almost certain (95%) true · confidence **moderate**\n\n- For: E19, E21, E22 (3 independent origin(s))\n- Against: none\n- Confidence capped by: one origin decides it: without benchmark, C6 supported → unverified; C6 supported but never challenged\n\n### C1. A major power outage occurred on 21/07/2026.\n\n**supported** · very likely (92%) true · confidence **moderate**\n\n- For: E1, E2, E3 (2 independent origin(s))\n- Against: none\n- Confidence capped by: one origin decides it: without nightlights, C1 supported → partially_supported; C1 supported but never challenged\n\n### C2. Peak electricity demand in 2026 rose significantly (more than 5%) over 2025.\n\n**contradicted** · almost no chance (4%) true · confidence **high**\n\n- For: none\n- Against: E4, E5 (2 independent origin(s))\n\n### C9. A documented emergency legally justified the direct award (gré à gré).\n\n**contradicted** · very unlikely (17%) true · confidence **moderate**\n\n- For: E17 (1 independent origin(s))\n- Against: E18, E23 (2 independent origin(s))\n- Confidence capped by: one origin decides it: without audit, C9 contradicted → partially_supported",
+     "title": "Key judgments"
+    },
+    {
+     "markdown": "Each explanation is rated by code against its own predictions; the matrices are in the annex *Competing hypotheses*.\n\n- **H1** (alternative) consistent, evidence against 0.00: The outage was caused by a production deficit, not a demand surge.\n- **H2** (alternative) falsified, evidence against 1.40: The outage was caused by a demand surge.\n\n- **H3** (allegation) open, evidence against 0.25: Expansion funds were diverted through a non-competitive award.\n- **H4** (innocent) falsified, evidence against 1.27: The direct award was a lawful emergency procedure.\n- **H5** (innocent) open, evidence against 0.00, untested: The price reflects a market price shock, not inflation of the contract.\n- **H6** (innocent) open, evidence against 0.00, untested: The figures differ because of an error that was, or can be, officially corrected.\n- **H7** (innocent) open, evidence against 0.00, untested: The project is delayed, not abandoned, and the money is accounted for.\n\n- Innocent explanation *sole_supplier* ruled out: The award notice and the operator's reply invoke urgency only, never exclusivity (jort_award_v1, steg_procedure).",
+     "title": "Alternatives considered"
+    },
+    {
+     "markdown": "- Sources are weighed by how easily their publisher can silently change them: audit 0.85, foreign_mirror 0.80, archive 0.75, osint 0.70, statistics 0.70, contributor 0.60, official_live 0.50, news 0.35.\n- Documents that cite, copy or derive from one another share an origin and count once (2 such group(s) here).\n- A party's statement in its own favour weighs 50% of its usual weight.\n- E23: Journal Officiel (JORT): decrees, orders and official notices is complete enough (prior 0.85) that a record missing from it is evidence; no capture of the empty result was stored, so it counts half.\n- The allocated amount and the benchmark describe comparable works; a gap above 20% backed by 2 independent origins is an anomaly.\n- The standard innocent explanations for *corruption_procurement* are the ones worth testing; others may exist.\n- All weights and thresholds are uncalibrated priors until a labelled set of cases exists.",
+     "title": "Key assumptions"
+    },
+    {
+     "markdown": "Each independent origin removed in turn, and what the conclusion loses without it.\n\n- Without `benchmark`: **changes the verdict**: verdict high_suspicion → partially_supported; C6 supported → unverified\n- Without `sentinel`: **changes the verdict**: verdict high_suspicion → partially_supported; C4 supported → partially_supported\n- Without `audit`: C9 contradicted → partially_supported\n- Without `nightlights`: C1 supported → partially_supported",
+     "title": "What the conclusion depends on"
+    },
+    {
+     "markdown": "- C7: Who are the contractor's managers and owners in the RNE?\n- C7: Who signed the award?\n- C8: Is there any documented use of the disbursed funds?\n- C10: Did prices of the main inputs (equipment, materials, currency) rise over the period?\n- C11: Was an erratum or rectification published?\n- C11: Does the corrected figure match other records?\n- C12: Is a suspension, amendment or extension of the contract documented?\n- C12: Were the funds returned, frozen or kept in the project account?\n- Innocent explanation H5 not settled: test C10.\n- Innocent explanation H6 not settled: test C11.\n- Innocent explanation H7 not settled: test C12.\n- Expected record not searched yet (C3.E1, Journal Officiel (JORT)): Award notice for market 2026-017 in the JORT.\n- Expected record not searched yet (C4.E1, Lenders' project documents and disbursement records): Progress reports or provisional acceptance of the works in the lender's project records.\n- Expected record not searched yet (C5.E1, TUNEPS): TUNEPS tender notice for the Rades-Fictive extension, published before the award.\n- Expected record not searched yet (C11.E1, Journal Officiel (JORT)): Erratum or rectification of the notice concerned.\n- Expected record not searched yet (C12.E1, Lenders' project documents and disbursement records): Suspension, restructuring or extension of the project in the lender's records.\n- Supported but never challenged: C1, C3, C4, C5, C6.",
+     "title": "Gaps and collection requests"
+    },
+    {
+     "markdown": "Would weaken the allegation:\n\n- Evidence for H4 (would reopen it): A documented emergency legally justified the direct award (gré à gré). For instance: Decree n° 2026-0412 declaring the emergency, in the JORT (Journal Officiel (JORT)).\n- Evidence for H5: Market prices rose enough between the benchmark and the award to explain the price gap.\n- Evidence for H6: The discrepancy is a clerical error or an officially published correction (erratum). For instance: Erratum or rectification of the notice concerned (Journal Officiel (JORT)).\n- Evidence for H7: Delivery is delayed for documented reasons (force majeure, suspension, litigation), with the funds unspent or recoverable. For instance: Suspension, restructuring or extension of the project in the lender's records (Lenders' project documents and disbursement records).\n- Anything showing `benchmark` is wrong, not comparable or not independent.\n- Anything showing `sentinel` is wrong, not comparable or not independent.\n- C3 would be contradicted if a proper search of Journal Officiel (JORT) finds no: Award notice for market 2026-017 in the JORT.\n- C4 would be contradicted by finding: Progress reports or provisional acceptance of the works in the lender's project records (Lenders' project documents and disbursement records).\n- C5 would be contradicted by finding: TUNEPS tender notice for the Rades-Fictive extension, published before the award (TUNEPS).\n\nWould strengthen it:\n\n- C4 would be supported if a proper search of Lenders' project documents and disbursement records finds no: Progress reports or provisional acceptance of the works in the lender's project records.\n- C5 would be supported if a proper search of TUNEPS finds no: TUNEPS tender notice for the Rades-Fictive extension, published before the award.",
+     "title": "Indicators that would change the assessment"
+    }
+   ]
+  },
+  "/cases/{id}/audit": {
+   "entries": [
+    {
+     "action": "evidence",
+     "actor": "recorded",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "id": "E1",
+      "item": {
+       "doc_id": "steg_communique",
+       "quote": "une coupure d'électricité a touché plusieurs gouvernorats le 21/07/2026",
+       "rationale": "",
+       "relation": "supports",
+       "subclaim_id": "C1"
+      }
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 0
+    },
+    {
+     "action": "evidence",
+     "actor": "recorded",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "id": "E2",
+      "item": {
+       "doc_id": "news_outage",
+       "quote": "plusieurs gouvernorats privés d'électricité le 21/07/2026",
+       "rationale": "",
+       "relation": "supports",
+       "subclaim_id": "C1"
+      }
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 1
+    },
+    {
+     "action": "evidence",
+     "actor": "recorded",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "id": "E3",
+      "item": {
+       "doc_id": "nightlights",
+       "quote": "Baisse de radiance nocturne de 62 % sur le Grand Tunis",
+       "rationale": "",
+       "relation": "supports",
+       "subclaim_id": "C1"
+      }
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 2
+    },
+    {
+     "action": "evidence",
+     "actor": "recorded",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "id": "E4",
+      "item": {
+       "doc_id": "ins_peak",
+       "quote": "2026 : 4 870 MW (+0,8 % par rapport à 2025)",
+       "rationale": "",
+       "relation": "contradicts",
+       "subclaim_id": "C2"
+      }
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 3
+    },
+    {
+     "action": "evidence",
+     "actor": "recorded",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "id": "E5",
+      "item": {
+       "doc_id": "weather",
+       "quote": "Aucun épisode de chaleur exceptionnel par rapport à l'été 2025.",
+       "rationale": "",
+       "relation": "contradicts",
+       "subclaim_id": "C2"
+      }
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 4
+    },
+    {
+     "action": "evidence",
+     "actor": "recorded",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "id": "E6",
+      "item": {
+       "doc_id": "jort_award_v1",
+       "quote": "Marché n° 2026-017 : extension de 450 MW de la centrale de Rades-Fictive.",
+       "rationale": "",
+       "relation": "supports",
+       "subclaim_id": "C3"
+      }
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 5
+    },
+    {
+     "action": "rejection",
+     "actor": "recorded",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "item": {
+       "doc_id": "jort_award_v2",
+       "quote": "Marché n° 2026-017 : extension de 450 MW de la centrale de Rades-Fictive.",
+       "rationale": "",
+       "relation": "supports",
+       "subclaim_id": "C3"
+      },
+      "reason": "jort_award_v2 is an editable source first observed after 2026-07-21"
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 6
+    },
+    {
+     "action": "evidence",
+     "actor": "recorded",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "id": "E7",
+      "item": {
+       "doc_id": "worldbank",
+       "quote": "Composante 2 : extension de capacité, centrale de Rades-Fictive (marché n° 2026-017).",
+       "rationale": "",
+       "relation": "supports",
+       "subclaim_id": "C3"
+      }
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 7
+    },
+    {
+     "action": "evidence",
+     "actor": "recorded",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "id": "E8",
+      "item": {
+       "doc_id": "news_jort_b",
+       "quote": "le marché n° 2026-017 de 120 000 000 TND a été attribué",
+       "rationale": "",
+       "relation": "supports",
+       "subclaim_id": "C3"
+      }
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 8
+    },
+    {
+     "action": "evidence",
+     "actor": "recorded",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "id": "E9",
+      "item": {
+       "doc_id": "news_jort_c",
+       "quote": "le marché n° 2026-017 de 120 000 000 TND a été attribué",
+       "rationale": "",
+       "relation": "supports",
+       "subclaim_id": "C3"
+      }
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 9
+    },
+    {
+     "action": "evidence",
+     "actor": "recorded",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "id": "E10",
+      "item": {
+       "doc_id": "news_jort_d",
+       "quote": "le marché n° 2026-017 de 120 000 000 TND a été attribué",
+       "rationale": "",
+       "relation": "supports",
+       "subclaim_id": "C3"
+      }
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 10
+    },
+    {
+     "action": "evidence",
+     "actor": "recorded",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "id": "E11",
+      "item": {
+       "doc_id": "site_report",
+       "quote": "terrain nu, aucun engin de chantier, aucune fondation visible",
+       "rationale": "",
+       "relation": "supports",
+       "subclaim_id": "C4"
+      }
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 11
+    },
+    {
+     "action": "evidence",
+     "actor": "recorded",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "id": "E12",
+      "item": {
+       "doc_id": "sentinel",
+       "quote": "aucun changement de surface bâtie détecté",
+       "rationale": "",
+       "relation": "supports",
+       "subclaim_id": "C4"
+      }
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 12
+    },
+    {
+     "action": "evidence",
+     "actor": "recorded",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "id": "E13",
+      "item": {
+       "doc_id": "jort_award_v1",
+       "quote": "par procédure de gré à gré",
+       "rationale": "",
+       "relation": "supports",
+       "subclaim_id": "C5"
+      }
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 13
+    },
+    {
+     "action": "evidence",
+     "actor": "recorded",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "id": "E14",
+      "item": {
+       "doc_id": "tuneps_search",
+       "quote": "Aucun avis d'appel d'offres publié entre le 01/01/2025 et le 15/02/2026 pour cet objet.",
+       "rationale": "",
+       "relation": "supports",
+       "subclaim_id": "C5"
+      }
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 14
+    },
+    {
+     "action": "evidence",
+     "actor": "recorded",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "id": "E15",
+      "item": {
+       "doc_id": "audit",
+       "quote": "Le recours au gré à gré pour le marché n° 2026-017 n'est pas justifié par une situation d'urgence documentée.",
+       "rationale": "",
+       "relation": "supports",
+       "subclaim_id": "C5"
+      }
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 15
+    },
+    {
+     "action": "evidence",
+     "actor": "recorded",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "id": "E16",
+      "item": {
+       "doc_id": "steg_procedure",
+       "quote": "attribué conformément à la procédure d'urgence prévue par le décret n° 2026-0412",
+       "rationale": "Accused party's own justification; checked against the audit.",
+       "relation": "qualifies",
+       "subclaim_id": "C5"
+      }
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 16
+    },
+    {
+     "action": "rejection",
+     "actor": "recorded",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "item": {
+       "doc_id": "news_outage",
+       "quote": "Le ministre a reconnu un détournement de fonds.",
+       "rationale": "Hallucinated quote.",
+       "relation": "supports",
+       "subclaim_id": "C8"
+      },
+      "reason": "quote not found verbatim in news_outage"
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 17
+    },
+    {
+     "action": "rejection",
+     "actor": "recorded",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "item": {
+       "doc_id": "jort_award_v1",
+       "quote": "par procédure de gré à gré",
+       "rationale": "Unknown sub-claim.",
+       "relation": "supports",
+       "subclaim_id": "C99"
+      },
+      "reason": "unknown sub-claim C99"
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 18
+    },
+    {
+     "action": "evidence",
+     "actor": "recorded",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "id": "E17",
+      "item": {
+       "doc_id": "steg_procedure",
+       "quote": "attribué conformément à la procédure d'urgence prévue par le décret n° 2026-0412",
+       "rationale": "The operator's own justification.",
+       "relation": "supports",
+       "subclaim_id": "C9"
+      }
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 19
+    },
+    {
+     "action": "evidence",
+     "actor": "recorded",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "id": "E18",
+      "item": {
+       "doc_id": "audit",
+       "quote": "n'est pas justifié par une situation d'urgence documentée",
+       "rationale": "The auditor's finding.",
+       "relation": "contradicts",
+       "subclaim_id": "C9"
+      }
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 20
+    },
+    {
+     "action": "evidence",
+     "actor": "recorded",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "id": "E19",
+      "item": {
+       "amount_tnd": 120000000.0,
+       "doc_id": "jort_award_v1",
+       "quote": "pour un montant de 120 000 000 TND",
+       "role": "allocated"
+      }
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 21
+    },
+    {
+     "action": "evidence",
+     "actor": "recorded",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "id": "E20",
+      "item": {
+       "amount_tnd": 80000000.0,
+       "doc_id": "jort_award_v2",
+       "quote": "pour un montant de 80 000 000 TND",
+       "role": "allocated"
+      }
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 22
+    },
+    {
+     "action": "evidence",
+     "actor": "recorded",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "id": "E21",
+      "item": {
+       "amount_tnd": 110000000.0,
+       "doc_id": "worldbank",
+       "quote": "Montant décaissé au 30/06/2026 : 110 000 000 TND (équivalent).",
+       "role": "disbursed"
+      }
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 23
+    },
+    {
+     "action": "evidence",
+     "actor": "recorded",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "id": "E22",
+      "item": {
+       "amount_tnd": 60000000.0,
+       "doc_id": "benchmark",
+       "quote": "pour un montant de 60 000 000 TND",
+       "role": "benchmark"
+      }
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 24
+    },
+    {
+     "action": "rejection",
+     "actor": "recorded",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "item": {
+       "amount_tnd": 5000000.0,
+       "doc_id": "site_report",
+       "quote": "aucun engin de chantier",
+       "role": "proven_spend"
+      },
+      "reason": "amount not present in quoted text"
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 25
+    },
+    {
+     "action": "evidence",
+     "actor": "recorded",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "id": "E23",
+      "item": {
+       "doc_id": null,
+       "note": "The decree the operator cites is not in the JORT; no capture of the search was stored.",
+       "query": "décret n° 2026-0412 (all 2026 issues, decrees section)",
+       "register_id": "jort",
+       "relation": "contradicts",
+       "searched_at": "2026-08-10T00:00:00Z",
+       "subclaim_id": "C9",
+       "window_end": "2026-02-15T00:00:00Z",
+       "window_start": "2026-01-01T00:00:00Z"
+      }
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 26
+    },
+    {
+     "action": "case_opened",
+     "actor": "replay",
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "case_id": "STEG-2026-07-21-SYNTHETIC",
+      "mode": "investigate",
+      "poc": true
+     },
+     "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+     "seq": 27
+    }
+   ],
+   "integrity": {
+    "broken_at": null,
+    "entries": 28,
+    "head": "0000000000000000000000000000000000000000000000000000000000000000",
+    "intact": true
+   }
+  },
+  "/cases/{id}/claims": {
+   "depends_on": [
+    {
+     "changes": [
+      "verdict high_suspicion -> partially_supported",
+      "C6 supported -> unverified"
+     ],
+     "changes_verdict": true,
+     "origin": [
+      "benchmark"
+     ]
+    },
+    {
+     "changes": [
+      "verdict high_suspicion -> partially_supported",
+      "C4 supported -> partially_supported"
+     ],
+     "changes_verdict": true,
+     "origin": [
+      "sentinel"
+     ]
+    },
+    {
+     "changes": [
+      "C9 contradicted -> partially_supported"
+     ],
+     "changes_verdict": false,
+     "origin": [
+      "audit"
+     ]
+    },
+    {
+     "changes": [
+      "C1 supported -> partially_supported"
+     ],
+     "changes_verdict": false,
+     "origin": [
+      "nightlights"
+     ]
+    }
+   ],
+   "hypotheses": [
+    {
+     "evidence_against": 0.0,
+     "id": "H1",
+     "kind": "alternative",
+     "predicts": {
+      "C1": true,
+      "C2": false
+     },
+     "reasons": [
+      "C1=True as predicted",
+      "C2=False as predicted"
+     ],
+     "statement": "The outage was caused by a production deficit, not a demand surge.",
+     "status": "consistent",
+     "untested": false
+    },
+    {
+     "evidence_against": 1.4,
+     "id": "H2",
+     "kind": "alternative",
+     "predicts": {
+      "C1": true,
+      "C2": true
+     },
+     "reasons": [
+      "C1=True as predicted",
+      "predicts C2=True, evidence says False"
+     ],
+     "statement": "The outage was caused by a demand surge.",
+     "status": "falsified",
+     "untested": false
+    },
+    {
+     "evidence_against": 0.25,
+     "id": "H3",
+     "kind": "allegation",
+     "predicts": {
+      "C10": false,
+      "C11": false,
+      "C12": false,
+      "C3": true,
+      "C4": true,
+      "C5": true,
+      "C6": true,
+      "C9": false
+     },
+     "reasons": [
+      "C3=True as predicted",
+      "C4=True as predicted",
+      "C5=True as predicted",
+      "C6=True as predicted",
+      "C9=False as predicted",
+      "C10 is unverified",
+      "C11 is unverified",
+      "C12 is unverified"
+     ],
+     "statement": "Expansion funds were diverted through a non-competitive award.",
+     "status": "open",
+     "untested": false
+    },
+    {
+     "evidence_against": 1.275,
+     "id": "H4",
+     "kind": "innocent",
+     "predicts": {
+      "C5": true,
+      "C9": true
+     },
+     "reasons": [
+      "C5=True as predicted",
+      "predicts C9=True, evidence says False"
+     ],
+     "statement": "The direct award was a lawful emergency procedure.",
+     "status": "falsified",
+     "untested": false
+    },
+    {
+     "evidence_against": 0.0,
+     "id": "H5",
+     "kind": "innocent",
+     "predicts": {
+      "C10": true
+     },
+     "reasons": [
+      "C10 is unverified"
+     ],
+     "statement": "The price reflects a market price shock, not inflation of the contract.",
+     "status": "open",
+     "untested": true
+    },
+    {
+     "evidence_against": 0.0,
+     "id": "H6",
+     "kind": "innocent",
+     "predicts": {
+      "C11": true
+     },
+     "reasons": [
+      "C11 is unverified"
+     ],
+     "statement": "The figures differ because of an error that was, or can be, officially corrected.",
+     "status": "open",
+     "untested": true
+    },
+    {
+     "evidence_against": 0.0,
+     "id": "H7",
+     "kind": "innocent",
+     "predicts": {
+      "C12": true
+     },
+     "reasons": [
+      "C12 is unverified"
+     ],
+     "statement": "The project is delayed, not abandoned, and the money is accounted for.",
+     "status": "open",
+     "untested": true
+    }
+   ],
+   "ruled_out": [
+    {
+     "explanation_id": "sole_supplier",
+     "reason": "The award notice and the operator's reply invoke urgency only, never exclusivity (jort_award_v1, steg_procedure)."
+    }
+   ],
+   "subclaims": [
+    {
+     "bearing": "neutral",
+     "challenged": false,
+     "confidence": "moderate",
+     "confidence_reasons": [
+      "one origin decides it: without nightlights, C1 supported -> partially_supported",
+      "C1 supported but never challenged"
+     ],
+     "contradiction": 0.0,
+     "core": false,
+     "evidence": {
+      "contradicts": [],
+      "qualifies": [],
+      "supports": [
+       "E1",
+       "E2",
+       "E3"
+      ]
+     },
+     "expected_records": [],
+     "id": "C1",
+     "independent_origins": {
+      "against": 0,
+      "for": 2
+     },
+     "likelihood": 0.925,
+     "likelihood_term": "very likely",
+     "statement": "A major power outage occurred on 21/07/2026.",
+     "status": "supported",
+     "support": 0.85,
+     "verification_questions": [
+      "Is the outage documented by a source independent of STEG?"
+     ]
+    },
+    {
+     "bearing": "neutral",
+     "challenged": true,
+     "confidence": "high",
+     "confidence_reasons": [
+      "strong, independent origins; nothing found against it"
+     ],
+     "contradiction": 0.91,
+     "core": false,
+     "evidence": {
+      "contradicts": [
+       "E4",
+       "E5"
+      ],
+      "qualifies": [],
+      "supports": []
+     },
+     "expected_records": [],
+     "id": "C2",
+     "independent_origins": {
+      "against": 2,
+      "for": 0
+     },
+     "likelihood": 0.045,
+     "likelihood_term": "almost no chance",
+     "statement": "Peak electricity demand in 2026 rose significantly (more than 5%) over 2025.",
+     "status": "contradicted",
+     "support": 0.0,
+     "verification_questions": [
+      "What were the 2025 and 2026 annual peaks in INS or grid operator data?",
+      "Was summer 2026 exceptionally hot?"
+     ]
+    },
+    {
+     "bearing": "against",
+     "challenged": false,
+     "confidence": "moderate",
+     "confidence_reasons": [
+      "C3 supported but never challenged"
+     ],
+     "contradiction": 0.0,
+     "core": true,
+     "evidence": {
+      "contradicts": [],
+      "qualifies": [],
+      "supports": [
+       "E6",
+       "E7",
+       "E8",
+       "E9",
+       "E10"
+      ]
+     },
+     "expected_records": [
+      {
+       "absence_means": "contradicts",
+       "description": "Award notice for market 2026-017 in the JORT",
+       "register_id": "jort"
+      }
+     ],
+     "id": "C3",
+     "independent_origins": {
+      "against": 0,
+      "for": 2
+     },
+     "likelihood": 0.975,
+     "likelihood_term": "almost certain",
+     "statement": "A funded capacity-expansion project (market 2026-017) existed before the outage.",
+     "status": "supported",
+     "support": 0.95,
+     "verification_questions": [
+      "Is there an archived JORT or TUNEPS award notice with amount and date?",
+      "Does a funder record the same project?"
+     ]
+    },
+    {
+     "bearing": "against",
+     "challenged": false,
+     "confidence": "moderate",
+     "confidence_reasons": [
+      "one origin decides it: without sentinel, C4 supported -> partially_supported",
+      "C4 supported but never challenged"
+     ],
+     "contradiction": 0.0,
+     "core": true,
+     "evidence": {
+      "contradicts": [],
+      "qualifies": [],
+      "supports": [
+       "E11",
+       "E12"
+      ]
+     },
+     "expected_records": [
+      {
+       "absence_means": "supports",
+       "description": "Progress reports or provisional acceptance of the works in the lender's project records",
+       "register_id": "funder_records"
+      }
+     ],
+     "id": "C4",
+     "independent_origins": {
+      "against": 0,
+      "for": 2
+     },
+     "likelihood": 0.94,
+     "likelihood_term": "very likely",
+     "statement": "No capacity has been added on the project site since the award.",
+     "status": "supported",
+     "support": 0.88,
+     "verification_questions": [
+      "Are there progress reports?",
+      "Do satellite images show construction?",
+      "Is there a dated field photo?"
+     ]
+    },
+    {
+     "bearing": "against",
+     "challenged": false,
+     "confidence": "moderate",
+     "confidence_reasons": [
+      "C5 supported but never challenged"
+     ],
+     "contradiction": 0.0,
+     "core": true,
+     "evidence": {
+      "contradicts": [],
+      "qualifies": [
+       "E16"
+      ],
+      "supports": [
+       "E13",
+       "E14",
+       "E15"
+      ]
+     },
+     "expected_records": [
+      {
+       "absence_means": "supports",
+       "description": "TUNEPS tender notice for the Rades-Fictive extension, published before the award",
+       "register_id": "tuneps"
+      }
+     ],
+     "id": "C5",
+     "independent_origins": {
+      "against": 0,
+      "for": 3
+     },
+     "likelihood": 0.996,
+     "likelihood_term": "almost certain",
+     "statement": "The contract was awarded without a competitive tender.",
+     "status": "supported",
+     "support": 0.991,
+     "verification_questions": [
+      "Was a tender notice published on TUNEPS before the award?",
+      "Was an emergency procedure legally justified?"
+     ]
+    },
+    {
+     "bearing": "against",
+     "challenged": false,
+     "confidence": "moderate",
+     "confidence_reasons": [
+      "one origin decides it: without benchmark, C6 supported -> unverified",
+      "C6 supported but never challenged"
+     ],
+     "contradiction": 0.0,
+     "core": true,
+     "evidence": {
+      "contradicts": [],
+      "qualifies": [],
+      "supports": [
+       "E19",
+       "E21",
+       "E22"
+      ]
+     },
+     "expected_records": [],
+     "id": "C6",
+     "independent_origins": {
+      "against": 0,
+      "for": 3
+     },
+     "likelihood": 0.95,
+     "likelihood_term": "almost certain",
+     "statement": "The committed amount exceeds the cost of comparable works by more than 20%.",
+     "status": "supported",
+     "support": 0.9,
+     "verification_questions": [
+      "What did comparable works cost in prior TUNEPS awards?"
+     ]
+    },
+    {
+     "bearing": "neutral",
+     "challenged": true,
+     "confidence": "low",
+     "confidence_reasons": [
+      "C7 has no evidence"
+     ],
+     "contradiction": 0.0,
+     "core": false,
+     "evidence": {
+      "contradicts": [],
+      "qualifies": [],
+      "supports": []
+     },
+     "expected_records": [],
+     "id": "C7",
+     "independent_origins": {
+      "against": 0,
+      "for": 0
+     },
+     "likelihood": null,
+     "likelihood_term": "cannot be assessed",
+     "statement": "The contractor is linked to the official who signed the award.",
+     "status": "unverified",
+     "support": 0.0,
+     "verification_questions": [
+      "Who are the contractor's managers and owners in the RNE?",
+      "Who signed the award?"
+     ]
+    },
+    {
+     "bearing": "neutral",
+     "challenged": true,
+     "confidence": "low",
+     "confidence_reasons": [
+      "C8 has no evidence"
+     ],
+     "contradiction": 0.0,
+     "core": false,
+     "evidence": {
+      "contradicts": [],
+      "qualifies": [],
+      "supports": []
+     },
+     "expected_records": [],
+     "id": "C8",
+     "independent_origins": {
+      "against": 0,
+      "for": 0
+     },
+     "likelihood": null,
+     "likelihood_term": "cannot be assessed",
+     "statement": "Project funds were misappropriated.",
+     "status": "unverified",
+     "support": 0.0,
+     "verification_questions": [
+      "Is there any documented use of the disbursed funds?"
+     ]
+    },
+    {
+     "bearing": "for",
+     "challenged": true,
+     "confidence": "moderate",
+     "confidence_reasons": [
+      "one origin decides it: without audit, C9 contradicted -> partially_supported"
+     ],
+     "contradiction": 0.914,
+     "core": false,
+     "evidence": {
+      "contradicts": [
+       "E18",
+       "E23"
+      ],
+      "qualifies": [],
+      "supports": [
+       "E17"
+      ]
+     },
+     "expected_records": [
+      {
+       "absence_means": "contradicts",
+       "description": "Decree n° 2026-0412 declaring the emergency, in the JORT",
+       "register_id": "jort"
+      }
+     ],
+     "id": "C9",
+     "independent_origins": {
+      "against": 2,
+      "for": 1
+     },
+     "likelihood": 0.168,
+     "likelihood_term": "very unlikely",
+     "statement": "A documented emergency legally justified the direct award (gré à gré).",
+     "status": "contradicted",
+     "support": 0.25,
+     "verification_questions": [
+      "Was decree n° 2026-0412 published in the JORT before the award?",
+      "Did the audit find the emergency justified?"
+     ]
+    },
+    {
+     "bearing": "for",
+     "challenged": true,
+     "confidence": "low",
+     "confidence_reasons": [
+      "C10 has no evidence"
+     ],
+     "contradiction": 0.0,
+     "core": false,
+     "evidence": {
+      "contradicts": [],
+      "qualifies": [],
+      "supports": []
+     },
+     "expected_records": [],
+     "id": "C10",
+     "independent_origins": {
+      "against": 0,
+      "for": 0
+     },
+     "likelihood": null,
+     "likelihood_term": "cannot be assessed",
+     "statement": "Market prices rose enough between the benchmark and the award to explain the price gap.",
+     "status": "unverified",
+     "support": 0.0,
+     "verification_questions": [
+      "Did prices of the main inputs (equipment, materials, currency) rise over the period?"
+     ]
+    },
+    {
+     "bearing": "for",
+     "challenged": true,
+     "confidence": "low",
+     "confidence_reasons": [
+      "C11 has no evidence"
+     ],
+     "contradiction": 0.0,
+     "core": false,
+     "evidence": {
+      "contradicts": [],
+      "qualifies": [],
+      "supports": []
+     },
+     "expected_records": [
+      {
+       "absence_means": "contradicts",
+       "description": "Erratum or rectification of the notice concerned",
+       "register_id": "jort"
+      }
+     ],
+     "id": "C11",
+     "independent_origins": {
+      "against": 0,
+      "for": 0
+     },
+     "likelihood": null,
+     "likelihood_term": "cannot be assessed",
+     "statement": "The discrepancy is a clerical error or an officially published correction (erratum).",
+     "status": "unverified",
+     "support": 0.0,
+     "verification_questions": [
+      "Was an erratum or rectification published?",
+      "Does the corrected figure match other records?"
+     ]
+    },
+    {
+     "bearing": "for",
+     "challenged": true,
+     "confidence": "low",
+     "confidence_reasons": [
+      "C12 has no evidence"
+     ],
+     "contradiction": 0.0,
+     "core": false,
+     "evidence": {
+      "contradicts": [],
+      "qualifies": [],
+      "supports": []
+     },
+     "expected_records": [
+      {
+       "absence_means": "contradicts",
+       "description": "Suspension, restructuring or extension of the project in the lender's records",
+       "register_id": "funder_records"
+      }
+     ],
+     "id": "C12",
+     "independent_origins": {
+      "against": 0,
+      "for": 0
+     },
+     "likelihood": null,
+     "likelihood_term": "cannot be assessed",
+     "statement": "Delivery is delayed for documented reasons (force majeure, suspension, litigation), with the funds unspent or recoverable.",
+     "status": "unverified",
+     "support": 0.0,
+     "verification_questions": [
+      "Is a suspension, amendment or extension of the contract documented?",
+      "Were the funds returned, frozen or kept in the project account?"
+     ]
+    }
+   ]
+  },
+  "/cases/{id}/documents": {
+   "documents": [
+    {
+     "canonical_url": "https://fixture.example/benchmark",
+     "custody": {
+      "bytes_intact": true,
+      "captured": [],
+      "cites": [],
+      "derived_from": [],
+      "extraction": "plain",
+      "raw_sha256": "40d394887d9bcd2dd110d584e2877768ae9094f784ebdf51403dc967fdece6b6",
+      "text_sha256": "b9c833982fefb49401483fc1fbd04730ee5c3927adb33a38e846ee458b056593"
+     },
+     "doc_id": "benchmark",
+     "kind": "archive",
+     "observed_at": "2024-11-06T00:00:00+00:00",
+     "published_at": "2024-11-05T00:00:00+00:00",
+     "publisher": "Wayback Machine",
+     "reliability": "archived copy",
+     "title": "",
+     "url": "https://fixture.example/benchmark",
+     "used_by": [
+      "E22"
+     ]
+    },
+    {
+     "canonical_url": "https://fixture.example/tuneps_search",
+     "custody": {
+      "bytes_intact": true,
+      "captured": [],
+      "cites": [],
+      "derived_from": [],
+      "extraction": "plain",
+      "raw_sha256": "7182d4a4869b7f5d936ef2c0e496c12b74733351a13b09520c42c7eeff4a1bf4",
+      "text_sha256": "309710980a4a2bda287237f85fdd80e6ce15047a1bbe7f9a326e64b4f296285d"
+     },
+     "doc_id": "tuneps_search",
+     "kind": "archive",
+     "observed_at": "2026-02-15T12:00:00+00:00",
+     "published_at": "2026-02-15T00:00:00+00:00",
+     "publisher": "Wayback Machine",
+     "reliability": "archived copy",
+     "title": "",
+     "url": "https://fixture.example/tuneps_search",
+     "used_by": [
+      "E14"
+     ]
+    },
+    {
+     "canonical_url": "https://jort.example.tn/2026/017",
+     "custody": {
+      "bytes_intact": true,
+      "captured": [],
+      "cites": [],
+      "derived_from": [],
+      "extraction": "plain",
+      "raw_sha256": "a8cad1c4a966e32b0845926c4805240c4392f5a0f825a939535e40a6c907aa5e",
+      "text_sha256": "ca13bdc67706c6ad184b5b2861f03e2aace9596b5129dac229e08d8771a94cbd"
+     },
+     "doc_id": "jort_award_v1",
+     "kind": "archive",
+     "observed_at": "2026-03-01T10:00:00+00:00",
+     "published_at": "2026-02-20T00:00:00+00:00",
+     "publisher": "Wayback Machine",
+     "reliability": "archived copy",
+     "title": "",
+     "url": "https://web.archive.org/web/20260301100000id_/https://jort.example.tn/2026/017",
+     "used_by": [
+      "E6",
+      "E13",
+      "E19"
+     ]
+    },
+    {
+     "canonical_url": "https://fixture.example/news_jort_b",
+     "custody": {
+      "bytes_intact": true,
+      "captured": [],
+      "cites": [
+       "jort_award_v1"
+      ],
+      "derived_from": [],
+      "extraction": "plain",
+      "raw_sha256": "695ac4ce15af334abac4646e6ec05c2746091e3650cd35ba042c7bbad6c8c241",
+      "text_sha256": "f608ee42d1a17316bc2400e3188a39e73e3fef0160eb1580a7ae7adeef06d669"
+     },
+     "doc_id": "news_jort_b",
+     "kind": "news",
+     "observed_at": "2026-03-02T00:00:00+00:00",
+     "published_at": "2026-03-02T00:00:00+00:00",
+     "publisher": "Média fictif b",
+     "reliability": "press",
+     "title": "",
+     "url": "https://fixture.example/news_jort_b",
+     "used_by": [
+      "E8"
+     ]
+    },
+    {
+     "canonical_url": "https://fixture.example/news_jort_c",
+     "custody": {
+      "bytes_intact": true,
+      "captured": [],
+      "cites": [
+       "jort_award_v1"
+      ],
+      "derived_from": [],
+      "extraction": "plain",
+      "raw_sha256": "1a5c73c3dabb11a858c7edfaf23d974294034e1d12a61e0828575c3e96bd3003",
+      "text_sha256": "5e0ffa78fc93d2f32a0b3c21c4746974ec8dac6357e532daed61a841a0e303a8"
+     },
+     "doc_id": "news_jort_c",
+     "kind": "news",
+     "observed_at": "2026-03-02T00:00:00+00:00",
+     "published_at": "2026-03-02T00:00:00+00:00",
+     "publisher": "Média fictif c",
+     "reliability": "press",
+     "title": "",
+     "url": "https://fixture.example/news_jort_c",
+     "used_by": [
+      "E9"
+     ]
+    },
+    {
+     "canonical_url": "https://fixture.example/news_jort_d",
+     "custody": {
+      "bytes_intact": true,
+      "captured": [],
+      "cites": [],
+      "derived_from": [
+       "news_jort_b"
+      ],
+      "extraction": "plain",
+      "raw_sha256": "2bbc71bddcb7e45cbfd772d0f1e163354700ad966c72d34a71194c8a695a0628",
+      "text_sha256": "2636cb194b91ba850fc5f27f59c33a991dad57306df4678a9c260a2b3b57178d"
+     },
+     "doc_id": "news_jort_d",
+     "kind": "news",
+     "observed_at": "2026-03-03T00:00:00+00:00",
+     "published_at": "2026-03-03T00:00:00+00:00",
+     "publisher": "Média fictif d",
+     "reliability": "press",
+     "title": "",
+     "url": "https://fixture.example/news_jort_d",
+     "used_by": [
+      "E10"
+     ]
+    },
+    {
+     "canonical_url": "https://fixture.example/steg_communique",
+     "custody": {
+      "bytes_intact": true,
+      "captured": [],
+      "cites": [],
+      "derived_from": [],
+      "extraction": "plain",
+      "raw_sha256": "da9e15574e9bf7f5ad4d62c89c7f199dbe6f31ed25bb4193cafbdfdd4941defc",
+      "text_sha256": "29e8178a96f144038404b09bef7a0f391cafc2cad58494d267d955b8932374e1"
+     },
+     "doc_id": "steg_communique",
+     "kind": "official_live",
+     "observed_at": "2026-07-21T21:00:00+00:00",
+     "published_at": "2026-07-21T20:00:00+00:00",
+     "publisher": "STEG",
+     "reliability": "live official page (editable by its publisher)",
+     "title": "",
+     "url": "https://fixture.example/steg_communique",
+     "used_by": [
+      "E1"
+     ]
+    },
+    {
+     "canonical_url": "https://fixture.example/weather",
+     "custody": {
+      "bytes_intact": true,
+      "captured": [],
+      "cites": [],
+      "derived_from": [],
+      "extraction": "plain",
+      "raw_sha256": "b793a1b27f02b0d40bbe1d5d884e9cb092bf3b212222a7d0a9cb7474fffc78dd",
+      "text_sha256": "79c656e7973aee3d89f5cf296d4f40ca24e14bf5c429a6651366ba521898446f"
+     },
+     "doc_id": "weather",
+     "kind": "osint",
+     "observed_at": "2026-07-22T00:00:00+00:00",
+     "published_at": "2026-07-22T00:00:00+00:00",
+     "publisher": "Station Tunis-Carthage",
+     "reliability": "measurement (satellite, sensors)",
+     "title": "",
+     "url": "https://fixture.example/weather",
+     "used_by": [
+      "E5"
+     ]
+    },
+    {
+     "canonical_url": "https://fixture.example/news_outage",
+     "custody": {
+      "bytes_intact": true,
+      "captured": [],
+      "cites": [
+       "steg_communique"
+      ],
+      "derived_from": [],
+      "extraction": "plain",
+      "raw_sha256": "01386f4a66b767db33c609881c1d2fb75b252e76e15d8e5e5a6d20758861c94a",
+      "text_sha256": "1d169a7d72604dcbd0077fbad76ed77be421b5023e369266f97ed9c4de635dde"
+     },
+     "doc_id": "news_outage",
+     "kind": "news",
+     "observed_at": "2026-07-22T08:00:00+00:00",
+     "published_at": "2026-07-22T06:00:00+00:00",
+     "publisher": "Le Quotidien Fictif",
+     "reliability": "press",
+     "title": "",
+     "url": "https://fixture.example/news_outage",
+     "used_by": [
+      "E2"
+     ]
+    },
+    {
+     "canonical_url": "https://fixture.example/nightlights",
+     "custody": {
+      "bytes_intact": true,
+      "captured": [],
+      "cites": [],
+      "derived_from": [],
+      "extraction": "plain",
+      "raw_sha256": "b3e957f4279f433fcc64e4633420e0390641b44cd3322b65f4563af8f9a6e655",
+      "text_sha256": "d53eff5d511d66accc526c28ad64e2c8d7dc41ce5593c026d010117aafa8906b"
+     },
+     "doc_id": "nightlights",
+     "kind": "osint",
+     "observed_at": "2026-07-23T00:00:00+00:00",
+     "published_at": "2026-07-23T00:00:00+00:00",
+     "publisher": "NASA Black Marble (analyse)",
+     "reliability": "measurement (satellite, sensors)",
+     "title": "",
+     "url": "https://fixture.example/nightlights",
+     "used_by": [
+      "E3"
+     ]
+    },
+    {
+     "canonical_url": "https://fixture.example/site_report",
+     "custody": {
+      "bytes_intact": true,
+      "captured": [],
+      "cites": [],
+      "derived_from": [],
+      "extraction": "plain",
+      "raw_sha256": "91e1dff99ea26ac80e003617711d992a875fb840a2a260b769800bc37892efd2",
+      "text_sha256": "bba24455e68a549506be7bd40bdf0b0ae3ab9d26dd7621d52d31a92575c3c22b"
+     },
+     "doc_id": "site_report",
+     "kind": "contributor",
+     "observed_at": "2026-08-10T16:00:00+00:00",
+     "published_at": "2026-08-10T00:00:00+00:00",
+     "publisher": "Contributeur anonyme",
+     "reliability": "field contributor",
+     "title": "",
+     "url": "https://fixture.example/site_report",
+     "used_by": [
+      "E11"
+     ]
+    },
+    {
+     "canonical_url": "https://fixture.example/ins_peak",
+     "custody": {
+      "bytes_intact": true,
+      "captured": [],
+      "cites": [],
+      "derived_from": [],
+      "extraction": "plain",
+      "raw_sha256": "b4ab5b1afa0666b073e2567616ca4442df3cf8dbdd914f563af6207aedfd77fd",
+      "text_sha256": "46163989cf3e645fb9eb722ab1ee3d246ef02465493a85a0c6e901b64238716a"
+     },
+     "doc_id": "ins_peak",
+     "kind": "statistics",
+     "observed_at": "2026-09-02T00:00:00+00:00",
+     "published_at": "2026-09-01T00:00:00+00:00",
+     "publisher": "INS (fictif)",
+     "reliability": "official statistics",
+     "title": "",
+     "url": "https://fixture.example/ins_peak",
+     "used_by": [
+      "E4"
+     ]
+    },
+    {
+     "canonical_url": "https://fixture.example/sentinel",
+     "custody": {
+      "bytes_intact": true,
+      "captured": [],
+      "cites": [],
+      "derived_from": [],
+      "extraction": "plain",
+      "raw_sha256": "9ea4f4f422ab622f62b735cd8908b863b03d1f68e2e7b09e83142486ba333247",
+      "text_sha256": "b16d0ed667b057163902352c42ebe7929155d459dc76f9610ad4bcc39715490c"
+     },
+     "doc_id": "sentinel",
+     "kind": "osint",
+     "observed_at": "2026-09-06T00:00:00+00:00",
+     "published_at": "2026-09-05T00:00:00+00:00",
+     "publisher": "Copernicus Sentinel-2 (analyse)",
+     "reliability": "measurement (satellite, sensors)",
+     "title": "",
+     "url": "https://fixture.example/sentinel",
+     "used_by": [
+      "E12"
+     ]
+    },
+    {
+     "canonical_url": "https://fixture.example/worldbank",
+     "custody": {
+      "bytes_intact": true,
+      "captured": [],
+      "cites": [],
+      "derived_from": [],
+      "extraction": "plain",
+      "raw_sha256": "6c0728e4d6afa33e4a399e40db0a36f5b3a0ebc288a77a4844638c9dced43ed9",
+      "text_sha256": "4c16613e2184fbcf313d6d809a6c405767819f51e90de033ff950f04d66a8585"
+     },
+     "doc_id": "worldbank",
+     "kind": "foreign_mirror",
+     "observed_at": "2026-09-10T00:00:00+00:00",
+     "published_at": "2026-06-30T00:00:00+00:00",
+     "publisher": "Bailleur international (fictif)",
+     "reliability": "independent record (lender, foreign register)",
+     "title": "",
+     "url": "https://fixture.example/worldbank",
+     "used_by": [
+      "E7",
+      "E21"
+     ]
+    },
+    {
+     "canonical_url": "https://fixture.example/audit",
+     "custody": {
+      "bytes_intact": true,
+      "captured": [],
+      "cites": [],
+      "derived_from": [],
+      "extraction": "plain",
+      "raw_sha256": "a2baf713387620856aa83061ffcf824346c9246a1ffc4dd47dc8b974f25da5fa",
+      "text_sha256": "230e3f1eb4ec76d5650e3264dd79c46fa7526cd02a4d90905752365b6f0807d6"
+     },
+     "doc_id": "audit",
+     "kind": "audit",
+     "observed_at": "2026-09-15T00:00:00+00:00",
+     "published_at": "2026-09-15T00:00:00+00:00",
+     "publisher": "Cour des comptes (fictif)",
+     "reliability": "independent audit",
+     "title": "",
+     "url": "https://fixture.example/audit",
+     "used_by": [
+      "E15",
+      "E18"
+     ]
+    },
+    {
+     "canonical_url": "https://fixture.example/steg_procedure",
+     "custody": {
+      "bytes_intact": true,
+      "captured": [],
+      "cites": [],
+      "derived_from": [],
+      "extraction": "plain",
+      "raw_sha256": "8eade8395f1ef269dcc52861941c294f99d89e2e784ac55085fcc6c4950a7ca3",
+      "text_sha256": "b0c5b6cb41430321aef5e8cdc34eceeb766cb6d09ab4cf60afa8ea49d2c239aa"
+     },
+     "doc_id": "steg_procedure",
+     "kind": "official_live",
+     "observed_at": "2026-09-18T12:00:00+00:00",
+     "published_at": "2026-09-18T00:00:00+00:00",
+     "publisher": "STEG",
+     "reliability": "live official page (editable by its publisher)",
+     "title": "",
+     "url": "https://fixture.example/steg_procedure",
+     "used_by": [
+      "E16",
+      "E17"
+     ]
+    },
+    {
+     "canonical_url": "https://jort.example.tn/2026/017",
+     "custody": {
+      "bytes_intact": true,
+      "captured": [],
+      "cites": [],
+      "derived_from": [],
+      "extraction": "plain",
+      "raw_sha256": "d30d04570809c49c8f8d1e6d1e72e6542cde9d5b10bf71ec5d19261a4ff388a6",
+      "text_sha256": "40909c095896cf73f03ab8de5a5dc640770c0ea9349a41a64b650a048974eaa3"
+     },
+     "doc_id": "jort_award_v2",
+     "kind": "official_live",
+     "observed_at": "2026-09-20T09:00:00+00:00",
+     "published_at": "2026-02-20T00:00:00+00:00",
+     "publisher": "JORT (fictif)",
+     "reliability": "live official page (editable by its publisher)",
+     "title": "",
+     "url": "https://jort.example.tn/2026/017",
+     "used_by": [
+      "E20"
+     ]
+    }
+   ]
+  },
+  "/cases/{id}/documents/jort_award_v1": {
+   "canonical_url": "https://jort.example.tn/2026/017",
+   "custody": {
+    "bytes_intact": true,
+    "captured": [],
+    "cites": [],
+    "derived_from": [],
+    "extraction": "plain",
+    "raw_sha256": "a8cad1c4a966e32b0845926c4805240c4392f5a0f825a939535e40a6c907aa5e",
+    "text_sha256": "ca13bdc67706c6ad184b5b2861f03e2aace9596b5129dac229e08d8771a94cbd"
+   },
+   "doc_id": "jort_award_v1",
+   "highlights": [
+    {
+     "evidence_id": "E6",
+     "quote": "Marché n° 2026-017 : extension de 450 MW de la centrale de Rades-Fictive."
+    },
+    {
+     "evidence_id": "E13",
+     "quote": "par procédure de gré à gré"
+    },
+    {
+     "evidence_id": "E19",
+     "quote": "pour un montant de 120 000 000 TND"
+    }
+   ],
+   "kind": "archive",
+   "observed_at": "2026-03-01T10:00:00+00:00",
+   "published_at": "2026-02-20T00:00:00+00:00",
+   "publisher": "Wayback Machine",
+   "reliability": "archived copy",
+   "text": "[DOCUMENT FICTIF - données synthétiques de test]\nJournal Officiel (fictif) - Avis d'attribution\nMarché n° 2026-017 : extension de 450 MW de la centrale de Rades-Fictive.\nLe marché est attribué à la Société Zeta Travaux (fictive) pour un montant de 120 000 000 TND, par procédure de gré à gré en application du décret n° 2026-0412 du 10/02/2026.\nDate de signature : 20/02/2026.\n",
+   "title": "",
+   "url": "https://web.archive.org/web/20260301100000id_/https://jort.example.tn/2026/017",
+   "used_by": [
+    "E6",
+    "E13",
+    "E19"
+   ]
+  },
+  "/cases/{id}/documents/jort_award_v1/versions": {
+   "canonical_url": "https://jort.example.tn/2026/017",
+   "changes": [
+    {
+     "changes": [
+      {
+       "added": [
+        "80000000"
+       ],
+       "kind": "amount_tnd",
+       "removed": [
+        "120000000"
+       ]
+      }
+     ],
+     "from": "jort_award_v1",
+     "to": "jort_award_v2"
+    }
+   ],
+   "versions": [
+    {
+     "doc_id": "jort_award_v1",
+     "extraction": "plain",
+     "kind": "archive",
+     "observed_at": "2026-03-01T10:00:00+00:00",
+     "published_at": "2026-02-20T00:00:00+00:00",
+     "publisher": "Wayback Machine",
+     "reliability": "archived copy",
+     "text": "[DOCUMENT FICTIF - données synthétiques de test]\nJournal Officiel (fictif) - Avis d'attribution\nMarché n° 2026-017 : extension de 450 MW de la centrale de Rades-Fictive.\nLe marché est attribué à la Société Zeta Travaux (fictive) pour un montant de 120 000 000 TND, par procédure de gré à gré en application du décret n° 2026-0412 du 10/02/2026.\nDate de signature : 20/02/2026.\n",
+     "url": "https://web.archive.org/web/20260301100000id_/https://jort.example.tn/2026/017"
+    },
+    {
+     "doc_id": "jort_award_v2",
+     "extraction": "plain",
+     "kind": "official_live",
+     "observed_at": "2026-09-20T09:00:00+00:00",
+     "published_at": "2026-02-20T00:00:00+00:00",
+     "publisher": "JORT (fictif)",
+     "reliability": "live official page (editable by its publisher)",
+     "text": "[DOCUMENT FICTIF - données synthétiques de test]\nJournal Officiel (fictif) - Avis d'attribution\nMarché n° 2026-017 : extension de 450 MW de la centrale de Rades-Fictive.\nLe marché est attribué à la Société Zeta Travaux (fictive) pour un montant de 80 000 000 TND, par procédure de gré à gré en application du décret n° 2026-0412 du 10/02/2026.\nDate de signature : 20/02/2026.\n",
+     "url": "https://jort.example.tn/2026/017"
+    }
+   ]
+  },
+  "/cases/{id}/documents/jort_award_v2/versions": {
+   "canonical_url": "https://jort.example.tn/2026/017",
+   "changes": [
+    {
+     "changes": [
+      {
+       "added": [
+        "80000000"
+       ],
+       "kind": "amount_tnd",
+       "removed": [
+        "120000000"
+       ]
+      }
+     ],
+     "from": "jort_award_v1",
+     "to": "jort_award_v2"
+    }
+   ],
+   "versions": [
+    {
+     "doc_id": "jort_award_v1",
+     "extraction": "plain",
+     "kind": "archive",
+     "observed_at": "2026-03-01T10:00:00+00:00",
+     "published_at": "2026-02-20T00:00:00+00:00",
+     "publisher": "Wayback Machine",
+     "reliability": "archived copy",
+     "text": "[DOCUMENT FICTIF - données synthétiques de test]\nJournal Officiel (fictif) - Avis d'attribution\nMarché n° 2026-017 : extension de 450 MW de la centrale de Rades-Fictive.\nLe marché est attribué à la Société Zeta Travaux (fictive) pour un montant de 120 000 000 TND, par procédure de gré à gré en application du décret n° 2026-0412 du 10/02/2026.\nDate de signature : 20/02/2026.\n",
+     "url": "https://web.archive.org/web/20260301100000id_/https://jort.example.tn/2026/017"
+    },
+    {
+     "doc_id": "jort_award_v2",
+     "extraction": "plain",
+     "kind": "official_live",
+     "observed_at": "2026-09-20T09:00:00+00:00",
+     "published_at": "2026-02-20T00:00:00+00:00",
+     "publisher": "JORT (fictif)",
+     "reliability": "live official page (editable by its publisher)",
+     "text": "[DOCUMENT FICTIF - données synthétiques de test]\nJournal Officiel (fictif) - Avis d'attribution\nMarché n° 2026-017 : extension de 450 MW de la centrale de Rades-Fictive.\nLe marché est attribué à la Société Zeta Travaux (fictive) pour un montant de 80 000 000 TND, par procédure de gré à gré en application du décret n° 2026-0412 du 10/02/2026.\nDate de signature : 20/02/2026.\n",
+     "url": "https://jort.example.tn/2026/017"
+    }
+   ]
+  },
+  "/cases/{id}/events": [
+   {
+    "at": "2026-09-26T10:00:00+00:00",
+    "data": {
+     "action": "case_opened",
+     "actor": "replay",
+     "data": {
+      "case_id": "STEG-2026-07-21-SYNTHETIC",
+      "mode": "investigate",
+      "poc": true
+     }
+    },
+    "kind": "audit",
+    "seq": 1
+   },
+   {
+    "at": "2026-09-26T10:00:00+00:00",
+    "data": {
+     "note": "imported for review",
+     "status": "in_review"
+    },
+    "kind": "status",
+    "seq": 2
+   }
+  ],
+  "/cases/{id}/evidence": {
+   "items": [
+    {
+     "counts": true,
+     "evidence_id": "E1",
+     "origin": "steg_communique",
+     "proposal_id": null,
+     "proposed_by": null,
+     "publisher_interest": "none",
+     "quote": "une coupure d'électricité a touché plusieurs gouvernorats le 21/07/2026",
+     "relation": "supports",
+     "review_note": "",
+     "source": {
+      "doc_id": "steg_communique",
+      "kind": "official_live",
+      "observed_at": "2026-07-21T21:00:00+00:00",
+      "published_at": "2026-07-21T20:00:00+00:00",
+      "publisher": "STEG",
+      "reliability": "live official page (editable by its publisher)",
+      "url": "https://fixture.example/steg_communique"
+     },
+     "status": "accepted",
+     "subclaim_id": "C1",
+     "type": "quote",
+     "weight": 0.5
+    },
+    {
+     "counts": true,
+     "evidence_id": "E2",
+     "origin": "steg_communique",
+     "proposal_id": null,
+     "proposed_by": null,
+     "publisher_interest": "none",
+     "quote": "plusieurs gouvernorats privés d'électricité le 21/07/2026",
+     "relation": "supports",
+     "review_note": "",
+     "source": {
+      "doc_id": "news_outage",
+      "kind": "news",
+      "observed_at": "2026-07-22T08:00:00+00:00",
+      "published_at": "2026-07-22T06:00:00+00:00",
+      "publisher": "Le Quotidien Fictif",
+      "reliability": "press",
+      "url": "https://fixture.example/news_outage"
+     },
+     "status": "accepted",
+     "subclaim_id": "C1",
+     "type": "quote",
+     "weight": 0.35
+    },
+    {
+     "counts": true,
+     "evidence_id": "E3",
+     "origin": "nightlights",
+     "proposal_id": null,
+     "proposed_by": null,
+     "publisher_interest": "none",
+     "quote": "Baisse de radiance nocturne de 62 % sur le Grand Tunis",
+     "relation": "supports",
+     "review_note": "",
+     "source": {
+      "doc_id": "nightlights",
+      "kind": "osint",
+      "observed_at": "2026-07-23T00:00:00+00:00",
+      "published_at": "2026-07-23T00:00:00+00:00",
+      "publisher": "NASA Black Marble (analyse)",
+      "reliability": "measurement (satellite, sensors)",
+      "url": "https://fixture.example/nightlights"
+     },
+     "status": "accepted",
+     "subclaim_id": "C1",
+     "type": "quote",
+     "weight": 0.7
+    },
+    {
+     "counts": true,
+     "evidence_id": "E4",
+     "origin": "ins_peak",
+     "proposal_id": null,
+     "proposed_by": null,
+     "publisher_interest": "none",
+     "quote": "2026 : 4 870 MW (+0,8 % par rapport à 2025)",
+     "relation": "contradicts",
+     "review_note": "",
+     "source": {
+      "doc_id": "ins_peak",
+      "kind": "statistics",
+      "observed_at": "2026-09-02T00:00:00+00:00",
+      "published_at": "2026-09-01T00:00:00+00:00",
+      "publisher": "INS (fictif)",
+      "reliability": "official statistics",
+      "url": "https://fixture.example/ins_peak"
+     },
+     "status": "accepted",
+     "subclaim_id": "C2",
+     "type": "quote",
+     "weight": 0.7
+    },
+    {
+     "counts": true,
+     "evidence_id": "E5",
+     "origin": "weather",
+     "proposal_id": null,
+     "proposed_by": null,
+     "publisher_interest": "none",
+     "quote": "Aucun épisode de chaleur exceptionnel par rapport à l'été 2025.",
+     "relation": "contradicts",
+     "review_note": "",
+     "source": {
+      "doc_id": "weather",
+      "kind": "osint",
+      "observed_at": "2026-07-22T00:00:00+00:00",
+      "published_at": "2026-07-22T00:00:00+00:00",
+      "publisher": "Station Tunis-Carthage",
+      "reliability": "measurement (satellite, sensors)",
+      "url": "https://fixture.example/weather"
+     },
+     "status": "accepted",
+     "subclaim_id": "C2",
+     "type": "quote",
+     "weight": 0.7
+    },
+    {
+     "counts": true,
+     "evidence_id": "E6",
+     "origin": "jort_award_v1",
+     "proposal_id": null,
+     "proposed_by": null,
+     "publisher_interest": "none",
+     "quote": "Marché n° 2026-017 : extension de 450 MW de la centrale de Rades-Fictive.",
+     "relation": "supports",
+     "review_note": "",
+     "source": {
+      "doc_id": "jort_award_v1",
+      "kind": "archive",
+      "observed_at": "2026-03-01T10:00:00+00:00",
+      "published_at": "2026-02-20T00:00:00+00:00",
+      "publisher": "Wayback Machine",
+      "reliability": "archived copy",
+      "url": "https://web.archive.org/web/20260301100000id_/https://jort.example.tn/2026/017"
+     },
+     "status": "accepted",
+     "subclaim_id": "C3",
+     "type": "quote",
+     "weight": 0.75
+    },
+    {
+     "counts": true,
+     "evidence_id": "E7",
+     "origin": "worldbank",
+     "proposal_id": null,
+     "proposed_by": null,
+     "publisher_interest": "none",
+     "quote": "Composante 2 : extension de capacité, centrale de Rades-Fictive (marché n° 2026-017).",
+     "relation": "supports",
+     "review_note": "",
+     "source": {
+      "doc_id": "worldbank",
+      "kind": "foreign_mirror",
+      "observed_at": "2026-09-10T00:00:00+00:00",
+      "published_at": "2026-06-30T00:00:00+00:00",
+      "publisher": "Bailleur international (fictif)",
+      "reliability": "independent record (lender, foreign register)",
+      "url": "https://fixture.example/worldbank"
+     },
+     "status": "accepted",
+     "subclaim_id": "C3",
+     "type": "quote",
+     "weight": 0.8
+    },
+    {
+     "counts": true,
+     "evidence_id": "E8",
+     "origin": "jort_award_v1",
+     "proposal_id": null,
+     "proposed_by": null,
+     "publisher_interest": "none",
+     "quote": "le marché n° 2026-017 de 120 000 000 TND a été attribué",
+     "relation": "supports",
+     "review_note": "",
+     "source": {
+      "doc_id": "news_jort_b",
+      "kind": "news",
+      "observed_at": "2026-03-02T00:00:00+00:00",
+      "published_at": "2026-03-02T00:00:00+00:00",
+      "publisher": "Média fictif b",
+      "reliability": "press",
+      "url": "https://fixture.example/news_jort_b"
+     },
+     "status": "accepted",
+     "subclaim_id": "C3",
+     "type": "quote",
+     "weight": 0.35
+    },
+    {
+     "counts": true,
+     "evidence_id": "E9",
+     "origin": "jort_award_v1",
+     "proposal_id": null,
+     "proposed_by": null,
+     "publisher_interest": "none",
+     "quote": "le marché n° 2026-017 de 120 000 000 TND a été attribué",
+     "relation": "supports",
+     "review_note": "",
+     "source": {
+      "doc_id": "news_jort_c",
+      "kind": "news",
+      "observed_at": "2026-03-02T00:00:00+00:00",
+      "published_at": "2026-03-02T00:00:00+00:00",
+      "publisher": "Média fictif c",
+      "reliability": "press",
+      "url": "https://fixture.example/news_jort_c"
+     },
+     "status": "accepted",
+     "subclaim_id": "C3",
+     "type": "quote",
+     "weight": 0.35
+    },
+    {
+     "counts": true,
+     "evidence_id": "E10",
+     "origin": "jort_award_v1",
+     "proposal_id": null,
+     "proposed_by": null,
+     "publisher_interest": "none",
+     "quote": "le marché n° 2026-017 de 120 000 000 TND a été attribué",
+     "relation": "supports",
+     "review_note": "",
+     "source": {
+      "doc_id": "news_jort_d",
+      "kind": "news",
+      "observed_at": "2026-03-03T00:00:00+00:00",
+      "published_at": "2026-03-03T00:00:00+00:00",
+      "publisher": "Média fictif d",
+      "reliability": "press",
+      "url": "https://fixture.example/news_jort_d"
+     },
+     "status": "accepted",
+     "subclaim_id": "C3",
+     "type": "quote",
+     "weight": 0.35
+    },
+    {
+     "counts": true,
+     "evidence_id": "E11",
+     "origin": "site_report",
+     "proposal_id": null,
+     "proposed_by": null,
+     "publisher_interest": "none",
+     "quote": "terrain nu, aucun engin de chantier, aucune fondation visible",
+     "relation": "supports",
+     "review_note": "",
+     "source": {
+      "doc_id": "site_report",
+      "kind": "contributor",
+      "observed_at": "2026-08-10T16:00:00+00:00",
+      "published_at": "2026-08-10T00:00:00+00:00",
+      "publisher": "Contributeur anonyme",
+      "reliability": "field contributor",
+      "url": "https://fixture.example/site_report"
+     },
+     "status": "accepted",
+     "subclaim_id": "C4",
+     "type": "quote",
+     "weight": 0.6
+    },
+    {
+     "counts": true,
+     "evidence_id": "E12",
+     "origin": "sentinel",
+     "proposal_id": null,
+     "proposed_by": null,
+     "publisher_interest": "none",
+     "quote": "aucun changement de surface bâtie détecté",
+     "relation": "supports",
+     "review_note": "",
+     "source": {
+      "doc_id": "sentinel",
+      "kind": "osint",
+      "observed_at": "2026-09-06T00:00:00+00:00",
+      "published_at": "2026-09-05T00:00:00+00:00",
+      "publisher": "Copernicus Sentinel-2 (analyse)",
+      "reliability": "measurement (satellite, sensors)",
+      "url": "https://fixture.example/sentinel"
+     },
+     "status": "accepted",
+     "subclaim_id": "C4",
+     "type": "quote",
+     "weight": 0.7
+    },
+    {
+     "counts": true,
+     "evidence_id": "E13",
+     "origin": "jort_award_v1",
+     "proposal_id": null,
+     "proposed_by": null,
+     "publisher_interest": "none",
+     "quote": "par procédure de gré à gré",
+     "relation": "supports",
+     "review_note": "",
+     "source": {
+      "doc_id": "jort_award_v1",
+      "kind": "archive",
+      "observed_at": "2026-03-01T10:00:00+00:00",
+      "published_at": "2026-02-20T00:00:00+00:00",
+      "publisher": "Wayback Machine",
+      "reliability": "archived copy",
+      "url": "https://web.archive.org/web/20260301100000id_/https://jort.example.tn/2026/017"
+     },
+     "status": "accepted",
+     "subclaim_id": "C5",
+     "type": "quote",
+     "weight": 0.75
+    },
+    {
+     "counts": true,
+     "evidence_id": "E14",
+     "origin": "tuneps_search",
+     "proposal_id": null,
+     "proposed_by": null,
+     "publisher_interest": "none",
+     "quote": "Aucun avis d'appel d'offres publié entre le 01/01/2025 et le 15/02/2026 pour cet objet.",
+     "relation": "supports",
+     "review_note": "",
+     "source": {
+      "doc_id": "tuneps_search",
+      "kind": "archive",
+      "observed_at": "2026-02-15T12:00:00+00:00",
+      "published_at": "2026-02-15T00:00:00+00:00",
+      "publisher": "Wayback Machine",
+      "reliability": "archived copy",
+      "url": "https://fixture.example/tuneps_search"
+     },
+     "status": "accepted",
+     "subclaim_id": "C5",
+     "type": "quote",
+     "weight": 0.75
+    },
+    {
+     "counts": true,
+     "evidence_id": "E15",
+     "origin": "audit",
+     "proposal_id": null,
+     "proposed_by": null,
+     "publisher_interest": "none",
+     "quote": "Le recours au gré à gré pour le marché n° 2026-017 n'est pas justifié par une situation d'urgence documentée.",
+     "relation": "supports",
+     "review_note": "",
+     "source": {
+      "doc_id": "audit",
+      "kind": "audit",
+      "observed_at": "2026-09-15T00:00:00+00:00",
+      "published_at": "2026-09-15T00:00:00+00:00",
+      "publisher": "Cour des comptes (fictif)",
+      "reliability": "independent audit",
+      "url": "https://fixture.example/audit"
+     },
+     "status": "accepted",
+     "subclaim_id": "C5",
+     "type": "quote",
+     "weight": 0.85
+    },
+    {
+     "counts": true,
+     "evidence_id": "E16",
+     "origin": "steg_procedure",
+     "proposal_id": null,
+     "proposed_by": null,
+     "publisher_interest": "self_serving",
+     "quote": "attribué conformément à la procédure d'urgence prévue par le décret n° 2026-0412",
+     "relation": "qualifies",
+     "review_note": "",
+     "source": {
+      "doc_id": "steg_procedure",
+      "kind": "official_live",
+      "observed_at": "2026-09-18T12:00:00+00:00",
+      "published_at": "2026-09-18T00:00:00+00:00",
+      "publisher": "STEG",
+      "reliability": "live official page (editable by its publisher)",
+      "url": "https://fixture.example/steg_procedure"
+     },
+     "status": "accepted",
+     "subclaim_id": "C5",
+     "type": "quote",
+     "weight": 0.25
+    },
+    {
+     "counts": true,
+     "evidence_id": "E17",
+     "origin": "steg_procedure",
+     "proposal_id": null,
+     "proposed_by": null,
+     "publisher_interest": "self_serving",
+     "quote": "attribué conformément à la procédure d'urgence prévue par le décret n° 2026-0412",
+     "relation": "supports",
+     "review_note": "",
+     "source": {
+      "doc_id": "steg_procedure",
+      "kind": "official_live",
+      "observed_at": "2026-09-18T12:00:00+00:00",
+      "published_at": "2026-09-18T00:00:00+00:00",
+      "publisher": "STEG",
+      "reliability": "live official page (editable by its publisher)",
+      "url": "https://fixture.example/steg_procedure"
+     },
+     "status": "accepted",
+     "subclaim_id": "C9",
+     "type": "quote",
+     "weight": 0.25
+    },
+    {
+     "counts": true,
+     "evidence_id": "E18",
+     "origin": "audit",
+     "proposal_id": null,
+     "proposed_by": null,
+     "publisher_interest": "none",
+     "quote": "n'est pas justifié par une situation d'urgence documentée",
+     "relation": "contradicts",
+     "review_note": "",
+     "source": {
+      "doc_id": "audit",
+      "kind": "audit",
+      "observed_at": "2026-09-15T00:00:00+00:00",
+      "published_at": "2026-09-15T00:00:00+00:00",
+      "publisher": "Cour des comptes (fictif)",
+      "reliability": "independent audit",
+      "url": "https://fixture.example/audit"
+     },
+     "status": "accepted",
+     "subclaim_id": "C9",
+     "type": "quote",
+     "weight": 0.85
+    },
+    {
+     "amount_tnd": 120000000.0,
+     "counts": true,
+     "evidence_id": "E19",
+     "origin": "jort_award_v1",
+     "proposal_id": null,
+     "proposed_by": null,
+     "quote": "pour un montant de 120 000 000 TND",
+     "review_note": "",
+     "role": "allocated",
+     "source": {
+      "doc_id": "jort_award_v1",
+      "kind": "archive",
+      "observed_at": "2026-03-01T10:00:00+00:00",
+      "published_at": "2026-02-20T00:00:00+00:00",
+      "publisher": "Wayback Machine",
+      "reliability": "archived copy",
+      "url": "https://web.archive.org/web/20260301100000id_/https://jort.example.tn/2026/017"
+     },
+     "status": "accepted",
+     "type": "amount",
+     "used_by_financial_check": true
+    },
+    {
+     "amount_tnd": 80000000.0,
+     "counts": true,
+     "evidence_id": "E20",
+     "origin": "jort_award_v1",
+     "proposal_id": null,
+     "proposed_by": null,
+     "quote": "pour un montant de 80 000 000 TND",
+     "review_note": "",
+     "role": "allocated",
+     "source": {
+      "doc_id": "jort_award_v2",
+      "kind": "official_live",
+      "observed_at": "2026-09-20T09:00:00+00:00",
+      "published_at": "2026-02-20T00:00:00+00:00",
+      "publisher": "JORT (fictif)",
+      "reliability": "live official page (editable by its publisher)",
+      "url": "https://jort.example.tn/2026/017"
+     },
+     "status": "accepted",
+     "type": "amount",
+     "used_by_financial_check": false
+    },
+    {
+     "amount_tnd": 110000000.0,
+     "counts": true,
+     "evidence_id": "E21",
+     "origin": "worldbank",
+     "proposal_id": null,
+     "proposed_by": null,
+     "quote": "Montant décaissé au 30/06/2026 : 110 000 000 TND (équivalent).",
+     "review_note": "",
+     "role": "disbursed",
+     "source": {
+      "doc_id": "worldbank",
+      "kind": "foreign_mirror",
+      "observed_at": "2026-09-10T00:00:00+00:00",
+      "published_at": "2026-06-30T00:00:00+00:00",
+      "publisher": "Bailleur international (fictif)",
+      "reliability": "independent record (lender, foreign register)",
+      "url": "https://fixture.example/worldbank"
+     },
+     "status": "accepted",
+     "type": "amount",
+     "used_by_financial_check": true
+    },
+    {
+     "amount_tnd": 60000000.0,
+     "counts": true,
+     "evidence_id": "E22",
+     "origin": "benchmark",
+     "proposal_id": null,
+     "proposed_by": null,
+     "quote": "pour un montant de 60 000 000 TND",
+     "review_note": "",
+     "role": "benchmark",
+     "source": {
+      "doc_id": "benchmark",
+      "kind": "archive",
+      "observed_at": "2024-11-06T00:00:00+00:00",
+      "published_at": "2024-11-05T00:00:00+00:00",
+      "publisher": "Wayback Machine",
+      "reliability": "archived copy",
+      "url": "https://fixture.example/benchmark"
+     },
+     "status": "accepted",
+     "type": "amount",
+     "used_by_financial_check": true
+    },
+    {
+     "capture": null,
+     "counts": true,
+     "evidence_id": "E23",
+     "proposal_id": null,
+     "proposed_by": null,
+     "query": "décret n° 2026-0412 (all 2026 issues, decrees section)",
+     "register": "jort",
+     "register_name": "Journal Officiel (JORT): decrees, orders and official notices",
+     "relation": "contradicts",
+     "review_note": "",
+     "searched_at": "2026-08-10T00:00:00+00:00",
+     "status": "accepted",
+     "subclaim_id": "C9",
+     "type": "absence",
+     "weight": 0.425
+    }
+   ]
+  },
+  "/cases/{id}/history": {
+   "rounds": [],
+   "stop_explained": null,
+   "stop_reason": null
+  },
+  "/cases/{id}/plan": {
+   "plan": null,
+   "status": "in_review"
+  },
+  "/cases/{id}/summary": {
+   "published": "The award was made by direct agreement [E13]. It was worth 120 million TND [E19]. More collection is needed on the price.",
+   "sentences": [
+    {
+     "cited": [
+      "E13"
+     ],
+     "reasons": [],
+     "status": "unjudged",
+     "text": "The award was made by direct agreement [E13]."
+    },
+    {
+     "cited": [
+      "E19"
+     ],
+     "reasons": [],
+     "status": "unjudged",
+     "text": "It was worth 120 million TND [E19]."
+    },
+    {
+     "cited": [
+      "E13"
+     ],
+     "reasons": [
+      "names Karim, Ben, Salah, which the cited sources do not name"
+     ],
+     "status": "unsupported",
+     "text": "The contract was signed by Karim Ben Salah [E13]."
+    },
+    {
+     "cited": [],
+     "reasons": [],
+     "status": "analysis",
+     "text": "More collection is needed on the price."
+    }
+   ],
+   "written": "The award was made by direct agreement [E13]. It was worth 120 million TND [E19]. The contract was signed by Karim Ben Salah [E13]. More collection is needed on the price."
+  },
+  "/cases/{id}/suspicions": {
+   "suspicions": []
+  },
+  "/cases/{id}/timeline": {
+   "events": [
+    {
+     "date": "2024-11-05T00:00:00+00:00",
+     "doc_id": "benchmark",
+     "first_seen": "2024-11-06T00:00:00+00:00",
+     "seen_late": false,
+     "source": {
+      "doc_id": "benchmark",
+      "kind": "archive",
+      "observed_at": "2024-11-06T00:00:00+00:00",
+      "published_at": "2024-11-05T00:00:00+00:00",
+      "publisher": "Wayback Machine",
+      "reliability": "archived copy",
+      "url": "https://fixture.example/benchmark"
+     },
+     "text": "Wayback Machine",
+     "type": "document"
+    },
+    {
+     "date": "2026-02-15T00:00:00+00:00",
+     "doc_id": "tuneps_search",
+     "first_seen": "2026-02-15T12:00:00+00:00",
+     "seen_late": false,
+     "source": {
+      "doc_id": "tuneps_search",
+      "kind": "archive",
+      "observed_at": "2026-02-15T12:00:00+00:00",
+      "published_at": "2026-02-15T00:00:00+00:00",
+      "publisher": "Wayback Machine",
+      "reliability": "archived copy",
+      "url": "https://fixture.example/tuneps_search"
+     },
+     "text": "Wayback Machine",
+     "type": "document"
+    },
+    {
+     "date": "2026-02-20T00:00:00+00:00",
+     "doc_id": "jort_award_v2",
+     "first_seen": "2026-09-20T09:00:00+00:00",
+     "seen_late": true,
+     "source": {
+      "doc_id": "jort_award_v2",
+      "kind": "official_live",
+      "observed_at": "2026-09-20T09:00:00+00:00",
+      "published_at": "2026-02-20T00:00:00+00:00",
+      "publisher": "JORT (fictif)",
+      "reliability": "live official page (editable by its publisher)",
+      "url": "https://jort.example.tn/2026/017"
+     },
+     "text": "JORT (fictif)",
+     "type": "document"
+    },
+    {
+     "date": "2026-02-20T00:00:00+00:00",
+     "doc_id": "jort_award_v1",
+     "first_seen": "2026-03-01T10:00:00+00:00",
+     "seen_late": true,
+     "source": {
+      "doc_id": "jort_award_v1",
+      "kind": "archive",
+      "observed_at": "2026-03-01T10:00:00+00:00",
+      "published_at": "2026-02-20T00:00:00+00:00",
+      "publisher": "Wayback Machine",
+      "reliability": "archived copy",
+      "url": "https://web.archive.org/web/20260301100000id_/https://jort.example.tn/2026/017"
+     },
+     "text": "Wayback Machine",
+     "type": "document"
+    },
+    {
+     "date": "2026-03-02T00:00:00+00:00",
+     "doc_id": "news_jort_b",
+     "first_seen": "2026-03-02T00:00:00+00:00",
+     "seen_late": false,
+     "source": {
+      "doc_id": "news_jort_b",
+      "kind": "news",
+      "observed_at": "2026-03-02T00:00:00+00:00",
+      "published_at": "2026-03-02T00:00:00+00:00",
+      "publisher": "Média fictif b",
+      "reliability": "press",
+      "url": "https://fixture.example/news_jort_b"
+     },
+     "text": "Média fictif b",
+     "type": "document"
+    },
+    {
+     "date": "2026-03-02T00:00:00+00:00",
+     "doc_id": "news_jort_c",
+     "first_seen": "2026-03-02T00:00:00+00:00",
+     "seen_late": false,
+     "source": {
+      "doc_id": "news_jort_c",
+      "kind": "news",
+      "observed_at": "2026-03-02T00:00:00+00:00",
+      "published_at": "2026-03-02T00:00:00+00:00",
+      "publisher": "Média fictif c",
+      "reliability": "press",
+      "url": "https://fixture.example/news_jort_c"
+     },
+     "text": "Média fictif c",
+     "type": "document"
+    },
+    {
+     "date": "2026-03-03T00:00:00+00:00",
+     "doc_id": "news_jort_d",
+     "first_seen": "2026-03-03T00:00:00+00:00",
+     "seen_late": false,
+     "source": {
+      "doc_id": "news_jort_d",
+      "kind": "news",
+      "observed_at": "2026-03-03T00:00:00+00:00",
+      "published_at": "2026-03-03T00:00:00+00:00",
+      "publisher": "Média fictif d",
+      "reliability": "press",
+      "url": "https://fixture.example/news_jort_d"
+     },
+     "text": "Média fictif d",
+     "type": "document"
+    },
+    {
+     "date": "2026-06-30T00:00:00+00:00",
+     "doc_id": "worldbank",
+     "first_seen": "2026-09-10T00:00:00+00:00",
+     "seen_late": true,
+     "source": {
+      "doc_id": "worldbank",
+      "kind": "foreign_mirror",
+      "observed_at": "2026-09-10T00:00:00+00:00",
+      "published_at": "2026-06-30T00:00:00+00:00",
+      "publisher": "Bailleur international (fictif)",
+      "reliability": "independent record (lender, foreign register)",
+      "url": "https://fixture.example/worldbank"
+     },
+     "text": "Bailleur international (fictif)",
+     "type": "document"
+    },
+    {
+     "date": "2026-07-21T00:00:00+00:00",
+     "subclaim_id": "C1",
+     "text": "A major power outage occurred on 21/07/2026.",
+     "type": "claimed_event"
+    },
+    {
+     "date": "2026-07-21T20:00:00+00:00",
+     "doc_id": "steg_communique",
+     "first_seen": "2026-07-21T21:00:00+00:00",
+     "seen_late": false,
+     "source": {
+      "doc_id": "steg_communique",
+      "kind": "official_live",
+      "observed_at": "2026-07-21T21:00:00+00:00",
+      "published_at": "2026-07-21T20:00:00+00:00",
+      "publisher": "STEG",
+      "reliability": "live official page (editable by its publisher)",
+      "url": "https://fixture.example/steg_communique"
+     },
+     "text": "STEG",
+     "type": "document"
+    },
+    {
+     "date": "2026-07-22T00:00:00+00:00",
+     "doc_id": "weather",
+     "first_seen": "2026-07-22T00:00:00+00:00",
+     "seen_late": false,
+     "source": {
+      "doc_id": "weather",
+      "kind": "osint",
+      "observed_at": "2026-07-22T00:00:00+00:00",
+      "published_at": "2026-07-22T00:00:00+00:00",
+      "publisher": "Station Tunis-Carthage",
+      "reliability": "measurement (satellite, sensors)",
+      "url": "https://fixture.example/weather"
+     },
+     "text": "Station Tunis-Carthage",
+     "type": "document"
+    },
+    {
+     "date": "2026-07-22T06:00:00+00:00",
+     "doc_id": "news_outage",
+     "first_seen": "2026-07-22T08:00:00+00:00",
+     "seen_late": false,
+     "source": {
+      "doc_id": "news_outage",
+      "kind": "news",
+      "observed_at": "2026-07-22T08:00:00+00:00",
+      "published_at": "2026-07-22T06:00:00+00:00",
+      "publisher": "Le Quotidien Fictif",
+      "reliability": "press",
+      "url": "https://fixture.example/news_outage"
+     },
+     "text": "Le Quotidien Fictif",
+     "type": "document"
+    },
+    {
+     "date": "2026-07-23T00:00:00+00:00",
+     "doc_id": "nightlights",
+     "first_seen": "2026-07-23T00:00:00+00:00",
+     "seen_late": false,
+     "source": {
+      "doc_id": "nightlights",
+      "kind": "osint",
+      "observed_at": "2026-07-23T00:00:00+00:00",
+      "published_at": "2026-07-23T00:00:00+00:00",
+      "publisher": "NASA Black Marble (analyse)",
+      "reliability": "measurement (satellite, sensors)",
+      "url": "https://fixture.example/nightlights"
+     },
+     "text": "NASA Black Marble (analyse)",
+     "type": "document"
+    },
+    {
+     "date": "2026-08-10T00:00:00+00:00",
+     "doc_id": "site_report",
+     "first_seen": "2026-08-10T16:00:00+00:00",
+     "seen_late": false,
+     "source": {
+      "doc_id": "site_report",
+      "kind": "contributor",
+      "observed_at": "2026-08-10T16:00:00+00:00",
+      "published_at": "2026-08-10T00:00:00+00:00",
+      "publisher": "Contributeur anonyme",
+      "reliability": "field contributor",
+      "url": "https://fixture.example/site_report"
+     },
+     "text": "Contributeur anonyme",
+     "type": "document"
+    },
+    {
+     "date": "2026-09-01T00:00:00+00:00",
+     "doc_id": "ins_peak",
+     "first_seen": "2026-09-02T00:00:00+00:00",
+     "seen_late": false,
+     "source": {
+      "doc_id": "ins_peak",
+      "kind": "statistics",
+      "observed_at": "2026-09-02T00:00:00+00:00",
+      "published_at": "2026-09-01T00:00:00+00:00",
+      "publisher": "INS (fictif)",
+      "reliability": "official statistics",
+      "url": "https://fixture.example/ins_peak"
+     },
+     "text": "INS (fictif)",
+     "type": "document"
+    },
+    {
+     "date": "2026-09-05T00:00:00+00:00",
+     "doc_id": "sentinel",
+     "first_seen": "2026-09-06T00:00:00+00:00",
+     "seen_late": false,
+     "source": {
+      "doc_id": "sentinel",
+      "kind": "osint",
+      "observed_at": "2026-09-06T00:00:00+00:00",
+      "published_at": "2026-09-05T00:00:00+00:00",
+      "publisher": "Copernicus Sentinel-2 (analyse)",
+      "reliability": "measurement (satellite, sensors)",
+      "url": "https://fixture.example/sentinel"
+     },
+     "text": "Copernicus Sentinel-2 (analyse)",
+     "type": "document"
+    },
+    {
+     "date": "2026-09-15T00:00:00+00:00",
+     "doc_id": "audit",
+     "first_seen": "2026-09-15T00:00:00+00:00",
+     "seen_late": false,
+     "source": {
+      "doc_id": "audit",
+      "kind": "audit",
+      "observed_at": "2026-09-15T00:00:00+00:00",
+      "published_at": "2026-09-15T00:00:00+00:00",
+      "publisher": "Cour des comptes (fictif)",
+      "reliability": "independent audit",
+      "url": "https://fixture.example/audit"
+     },
+     "text": "Cour des comptes (fictif)",
+     "type": "document"
+    },
+    {
+     "date": "2026-09-18T00:00:00+00:00",
+     "doc_id": "steg_procedure",
+     "first_seen": "2026-09-18T12:00:00+00:00",
+     "seen_late": false,
+     "source": {
+      "doc_id": "steg_procedure",
+      "kind": "official_live",
+      "observed_at": "2026-09-18T12:00:00+00:00",
+      "published_at": "2026-09-18T00:00:00+00:00",
+      "publisher": "STEG",
+      "reliability": "live official page (editable by its publisher)",
+      "url": "https://fixture.example/steg_procedure"
+     },
+     "text": "STEG",
+     "type": "document"
+    },
+    {
+     "date": "2026-09-20T09:00:00+00:00",
+     "doc_id": "jort_award_v2",
+     "earlier_doc_id": "jort_award_v1",
+     "needs_review": false,
+     "text": "amount_tnd ['120000000'] → ['80000000']",
+     "type": "rewrite"
+    }
+   ]
+  },
+  "/health": {
+   "can_investigate": false,
+   "cases": 1,
+   "status": "ok"
+  }
+ }
+}

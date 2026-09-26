@@ -92,7 +92,8 @@ def overview(case: Case) -> Json:
             "verdict": v.verdict, "likelihood": v.likelihood, "likelihood_term": v.likelihood_term,
             "confidence": v.confidence, "confidence_reasons": v.confidence_reasons, "final": case.verdict is not None},
         "stop_reason": result.stop_reason if result else None,
-        "rounds": len(result.rounds) if result else (ws.round if ws else 0),
+        "rounds": len(result.rounds) if result else (ws.round if ws and case.status in (
+            CaseStatus.RUNNING, CaseStatus.PAUSED) else 0),
         "counts": None if ws is None else {
             "documents": len(ws.store.documents), "evidence": len(ws.counted()),
             "pending_proposals": sum(p.status == "pending" for p in ws.proposals),
