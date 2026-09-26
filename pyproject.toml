@@ -13,7 +13,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "ruff>=0.6"]
+# The HTTP API for the web interface (caligula serve).
+api = ["fastapi>=0.110", "uvicorn>=0.29"]
+dev = ["pytest>=8.0", "ruff>=0.6", "fastapi>=0.110", "uvicorn>=0.29"]
 
 [project.scripts]
 caligula = "caligula.adapters.cli.main:main"
