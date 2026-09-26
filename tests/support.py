@@ -159,3 +159,54 @@ def scripted_team(scripts, record=None, briefs=None):
         return scripts.get((agent, n), []), record.setdefault((agent, n), [])
 
     return ScriptedAgentRunner(script_for)
+
+
+class ScriptedAnalyst:
+    """A stand-in analyst for case lifecycles: intake by keyword ("spy" is refused, "offshore"
+    needs a lawyer), the synthetic case as decomposition, a one-task plan."""
+
+    def classify(self, text):
+        from caligula.domain.model.intake import ClaimType, Intake, SubjectType
+
+        kind = (ClaimType.ESPIONAGE_OR_STATE_SECURITY if "spy" in text
+                else ClaimType.FINANCIAL_CRIME_INDICATORS if "offshore" in text else ClaimType.PROCUREMENT)
+        return Intake(claim_type=kind, subject_types=[SubjectType.PUBLIC_BODY], public_nexus=True,
+                      documented_act=True, relies_on_sensitive_traits=False,
+                      involves_leaked_or_classified_material=False, rationale="scripted")
+
+    def decompose(self, allegation_id, text):
+        import json
+
+        case = json.loads((FIXTURE / "case.json").read_text(encoding="utf-8"))
+        return Allegation.model_validate(case["allegation"] | {"id": allegation_id, "text": text})
+
+    def plan(self, allegation):
+        from caligula.application.investigation.plan import BudgetWeight, PlanDraft, PlannedTask
+
+        return PlanDraft(entities=[], window_start="2025-01-01", window_end="2026-09-30",
+                         tasks=[PlannedTask(specialist="official", objective="Find the award notice",
+                                            subclaim_ids=["C3"], purpose="support", queries=["marché 2026-017"],
+                                            urls=[])],
+                         budget_weights=[BudgetWeight(specialist="official", weight=1.0)])
+
+
+def scripted_cases(store, scripts=None, specialists=None, background=None, **team_kw):
+    """A CaseService on the scripted analyst and scripted agents; work runs inline unless
+    `background` says otherwise. Returns (service, runner records)."""
+    from caligula.application.cases.service import CaseService, Engine
+    from caligula.application.investigation.team import InvestigationTeam, Specialist
+
+    load_case(FIXTURE, store)
+    record = {}
+    collect = ["list_tasks", "complete_task", "search_evidence", "record_evidence", "report"]
+    team = specialists or [Specialist("official", collect, False), Specialist("web_news", collect, False)]
+
+    def new_team(on_event):
+        return InvestigationTeam(runner=scripted_team({} if scripts is None else scripts, record), analyst=ScriptedAnalyst(),
+                                 specialists=team, web_search=False, on_event=on_event,
+                                 **({"max_rounds": 1} | team_kw))
+
+    engine = Engine(analyst=ScriptedAnalyst(), new_team=new_team, store=store)
+    service = CaseService(engine, new_ledger=lambda case_id: JsonlLedger(),
+                          background=background or (lambda work: work()))
+    return service, record
