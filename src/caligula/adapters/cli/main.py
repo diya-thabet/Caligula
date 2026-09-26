@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -14,7 +15,9 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     run = sub.add_parser("run", help="investigate a case directory")
     run.add_argument("case_dir", type=Path)
-    run.add_argument("--live", action="store_true", help="use Claude instead of the recorded readings")
+    run.add_argument("--live", dest="llm", nargs="?", const="claude", metavar="SPEC",
+                     help="read the documents with a model instead of the recorded readings "
+                          "(default claude; see --llm)")
     run.add_argument("--blobs", type=Path, default=Path("blobs"), help="content-addressed blob store")
     run.add_argument("--json", action="store_true", help="print the full verdict as JSON")
     run.add_argument("--db", help="PostgreSQL DSN; default is an in-memory store")
@@ -24,12 +27,20 @@ def main(argv: list[str] | None = None) -> int:
     cal.add_argument("--blobs", type=Path, default=Path("blobs"))
     scr = sub.add_parser("screen", help="rank procurement awards by red flags")
     scr.add_argument("awards_json", type=Path)
-    inv = sub.add_parser("investigate", help="run the investigator agent on a claim (needs Claude API access)")
+    inv = sub.add_parser("investigate", help="run the investigator agents on a claim (needs a model API or server)")
     inv.add_argument("claim", help="claim or allegation text")
     inv.add_argument("--mode", choices=["factcheck", "investigate"], default="factcheck")
     inv.add_argument("--id", default="claim", help="case id")
     inv.add_argument("--case-dir", type=Path, help="preload documents from a case directory")
     inv.add_argument("--no-web", action="store_true", help="disable web search")
+    inv.add_argument("--llm", metavar="SPEC", help="model for every role: claude[:MODEL] or openai:MODEL[@BASE_URL] "
+                                                   "(default: $CALIGULA_LLM, else claude)")
+    inv.add_argument("--analyst-llm", metavar="SPEC", help="model for intake, decomposition and planning")
+    inv.add_argument("--collector-llm", metavar="SPEC", help="model for the source specialists / investigator")
+    inv.add_argument("--reviewer-llm", metavar="SPEC", help="model for the reviewer (team mode)")
+    inv.add_argument("--search", choices=["searxng", "brave"], default=os.environ.get("CALIGULA_SEARCH"),
+                     help="our own web search engine (needed for OpenAI-compatible models; default: the "
+                          "provider's built-in search, Claude only)")
     inv.add_argument("--blobs", type=Path, default=Path("blobs"))
     inv.add_argument("--db", help="PostgreSQL DSN; default is an in-memory store")
     inv.add_argument("--team", action="store_true", help="parallel source specialists + reviewer")

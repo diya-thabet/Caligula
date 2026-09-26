@@ -8,6 +8,7 @@ from caligula.adapters.persistence.blob_fs import FileBlobStorage
 from caligula.adapters.persistence.memory import MemoryDocumentRepository
 from caligula.application.evidence_store import EvidenceStore
 from caligula.application.investigation.workspace import Connectors
+from caligula.application.ports.sources import WebSearch
 
 
 def open_store(dsn: str | None, blobs_dir: Path) -> EvidenceStore:
@@ -25,7 +26,7 @@ def memory_store(blobs_dir: Path) -> EvidenceStore:
     return EvidenceStore(MemoryDocumentRepository(), FileBlobStorage(blobs_dir))
 
 
-def live_connectors() -> Connectors:
+def live_connectors(search: WebSearch | None = None) -> Connectors:
     from caligula.adapters.media.text_extraction import PopplerTesseractExtractor
     from caligula.adapters.sources.telegram import TelegramClient
     from caligula.adapters.sources.wayback import WaybackClient
@@ -33,12 +34,4 @@ def live_connectors() -> Connectors:
     from caligula.adapters.sources.worldbank import WorldBankClient
 
     return Connectors(wayback=WaybackClient(), live=LiveFetcher(), funders=WorldBankClient(),
-                      telegram=TelegramClient(), extractor=PopplerTesseractExtractor())
-
-
-def claude():
-    """(analyst, agent runner) on the Claude API."""
-    from caligula.adapters.llm.claude_analyst import ClaudeAnalyst
-    from caligula.adapters.llm.claude_runner import ClaudeAgentRunner
-
-    return ClaudeAnalyst(), ClaudeAgentRunner()
+                      telegram=TelegramClient(), extractor=PopplerTesseractExtractor(), search=search)

@@ -92,6 +92,7 @@ class InvestigationTeam:
         self,
         runner: AgentRunner,
         analyst: ClaimAnalyst | None = None,
+        reviewer_runner: AgentRunner | None = None,
         specialists: list[Specialist] | None = None,
         max_rounds: int = 3,
         total_budget: int = 100,
@@ -102,6 +103,7 @@ class InvestigationTeam:
         on_event: Callable[[str, str], None] | None = None,
     ):
         self.runner = runner
+        self.reviewer_runner = reviewer_runner or runner  # the reviewer may run on another model
         self.analyst = analyst
         self.specialists = {s.name: s for s in (specialists or SPECIALISTS)}
         self.max_rounds = max_rounds
@@ -259,5 +261,5 @@ class InvestigationTeam:
             + f"\n\n<leads_for_you>\n{json.dumps(leads, ensure_ascii=False)}\n</leads_for_you>"
             + f"\n\n<specialist_reports>\n{json.dumps(latest, ensure_ascii=False, indent=1)}\n</specialist_reports>"
         )
-        self.runner.run(system, tools, brief, self.reviewer_budget + 10, lambda: ctx.done)
+        self.reviewer_runner.run(system, tools, brief, self.reviewer_budget + 10, lambda: ctx.done)
         return ctx.report

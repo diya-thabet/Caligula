@@ -5,14 +5,15 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from caligula.adapters.cli.bootstrap import claude, live_connectors, memory_store, open_store
+from caligula.adapters.cli.bootstrap import live_connectors, memory_store, open_store
+from caligula.adapters.cli.models import analyst_for, check_web_search, models_from, parse_spec, search_from
 from caligula.adapters.fixtures.case_directory import case_workspace, run_case
 from caligula.adapters.presenters.cli_summary import summarize
 from caligula.adapters.presenters.markdown_report import build_report
 
 
 def run(args: argparse.Namespace) -> int:
-    analyst = claude()[0] if args.live else None
+    analyst = analyst_for(parse_spec(args.llm)) if args.llm else None
     store = open_store(args.db, args.blobs)
     verdict = run_case(args.case_dir, store, analyst)
     print(verdict.model_dump_json(indent=2) if args.json else summarize(verdict))
@@ -40,7 +41,10 @@ def investigate(args: argparse.Namespace) -> int:
     from caligula.domain.model.intake import Decision
 
     ledger = JsonlLedger(args.ledger)
-    llm, runner = claude()
+    models = models_from(args.llm, args.analyst_llm, args.collector_llm, args.reviewer_llm)
+    search = search_from(args.search)
+    check_web_search(models, search, web=not args.no_web)
+    llm = models.analyst
     admission = admit(llm, ledger, args.id, args.claim, args.legal_approved, args.poc)
     intake, decision = admission.intake, admission.decision
     print(f"Intake: {decision.decision} ({intake.claim_type}; subjects {[str(s) for s in intake.subject_types]})")
@@ -56,17 +60,18 @@ def investigate(args: argparse.Namespace) -> int:
     allegation, added = decompose_case(llm, args.id, args.claim)
     for note in added:
         print(f"  + {note}")
-    ws = Workspace(store=store, allegation=allegation, mode=mode, connectors=live_connectors(), ledger=ledger)
+    ws = Workspace(store=store, allegation=allegation, mode=mode, connectors=live_connectors(search), ledger=ledger)
     if args.team:
         rubric = args.rubric.read_text(encoding="utf-8") if args.rubric else ""
-        team = InvestigationTeam(runner=runner, analyst=llm, web_search=not args.no_web,
+        team = InvestigationTeam(runner=models.collectors, reviewer_runner=models.reviewer, analyst=llm,
+                                 web_search=not args.no_web,
                                  rubric=rubric, max_rounds=args.rounds,
                                  on_event=lambda phase, detail: print(f"[{phase}] {detail}", flush=True))
         result = team.run(ws)
         narrative = result.review
         print(f"\nStopped after {len(result.rounds)} round(s): {result.stop_reason}")
     else:
-        result = InvestigatorAgent(runner, web_search=not args.no_web).run(ws)
+        result = InvestigatorAgent(models.collectors, web_search=not args.no_web).run(ws)
         narrative = result.summary
 
     print("\n" + summarize(result.verdict))
