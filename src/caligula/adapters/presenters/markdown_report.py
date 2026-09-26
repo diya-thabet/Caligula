@@ -13,12 +13,14 @@ from caligula.adapters.presenters.analysis import competing_hypotheses, dependen
 from caligula.adapters.presenters.analytic import (
     alternatives,
     bottom_line,
+    checked_summary,
     gaps,
     indicators,
     key_assumptions,
     key_judgments,
 )
 from caligula.adapters.presenters.evolution import evolution, suspicions
+from caligula.application.investigation.attribution import check_summary
 from caligula.application.investigation.plan import TaskStatus
 from caligula.application.investigation.team import RoundSummary
 from caligula.application.investigation.workspace import ProposalStatus, Workspace
@@ -84,7 +86,8 @@ def build_report(ws: Workspace, verdict: Verdict, review: str | None = None, poc
                    "(quotes not found, dates incompatible, unknown sub-claims).")
     out.append(f"- {verdict.disclaimer}")
     if review:
-        out += ["", "## Reviewer summary", "", review]
+        # The check the loop ran (with its judge), or, for a summary that never went through it, the checks in code.
+        out += ["", *checked_summary(ws.attribution or check_summary(ws, review, verdict=verdict))]
 
     out += ["", "---", "", "# Annexes", "", "The detail every judgment above rests on.", "",
             "## Sub-claims", "",

@@ -126,6 +126,13 @@ def assert_invariants(ws, verdict=None):
     for p in ws.proposals:
         if isinstance(p.item, EvidenceEdge):
             assert p.item.quote in report
+    # 11. A checked summary publishes no failing sentence, and cites only evidence that counts.
+    if ws.attribution is not None:
+        import re
+
+        published = ws.attribution.published()
+        assert not any(s.text in published for s in ws.attribution.failures)
+        assert set(re.findall(r"\bE\d+\b", published)) <= set(ws.counted())
     return report
 
 

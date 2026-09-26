@@ -67,16 +67,20 @@ def investigate(args: argparse.Namespace) -> int:
         team = InvestigationTeam(runner=models.collectors, reviewer_runner=models.reviewer, analyst=llm,
                                  web_search=not args.no_web,
                                  rubric=rubric, max_rounds=args.rounds, max_tool_calls=args.max_tool_calls,
-                                 on_event=lambda phase, detail: print(f"[{phase}] {detail}", flush=True))
+                                 on_event=lambda phase, detail: print(f"[{phase}] {detail}", flush=True),
+                                 judge=llm)
         result = team.run(ws)
         narrative = result.review
         print(f"\nStopped after {len(result.rounds)} round(s): {STOP_REASONS[result.stop_reason]}")
     else:
-        result = InvestigatorAgent(models.collectors, web_search=not args.no_web).run(ws)
+        result = InvestigatorAgent(models.collectors, web_search=not args.no_web, judge=llm).run(ws)
         narrative = result.summary
 
     print("\n" + summarize(result.verdict))
-    print(f"\n{'Review' if args.team else 'Agent summary'} ({len(result.trace)} tool calls):\n{narrative}")
+    print(f"\n{'Review' if args.team else 'Agent summary'} ({len(result.trace)} tool calls), as published "
+          f"after the citation check:\n{ws.attribution.published() if ws.attribution else narrative}")
+    if ws.attribution and ws.attribution.failures:
+        print(f"  ({len(ws.attribution.failures)} sentence(s) removed; see the case file's sentence check)")
     if result.unknown_citations:
         print(f"\nWARNING: summary cites unknown documents: {result.unknown_citations}")
     print(f"\nPublic reply:\n{public_reply(result, mode, store, args.claim)}")

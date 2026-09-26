@@ -10,11 +10,14 @@ each judgment points at the exact quote or search behind it.
 
 from __future__ import annotations
 
+from collections import Counter
+
 from caligula.adapters.presenters.analysis import likelihood_text
 from caligula.application.investigation.plan import TaskStatus
 from caligula.application.investigation.suspicions import SuspicionStatus
 from caligula.application.investigation.team import STOP_REASONS
 from caligula.application.investigation.workspace import Workspace
+from caligula.domain.model.attribution import AttributionReport
 from caligula.domain.model.claims import Allegation, Hypothesis, HypothesisKind
 from caligula.domain.model.evidence import AbsenceFinding, FinancialFigure, Relation
 from caligula.domain.model.registers import REGISTERS
@@ -254,3 +257,30 @@ def indicators(ws: Workspace, v: Verdict) -> list[str]:
     if strengthen:
         out += ["Would strengthen it:", "", *[f"- {s}" for s in strengthen], ""]
     return out + (["None identified.", ""] if not weaken and not strengthen else [])
+
+
+_CHECK_NOTE = {
+    "supported": "the judge found it in the cited quotes",
+    "partial": "partly in the cited quotes: published with a mark",
+    "unsupported": "removed: not in its evidence",
+    "uncited": "removed: a fact without evidence",
+    "unjudged": "passed the checks in code; no judge model read it",
+    "analysis": "the writer's analysis: no fact to check",
+}
+
+
+def checked_summary(report: AttributionReport) -> list[str]:
+    """The summary as published, then every sentence with what the check found."""
+    counts = Counter(s.status.value for s in report.sentences)
+    out = ["## Summary", "",
+           "Written by the reviewer, checked sentence by sentence against the evidence it cites; "
+           "sentences that fail are removed, partly supported ones marked.", "",
+           report.published() or "(nothing left after the check)", "",
+           "### Sentence check", "",
+           ", ".join(f"{n} {status}" for status, n in sorted(counts.items())) + ".", "",
+           "| # | Sentence | Cites | Check | Why |", "|---|---|---|---|---|"]
+    for i, s in enumerate(report.sentences, 1):
+        why = "; ".join(s.reasons) or _CHECK_NOTE[s.status.value]
+        text = s.text.replace("|", "\\|")
+        out.append(f"| {i} | {text} | {', '.join(s.cited) or '–'} | {s.status.value} | {why.replace('|', '/')} |")
+    return out + [""]

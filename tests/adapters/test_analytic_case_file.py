@@ -79,3 +79,19 @@ def test_a_fitting_innocent_explanation_is_in_the_bottom_line(store):
         assert "fit the evidence: H4" in top and v.verdict != "high_suspicion"
     else:
         assert "not yet settled: H4" in top
+
+
+def test_the_summary_is_published_checked_with_a_sentence_table(store):
+    ws = case_workspace(FIXTURE, store)
+    review = ("The award was made by direct agreement [E13]. It went to Karim Ben Salah [E13]. "
+              "More collection is needed.")
+    report = build_report(ws, ws.verdict(), review)
+    summary = section(report, "## Summary")
+    published = summary.split("### Sentence check")[0]
+    assert "The award was made by direct agreement [E13]. More collection is needed." in published
+    assert "Karim" not in published
+    assert "1 analysis, 1 unjudged, 1 unsupported." in report
+    assert ("| 2 | It went to Karim Ben Salah [E13]. | E13 | unsupported | names Karim, Ben, Salah, which the cited "
+            "sources do not name |") in report
+    assert "| 1 | The award was made by direct agreement [E13]. | E13 | unjudged | passed the checks in code" in report
+    assert report.index("## Summary") < report.index("# Annexes")
