@@ -17,7 +17,7 @@ from caligula.application.investigation.plan import (
 from caligula.application.investigation.prompts import SPECIALIST_FOCUS
 from caligula.application.investigation.team import InvestigationTeam, Specialist
 from caligula.application.investigation.workspace import Mode
-from support import ScriptedAgentRunner, workspace
+from support import ScriptedAgentRunner, assert_invariants, workspace
 
 WS = {}
 
@@ -189,6 +189,7 @@ def test_workflow_rounds_review_challenges_and_report(store):
     assert "- **H4** (innocent) open: The direct award was a lawful emergency procedure." in report
     assert "Innocent explanation *sole_supplier* ruled out: The award notice" in report
     assert public_reply(result, Mode.INVESTIGATE, store, "Le marché a été attribué").startswith("Caligula a ouvert")
+    assert_invariants(ws, result.verdict)
 
 
 def test_no_progress_stops_early(store):
@@ -207,6 +208,7 @@ def test_no_progress_stops_early(store):
                              specialists=[Specialist("official", ["list_tasks", "complete_task", "report"], False)])
     result = team.run(ws, plan=plan)
     assert result.stop_reason == "no_progress" and len(result.rounds) == 2
+    assert_invariants(ws, result.verdict)
 
 
 def test_specialists_only_get_their_tools(store):
@@ -241,3 +243,4 @@ def test_unfinished_tasks_carry_over(store):
     result = team.run(ws, plan=plan)
     assert [r.round for r in result.rounds] == [1, 2]
     assert len(result.rounds[0].tasks_closed) == 5 and not ws.open_tasks()
+    assert_invariants(ws, result.verdict)

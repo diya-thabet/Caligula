@@ -46,3 +46,66 @@ def workspace(store, mode=Mode.INVESTIGATE, **kw):
     case = load_case(FIXTURE, store)
     allegation, _ = ensure_innocent_explanations(Allegation.model_validate(case["allegation"]))
     return Workspace(store=store, allegation=allegation, mode=mode, ledger=JsonlLedger(), **kw)
+
+
+def assert_invariants(ws, verdict=None):
+    """Properties that must hold after any run, whatever the agents did.
+
+    Workflow tests call this on their final state, so a change anywhere in the
+    chain that breaks one of the engine's guarantees fails loudly.
+    """
+    from caligula.adapters.presenters.markdown_report import build_report
+    from caligula.application.investigation.plan import TaskStatus
+    from caligula.application.investigation.workspace import ProposalStatus
+    from caligula.domain.model.evidence import EvidenceEdge
+    from caligula.domain.services.absence import validate_absences
+    from caligula.domain.services.ach import rate
+    from caligula.domain.services.validation import validate_edges, validate_figures
+
+    v = verdict or ws.verdict()
+    corpus = ws.store.corpus()
+    # 1. What counts is valid: quotes verbatim, dates coherent, bytes intact, absences checkable.
+    assert validate_edges(corpus, ws.allegation, ws.edges)[1] == []
+    assert validate_figures(corpus, ws.figures)[1] == []
+    assert validate_absences(corpus, ws.allegation, ws.absences)[1] == []
+    # 2. With review, only accepted proposals count, and every accepted proposal counts.
+    if ws.review_required:
+        accepted = [p.item for p in ws.proposals if p.status == ProposalStatus.ACCEPTED]
+        counted = [*ws.edges, *ws.figures, *ws.absences]
+        assert all(item in counted for item in accepted) and all(item in accepted for item in counted)
+    # 3. Weighed evidence is exactly the counted edges and absences.
+    assert len(v.weighed) == len(ws.edges) + len(ws.absences)
+    assert {w.doc_id for w in v.weighed if w.kind == "edge"} == {e.doc_id for e in ws.edges}
+    # 4. Tasks: closed ones have an outcome, open ones do not.
+    for t in ws.tasks:
+        assert (t.status == TaskStatus.DONE) == (t.outcome is not None), t.id
+    # 5. The ledger is intact and records every proposal and review decision.
+    assert ws.ledger.verify() is None
+    actions = [e.action for e in ws.ledger.entries]
+    assert actions.count("proposal") == len(ws.proposals)
+    # 6. The verdict follows its own rules.
+    core = {c.id: c for c in v.by_subclaim if c.id in ws.allegation.core_subclaims}
+    if v.verdict == "high_suspicion":
+        assert all(c.status == "supported" for c in core.values())
+        innocent = {h.id for h in ws.allegation.hypotheses if h.kind == "innocent"}
+        assert not any(h.status == "consistent" for h in v.hypotheses if h.id in innocent)
+    no_evidence = any(c.support == 0 and c.contradiction == 0 for c in core.values())
+    assert (v.likelihood is None) == (no_evidence or not core)
+    assert v.confidence in ("low", "moderate", "high") and v.confidence_reasons
+    # 7. Every ACH rating follows from the hypotheses' predictions.
+    hyps = {h.id: h for h in ws.allegation.hypotheses}
+    for m in v.ach:
+        for r in m.rows:
+            assert r.ratings == {h: rate(hyps[h], r.subclaim_id, r.relation) for h in m.hypotheses}
+        assert set(m.ranking) | set(m.untested) == set(m.hypotheses)
+    # 8. Dependencies name origins the evidence actually used.
+    used = {w.doc_id for w in v.weighed} | ({f.doc_id for f in v.financial.figures} if v.financial else set())
+    assert all(set(d.origin) <= used for d in v.depends_on)
+    # 9. The case file builds and has its sections; every quoted edge appears in it.
+    report = build_report(ws, v)
+    for section in ("## Assessment", "## Sub-claims", "## Competing hypotheses", "## Timeline", "## Integrity"):
+        assert section in report, section
+    for p in ws.proposals:
+        if isinstance(p.item, EvidenceEdge):
+            assert p.item.quote in report
+    return report

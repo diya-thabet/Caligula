@@ -8,7 +8,7 @@ from caligula.application.investigation.toolkit import build_tools
 from caligula.application.investigation.workspace import AgentContext
 from caligula.domain.model.documents import SourceKind
 from conftest import add_doc
-from support import workspace
+from support import assert_invariants, workspace
 
 NAMES = ["record_evidence", "list_proposals", "register_party", "review_proposal"]
 
@@ -41,3 +41,4 @@ def test_registered_party_makes_its_denial_self_serving(store):
     report = build_report(ws, ws.verdict())
     assert "Parties: STEG (accused)" in report
     assert "self-serving: the publisher is a party and this helps it" in report
+    assert_invariants(ws)

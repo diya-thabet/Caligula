@@ -12,7 +12,7 @@ from caligula.application.investigation.workspace import AgentContext
 from caligula.domain.model.claims import ExpectedRecord
 from caligula.domain.model.evidence import Relation
 from caligula.domain.model.registers import REGISTERS
-from support import workspace
+from support import assert_invariants, workspace
 
 NAMES = ["complete_task", "record_absence", "list_proposals", "review_proposal"]
 
@@ -52,6 +52,7 @@ def test_not_found_on_expected_record_is_proposed_as_absence(store):
             "« extension centrale Rades-Fictive » (capture `tuneps_search`)") in report
     assert "| C5.E1 TUNEPS tender notice for the Rades-Fictive extension | tuneps | supports C5 | T1 not_found | yes |" \
         in report
+    assert_invariants(ws)
 
 
 def test_plan_searches_every_expected_record_once(store):

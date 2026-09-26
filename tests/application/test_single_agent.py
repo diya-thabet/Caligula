@@ -9,7 +9,7 @@ from caligula.adapters.presenters.public_reply import public_reply
 from caligula.adapters.sources.worldbank import WorldBankClient
 from caligula.application.investigation.single_agent import InvestigatorAgent
 from caligula.application.investigation.workspace import Connectors, Mode
-from support import ScriptedAgentRunner, workspace
+from support import ScriptedAgentRunner, assert_invariants, workspace
 
 
 def agent_for(script, record, calls):
@@ -54,6 +54,7 @@ def test_agent_builds_case_and_must_challenge_before_finishing(store):
     assert calls[0]["web_search"] is False
     assert "investigation" in calls[0]["system"]
     assert public_reply(result, Mode.INVESTIGATE, store).startswith("Caligula opened case")
+    assert_invariants(ws, result.verdict)
 
 
 def test_budget_is_enforced(store):
