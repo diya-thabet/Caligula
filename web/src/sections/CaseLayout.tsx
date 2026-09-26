@@ -22,7 +22,7 @@ export function CaseLayout() {
   return (
     <Query q={q}>
       {(c) => (
-        <div style={{ display: "grid", gridTemplateRows: "auto auto 1fr", minHeight: 0 }}>
+        <div className="case-shell">
           {c.poc && <div className="banner poc" role="note">{POC}</div>}
           <CaseHeader c={c} />
           <div className="workspace">

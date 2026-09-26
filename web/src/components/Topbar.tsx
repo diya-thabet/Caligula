@@ -39,7 +39,7 @@ export function Topbar() {
       <Link to="/" className="row brand" style={{ color: "var(--text)" }}>
         <Scale size={16} /> Caligula
       </Link>
-      <span className="faint">investigation workspace</span>
+      <span className="faint tagline">investigation workspace</span>
       <span className="spacer" />
       {editing ? (
         <form
