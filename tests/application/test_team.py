@@ -31,8 +31,16 @@ def amount(doc, role, value, quote):
 
 
 def close_all(agent, outcome="found", note="done"):
-    return ("__expand__", lambda: [("complete_task", {"task_id": t.id, "outcome": outcome, "note": note})
-                                   for t in WS["ws"].open_tasks(agent)])
+    """Close every open task; "not_found" only after the three searches the rule requires."""
+    def calls():
+        out = []
+        for t in WS["ws"].open_tasks(agent):
+            if outcome == "not_found":
+                out += [("search_evidence", {"query": f"{t.id} attempt {i}", "purpose": "support", "task_id": t.id})
+                        for i in range(3)]
+            out.append(("complete_task", {"task_id": t.id, "outcome": outcome, "note": note}))
+        return out
+    return ("__expand__", calls)
 
 
 def review_all():
@@ -205,7 +213,7 @@ def test_no_progress_stops_early(store):
     plan = normalize_plan(PlanDraft(entities=[], window_start=None, window_end=None, budget_weights=[], tasks=[]),
                           ws.allegation, 50, ("official",))
     team = InvestigationTeam(runner=fake_runner({}, {}, scripts), web_search=False, max_rounds=4,
-                             specialists=[Specialist("official", ["list_tasks", "complete_task", "report"], False)])
+                             specialists=[Specialist("official", ["list_tasks", "complete_task", "search_evidence", "report"], False)])
     result = team.run(ws, plan=plan)
     assert result.stop_reason == "no_progress" and len(result.rounds) == 2
     assert_invariants(ws, result.verdict)
@@ -230,7 +238,7 @@ def test_unfinished_tasks_carry_over(store):
     scripts = {
         # Round 1: closes only one of its tasks, then runs out of budget.
         ("official", 1): [("__expand__", first_task)] * 5 + [("report", {"summary": "out of budget"})],
-        ("official", 2): [close_all("official", "not_found"), ("report", {"summary": "finished"})],
+        ("official", 2): [close_all("official", "partial"), ("report", {"summary": "finished"})],
         ("reviewer", 1): [("complete_review", {"summary": "r1"})],
         ("reviewer", 2): [("complete_review", {"summary": "r2"})],
     }
@@ -239,7 +247,7 @@ def test_unfinished_tasks_carry_over(store):
                                           queries=[], urls=[]) for i in range(8)])
     plan = normalize_plan(draft_, ws.allegation, 40, ("official",))  # 8 planned + 4 coverage tasks
     team = InvestigationTeam(runner=fake_runner({}, {}, scripts), web_search=False, max_rounds=3,
-                             specialists=[Specialist("official", ["list_tasks", "complete_task", "report"], False)])
+                             specialists=[Specialist("official", ["list_tasks", "complete_task", "search_evidence", "report"], False)])
     result = team.run(ws, plan=plan)
     assert [r.round for r in result.rounds] == [1, 2]
     assert len(result.rounds[0].tasks_closed) == 5 and not ws.open_tasks()

@@ -35,6 +35,8 @@ from caligula.domain.services.retcon import diff_fields
 from caligula.domain.services.text import sha256_bytes
 
 MAX_READ = 8000
+# "Not found" and absences are only credible after this many different searches.
+MIN_ATTEMPTS = 3
 KindName = Literal[
     "official_live", "archive", "foreign_mirror", "audit", "statistics", "contributor", "osint", "news", "social"
 ]
@@ -335,6 +337,16 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         return json.dumps({"stored": stored, "posts_on_page": len(posts), "page_back_with_before": oldest},
                           ensure_ascii=False)
 
+    def _check_persistence(tried: int, what: str, note: str) -> str:
+        """Refuse an absence claim made too early; near the end of the budget, accept it but say so."""
+        if tried >= MIN_ATTEMPTS:
+            return note
+        if ctx.budget > MIN_ATTEMPTS:
+            raise ToolRefusal(f"Search harder before concluding nothing exists: {tried} different search(es) "
+                              f"for {what} so far, at least {MIN_ATTEMPTS} needed (other spellings, French and "
+                              "English, reference numbers, the archive, the register itself; pass task_id).")
+        return f"{note} [only {tried} search(es): budget nearly spent]"
+
     def _record(item: EvidenceEdge | FinancialFigure | AbsenceFinding) -> str:
         reason, proposal_id = ws.record(item, ctx.name)
         if reason:
@@ -402,6 +414,7 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         it". It weighs as much as the register is complete (TUNEPS, JORT, RNE high;
         web search almost nothing), halved if you did not store a capture of the
         empty result page (store it with ingest_url or ingest_archived_capture first).
+        Refused until you made at least 3 different searches on this sub-claim.
 
         Args:
             subclaim_id: Sub-claim id.
@@ -413,6 +426,9 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
             window_end: ISO date: end of the period the search covered.
             note: Anything that limits the search (register down, partial coverage).
         """
+        tried = {(s.tool, s.query.casefold()) for s in ws.searches
+                 if s.agent == ctx.name and s.subclaim_id == subclaim_id}
+        note = _check_persistence(len(tried), f"sub-claim {subclaim_id}", note)
         return _record(AbsenceFinding(subclaim_id=subclaim_id, register_id=register_id, relation=Relation(relation),
                                       query=query, searched_at=datetime.now(UTC), doc_id=doc_id,
                                       window_start=_date(window_start), window_end=_date(window_end), note=note))
@@ -485,19 +501,30 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         outcome: Literal["found", "partial", "not_found", "blocked"],
         note: str,
         doc_ids: list[str] | None = None,
+        searched: list[str] | None = None,
     ) -> str:
         """Close one of your tasks. "not_found" means you searched properly and the
         thing does not exist in reach (absence is information: say where you looked).
-        On a task with an expectation_id, "not_found" is recorded as scored absence
-        evidence; pass the stored capture of the empty result as the first doc_id.
-        "blocked" means the source was unreachable or needs access we do not have.
+        It is refused until you made at least 3 different searches for the task
+        (other spellings, French and English, reference numbers, the archive, the
+        register itself): pass task_id to your searches. On a task with an
+        expectation_id, "not_found" is recorded as scored absence evidence; pass the
+        stored capture of the empty result as the first doc_id. "blocked" means the
+        source was unreachable or needs access we do not have.
 
         Args:
             task_id: Task id (T1, T2, ...).
             outcome: found / partial / not_found / blocked.
             note: What you did and what it showed, in one to three sentences.
             doc_ids: Stored documents that answer the task.
+            searched: Queries you ran with a search this workspace cannot see (the
+                model provider's built-in web search). Recorded as declared.
         """
+        for query in searched or []:
+            ws.add_search(Purpose.EXPLORE, None, query, ctx.name, task_id, "declared")
+        task = next((t for t in ws.tasks if t.id == task_id), None)
+        if task is not None and outcome == "not_found":
+            note = _check_persistence(len(ws.attempts(task, ctx.name)), f"task {task_id}", note)
         try:
             t = ws.close_task(task_id, ctx.name, Outcome(outcome), note, doc_ids or [])
         except (KeyError, ValueError) as exc:

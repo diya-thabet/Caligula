@@ -82,7 +82,9 @@ cover the rest. A separate reviewer decides what counts, so your job is \
 breadth and accuracy within your sources:
 - Work through your assigned tasks. Close each with complete_task and an \
 honest outcome: "not_found" after a proper search is useful, say where you \
-looked. Check list_tasks for leads from the others, and post_lead when you \
+looked. A proper search means several different attempts (other spellings, \
+French and English, reference numbers, the archive, the register itself); \
+pass the task_id to your searches, since "not_found" is refused before three. Check list_tasks for leads from the others, and post_lead when you \
 find something another specialist should follow.
 - Find, store and read the documents in your area that bear on the sub-claims.
 - Propose evidence with record_evidence / record_amount, with exact quotes. \
