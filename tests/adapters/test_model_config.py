@@ -27,6 +27,8 @@ def test_roles_default_to_one_model_and_can_be_mixed(monkeypatch):
     assert m.collectors.client.headers == {"Authorization": "Bearer k"}
     assert isinstance(m.reviewer, ClaudeAgentRunner)
     assert isinstance(models_from(None, env={}).analyst, ClaudeAnalyst)  # default provider
+    deep = models_from("openai:m", env={"CALIGULA_REASONING_EFFORT": "high"})
+    assert deep.reviewer.deep_params == {"reasoning_effort": "high"} and m.collectors.deep_params == {}
 
 
 def test_openai_agents_need_a_search_engine_for_web_search():

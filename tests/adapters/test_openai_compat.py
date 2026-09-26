@@ -97,3 +97,12 @@ def test_runner_clears_old_tool_results_and_refuses_native_web_search(store):
     assert last[:2] == [CLEARED, CLEARED] and last[2] != CLEARED
     with pytest.raises(ValueError, match="configure a WebSearch connector"):
         runner.run("s", [], "b", 5, lambda: False, web_search=True)
+
+
+def test_deep_parameters_are_sent_only_for_deep_roles(store):
+    replies = [({"content": "ok"}, "stop"), ({"content": "ok"}, "stop")]
+    client, requests = server(replies)
+    runner = OpenAICompatRunner(client, deep_params={"reasoning_effort": "high"})
+    runner.run("s", [], "b", 3, lambda: False)
+    runner.run("s", [], "b", 3, lambda: False, deep=True)
+    assert "reasoning_effort" not in requests[0] and requests[1]["reasoning_effort"] == "high"

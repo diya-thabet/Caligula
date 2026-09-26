@@ -73,7 +73,8 @@ def runner_for(spec: ModelSpec, env: Mapping[str, str] = os.environ) -> AgentRun
         return ClaudeAgentRunner(model=spec.model or MODEL)
     from caligula.adapters.llm.openai_compat import OpenAICompatRunner
 
-    return OpenAICompatRunner(_chat_client(spec, env))
+    effort = env.get("CALIGULA_REASONING_EFFORT")  # for servers that accept reasoning_effort
+    return OpenAICompatRunner(_chat_client(spec, env), deep_params={"reasoning_effort": effort} if effort else None)
 
 
 def search_from(name: str | None, env: Mapping[str, str] = os.environ) -> WebSearch | None:

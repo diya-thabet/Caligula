@@ -54,3 +54,20 @@ def test_runner_request_shape_and_pause_turn_resume():
     assert "server-side-fallback-2026-07-01" in first["betas"]
     assert first["tools"][-1] == WEB_SEARCH and first["tools"][0].name == "lookup"
     assert first["system"] == "sys" and first["max_iterations"] == 10
+    assert "output_config" not in first  # default effort ("high"), adaptive thinking on by default
+
+
+def test_deep_roles_run_at_higher_effort():
+    calls = []
+
+    class FakeLoop:
+        def __iter__(self):
+            yield SimpleNamespace(content=[], stop_reason="end_turn")
+
+        def generate_tool_call_response(self):
+            return None
+
+    client = SimpleNamespace(beta=SimpleNamespace(messages=SimpleNamespace(
+        tool_runner=lambda **kw: calls.append(kw) or FakeLoop())))
+    ClaudeAgentRunner(client).run("sys", [lookup], "brief", 10, lambda: False, deep=True)
+    assert calls[0]["output_config"] == {"effort": "xhigh"}

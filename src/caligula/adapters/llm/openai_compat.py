@@ -104,19 +104,24 @@ class OpenAICompatRunner:
     proposals, task outcomes) is already recorded in the workspace.
     """
 
-    def __init__(self, client: ChatClient, keep_tool_results: int = 12, parallel_tool_calls: bool | None = None):
+    def __init__(self, client: ChatClient, keep_tool_results: int = 12, parallel_tool_calls: bool | None = None,
+                 deep_params: dict | None = None):
         self.client = client
+        # Extra request fields for deep roles, e.g. {"reasoning_effort": "high"}; servers differ, so opt-in.
+        self.deep_params = deep_params or {}
         self.keep_tool_results = keep_tool_results
         self.parallel_tool_calls = parallel_tool_calls
 
     def run(self, system: str, tools: list[Tool], brief: str, max_iterations: int, done: Callable[[], bool],
-            web_search: bool = False) -> str:
+            web_search: bool = False, deep: bool = False) -> str:
         if web_search:
             raise ValueError("OpenAI-compatible providers have no built-in web search here; "
                              "configure a WebSearch connector (agents then get search_web)")
         by_name = {t.__name__: t for t in tools}
         specs = [{"type": "function", "function": function_schema(t)} for t in tools]
         extra = {} if self.parallel_tool_calls is None else {"parallel_tool_calls": self.parallel_tool_calls}
+        if deep:
+            extra |= self.deep_params
         messages: list[dict] = [{"role": "system", "content": system}, {"role": "user", "content": brief}]
         for _ in range(max_iterations):
             self._clear_old_results(messages)

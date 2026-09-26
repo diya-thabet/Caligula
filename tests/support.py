@@ -34,9 +34,9 @@ class ScriptedAgentRunner:
         self.script_for = script_for
         self.calls = [] if calls is None else calls
 
-    def run(self, system, tools, brief, max_iterations, done, web_search=False):
+    def run(self, system, tools, brief, max_iterations, done, web_search=False, deep=False):
         self.calls.append({"system": system, "tools": tools, "brief": brief, "web_search": web_search,
-                           "max_iterations": max_iterations})
+                           "max_iterations": max_iterations, "deep": deep})
         script, record = self.script_for(system, brief)
         play(tools, script, record)
         return "end_turn"

@@ -15,6 +15,8 @@ from caligula.application.ports.llm import Tool, ToolRefusal
 CONTEXT_BETA = "context-management-2025-06-27"
 WEB_SEARCH = {"type": "web_search_20260209", "name": "web_search", "max_uses": 10}
 MAX_PAUSE_RESTARTS = 3
+# Claude Opus 5 thinks adaptively by default at effort "high"; deep roles run at "xhigh".
+DEEP_EFFORT = "xhigh"
 
 
 def as_claude_tool(fn: Tool):
@@ -43,8 +45,10 @@ class ClaudeAgentRunner:
         max_iterations: int,
         done: Callable[[], bool],
         web_search: bool = False,
+        deep: bool = False,
     ) -> str:
         bound: list = [as_claude_tool(t) for t in tools] + ([WEB_SEARCH] if web_search else [])
+        effort = {"output_config": {"effort": DEEP_EFFORT}} if deep else {}
         messages: list = [{"role": "user", "content": brief}]
         stop_reason = "no_response"
         for _ in range(MAX_PAUSE_RESTARTS + 1):
@@ -60,6 +64,7 @@ class ClaudeAgentRunner:
                 fallbacks="default",
                 # Old tool results can be cleared: everything that matters is in the workspace.
                 context_management={"edits": [{"type": "clear_tool_uses_20250919"}]},
+                **effort,
             )
             last = None
             for message in runner:

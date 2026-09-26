@@ -51,6 +51,8 @@ class AgentRunner(Protocol):
         max_iterations: int,
         done: Callable[[], bool],
         web_search: bool = False,
+        deep: bool = False,
     ) -> str:
-        """Returns the final stop reason."""
+        """Returns the final stop reason. `deep` asks for longer reasoning per turn,
+        for roles where judgment matters more than speed (the reviewer)."""
         ...

@@ -326,5 +326,5 @@ class InvestigationTeam:
             + f"\n\n<suspicions>\n{json.dumps(suspicions, ensure_ascii=False)}\n</suspicions>"
             + f"\n\n<specialist_reports>\n{json.dumps(latest, ensure_ascii=False, indent=1)}\n</specialist_reports>"
         )
-        self.reviewer_runner.run(system, tools, brief, self.reviewer_budget + 10, lambda: ctx.done)
+        self.reviewer_runner.run(system, tools, brief, self.reviewer_budget + 10, lambda: ctx.done, deep=True)
         return ctx.report

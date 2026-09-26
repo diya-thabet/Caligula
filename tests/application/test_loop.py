@@ -81,6 +81,9 @@ def test_a_suspicion_is_tested_in_the_next_round_and_resolved_by_the_evidence(st
     budgets = [c["max_iterations"] - 15 for c in runner.calls
                if "Try to confirm suspicion" in c["brief"] and not c["system"].startswith("You are the reviewer")]
     assert budgets == [15 + 2 * 4]
+    # Only the reviewer reasons at length.
+    assert {c["deep"] for c in runner.calls if c["system"].startswith("You are the reviewer")} == {True}
+    assert {c["deep"] for c in runner.calls if not c["system"].startswith("You are the reviewer")} == {False}
     [s] = ws.suspicions
     assert (s.status, s.resolved_round) == ("confirmed", 2)
     assert result.rounds[0].suspicions_raised == ["S1"]
