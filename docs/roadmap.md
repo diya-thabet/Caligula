@@ -106,7 +106,7 @@ capture ──► verification pipeline (code, per document, in parallel) ──
 |---|---|---|
 | F0 | HTTP API: case lifecycle with checkpoints (legal review, plan approval, scope, sign-off), pause/stop, live events, one view per surface (`caligula serve`, [api.md](api.md)) | Done |
 | F0b | Case repository (cases survive a restart), authentication and roles, checkpoints routed to roles, continuing a finished run | The API can face more than a trusted network |
-| F1 | Investigation interface per [ui.md](ui.md): case header, plan card, step tracker, claim cards, evidence chips, document viewer, checkpoints, summary check, case file and sign-off, audit log | A case can be opened, followed, reviewed and signed off without the CLI |
+| F1 | Investigation interface per [ui.md](ui.md): case header, plan card, step tracker, claim cards, evidence chips, document viewer, checkpoints, summary check, case file and sign-off, audit log | Done (`web/`, served by `caligula serve`) |
 | F2 | Deferred surfaces: entity graph and money flows (with R10/R11), red-flag triage queue | Each fed by an engine feature |
 | F3 | WhatsApp intake for contributors (hash on receipt, metadata split) | Uploads land in the store with custody records |
 | F4 | X bot through the official API | Replies follow the public-reply policy |

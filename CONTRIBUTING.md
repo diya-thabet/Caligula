@@ -46,6 +46,10 @@ Guards against hidden regressions:
 - Scripted agents (`support.ScriptedAgentRunner`, `support.scripted_team`)
   drive the real tools; `scripted_team` keys scripts by the round in the brief
   (and `("reviewer", "rewrite")` for the final summary rewrite).
+- The interface (`web/`): `npm run typecheck && npm test` before pushing.
+  Its tests run on a fixture taken from the real API
+  (`tests/adapters/test_web_fixture.py`); regenerate it with `UPDATE_GOLDEN=1`
+  when a view's shape changes on purpose.
 - Attribution faults are tested by planting them (a wrong figure, a person
   the sources do not name, an uncited fact, a withdrawn id); add a planted
   case for every new check.

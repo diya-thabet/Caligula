@@ -362,13 +362,30 @@ Small backend additions the interface needs, to make as it is built:
 
 ## 11. Build
 
+**Status:** every surface in sections 3 to 8 is built, except the entity graph
+and money-flow views (deferred, section 10). The four API additions in
+section 10 are done: rounds in the history view, document versions, evidence
+ids as chips in the case file, and serving the interface from `caligula
+serve`.
+
+```bash
+cd web && npm ci && npm run build            # then: caligula serve --replay fixtures/steg_synthetic
+npm run dev                                  # development, with the API on 127.0.0.1:8000
+npm test                                     # the interface's tests (vitest)
+```
+
+The interface's tests run on `web/src/test/steg.json`, taken from the real
+API by `tests/adapters/test_web_fixture.py`. When a view changes shape that
+Python test fails first; regenerate with `UPDATE_GOLDEN=1 pytest
+tests/adapters/test_web_fixture.py`, then run `npm test`.
+
 - **Stack:** React with TypeScript, built with Vite, in `web/`.
   - Server data via TanStack Query, the live stream via `EventSource`.
   - Lucide icons, IBM Plex fonts (bundled, no external requests).
   - CSS variables for the two themes.
-- **Development:** `caligula serve --replay fixtures/steg_synthetic --cors
-  http://localhost:5173` with the Vite dev server. The synthetic STEG case
-  fills every surface without a model.
+- **Development:** `caligula serve --replay fixtures/steg_synthetic` and
+  `npm run dev` (the Vite dev server forwards `/api` to port 8000). The
+  synthetic STEG case fills every surface without a model.
 - **Order:**
   1. shell and case header;
   2. overview and claims;
