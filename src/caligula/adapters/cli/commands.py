@@ -131,3 +131,50 @@ def screen(args: argparse.Namespace) -> int:
 
 
 
+
+
+def case_service(args: argparse.Namespace):
+    """The case service the API serves: with an engine when a model is configured, and the
+    replayed case directories added for review."""
+    from caligula.adapters.fixtures.case_directory import case_workspace
+    from caligula.adapters.persistence.ledger_jsonl import JsonlLedger
+    from caligula.application.cases.service import CaseService, Engine
+    from caligula.application.investigation.team import InvestigationTeam
+
+    store = open_store(args.db, args.blobs)
+    engine = None
+    if args.llm or args.analyst_llm:
+        models = models_from(args.llm, args.analyst_llm, args.collector_llm, args.reviewer_llm)
+        search = search_from(args.search)
+        check_web_search(models, search, web=not args.no_web)
+
+        def new_team(on_event):
+            return InvestigationTeam(runner=models.collectors, reviewer_runner=models.reviewer,
+                                     analyst=models.analyst, judge=models.analyst, web_search=not args.no_web,
+                                     max_rounds=args.rounds, max_tool_calls=args.max_tool_calls, on_event=on_event)
+
+        engine = Engine(analyst=models.analyst, new_team=new_team, store=store, connectors=live_connectors(search))
+    if args.ledgers:
+        args.ledgers.mkdir(parents=True, exist_ok=True)
+    service = CaseService(engine, new_ledger=lambda case_id: JsonlLedger(
+        args.ledgers / f"{case_id}.jsonl" if args.ledgers else None))
+    for case_dir in args.replay:
+        ws = case_workspace(case_dir, store)
+        service.add_reviewed(ws, ws.allegation.text, by="replay")
+    return service
+
+
+def serve(args: argparse.Namespace) -> int:
+    try:
+        import uvicorn
+
+        from caligula.adapters.api.app import create_app
+    except ImportError:
+        print("The API needs its extra: pip install -e '.[api]'")
+        return 1
+    service = case_service(args)
+    if service.engine is None:
+        print("No model configured (--llm or $CALIGULA_LLM): serving replayed cases only.")
+    print(f"{len(service.cases)} case(s) loaded; API on http://{args.host}:{args.port}/api (docs at /docs)")
+    uvicorn.run(create_app(service, cors_origins=args.cors), host=args.host, port=args.port)
+    return 0

@@ -55,10 +55,30 @@ def main(argv: list[str] | None = None) -> int:
                      help="proof-of-concept mode: cases needing legal review proceed, outputs are marked "
                           "internal and not for publication (default on)")
     inv.add_argument("--report", type=Path, help="write the Markdown case file here (default out/<id>.md)")
+    srv = sub.add_parser("serve", help="the HTTP API for the investigation interface (needs the api extra)")
+    srv.add_argument("--host", default="127.0.0.1")
+    srv.add_argument("--port", type=int, default=8000)
+    srv.add_argument("--llm", metavar="SPEC", default=os.environ.get("CALIGULA_LLM"),
+                     help="model for every role, as for investigate; without one, the API only serves "
+                          "replayed cases (default: $CALIGULA_LLM)")
+    srv.add_argument("--analyst-llm", metavar="SPEC")
+    srv.add_argument("--collector-llm", metavar="SPEC")
+    srv.add_argument("--reviewer-llm", metavar="SPEC")
+    srv.add_argument("--search", choices=["searxng", "brave"], default=os.environ.get("CALIGULA_SEARCH"))
+    srv.add_argument("--no-web", action="store_true", help="disable web search")
+    srv.add_argument("--rounds", type=int, default=8)
+    srv.add_argument("--max-tool-calls", type=int, default=600)
+    srv.add_argument("--replay", type=Path, action="append", default=[], metavar="CASE_DIR",
+                     help="add a recorded case directory for review (repeatable)")
+    srv.add_argument("--ledgers", type=Path, help="directory for one ledger file per case (default: in memory)")
+    srv.add_argument("--cors", action="append", default=[], metavar="ORIGIN",
+                     help="allow a browser interface served from this origin (repeatable)")
+    srv.add_argument("--blobs", type=Path, default=Path("blobs"))
+    srv.add_argument("--db", help="PostgreSQL DSN; default is an in-memory store")
     args = parser.parse_args(argv)
 
     handlers = {"run": commands.run, "investigate": commands.investigate,
-                "calibrate": commands.calibrate, "screen": commands.screen}
+                "calibrate": commands.calibrate, "screen": commands.screen, "serve": commands.serve}
     return handlers[args.command](args)
 
 
