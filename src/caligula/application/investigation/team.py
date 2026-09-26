@@ -58,7 +58,8 @@ SPECIALISTS = [
     Specialist("telegram", READ + ["fetch_telegram_channel"] + WORK, web_search=False),
 ]
 REVIEWER_TOOLS = READ + ["list_proposals", "review_proposal", "record_evidence", "record_amount",
-                         "register_party", "request_collection", "post_lead", "complete_review"]
+                         "register_party", "raise_suspicion", "request_collection", "post_lead",
+                         "complete_review"]
 # Challenges go to where innocent explanations are published: decrees and official
 # justifications, and press coverage of corrections or explanations.
 CHALLENGE_ROUTES = ("official", "web_news")

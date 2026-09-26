@@ -12,6 +12,7 @@ it counts once the reviewer accepts it.
 from __future__ import annotations
 
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
@@ -28,8 +29,9 @@ from caligula.application.ports.sources import (
     WebSearch,
 )
 from caligula.application.ports.storage import Ledger
-from caligula.domain.model.claims import Allegation, Party
+from caligula.domain.model.claims import Allegation, Bearing, HypothesisKind, Party, SubClaim
 from caligula.domain.model.evidence import AbsenceFinding, EvidenceEdge, FinancialFigure, RejectedEvidence
+from caligula.domain.model.intake import IntakeDecision
 from caligula.domain.model.verdict import Verdict
 from caligula.domain.services.absence import validate_absences
 from caligula.domain.services.judgment import confidence
@@ -149,6 +151,10 @@ class Workspace:
     searches: list[Search] = field(default_factory=list)
     budget: int = 0  # default budget for a single-agent run
     summary: str | None = None
+    # Proof-of-concept mode: work needing legal review proceeds, marked internal (see usecases/intake.py).
+    poc: bool = True
+    # Legal policy for a statement that widens the case (new people or companies); None: always legal review.
+    scope_policy: Callable[[str], IntakeDecision] | None = None
 
     def __post_init__(self):
         self.budget = self.budget or BUDGETS[self.mode]
@@ -223,6 +229,21 @@ class Workspace:
                     or any(t.purpose == "challenge" and t.status == TaskStatus.DONE for t in tasks),
                 }
             return out
+
+    def add_subclaim(self, statement: str, bearing: Bearing, questions: list[str], by: str) -> str:
+        """A sub-claim added during the investigation (to test a suspicion). The allegation's
+        hypotheses predict it true if it incriminates, false if it exculpates."""
+        with self.lock:
+            taken = {c.id for c in self.allegation.subclaims}
+            cid = next(f"C{n}" for n in range(1, len(taken) + 2) if f"C{n}" not in taken)
+            self.allegation.subclaims.append(SubClaim(id=cid, statement=statement, verification_questions=questions,
+                                                      bearing=bearing))
+            if bearing != Bearing.NEUTRAL:
+                for h in self.allegation.hypotheses:
+                    if h.kind == HypothesisKind.ALLEGATION:
+                        h.predicts[cid] = bearing == Bearing.AGAINST
+            self.ledger.append("subclaim", by, id=cid, statement=statement, bearing=bearing.value)
+            return cid
 
     def known_entities(self) -> list[str]:
         return [n for e in self.entities for n in [e.name, *e.aliases]]

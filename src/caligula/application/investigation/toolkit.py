@@ -17,6 +17,7 @@ from itertools import pairwise
 from typing import Literal
 
 from caligula.application.investigation.plan import Outcome
+from caligula.application.investigation.suspicions import Suspicion, SuspicionStatus, unknown_entities
 from caligula.application.investigation.workspace import (
     AgentContext,
     ProposalStatus,
@@ -25,9 +26,10 @@ from caligula.application.investigation.workspace import (
 )
 from caligula.application.ports.llm import Tool, ToolRefusal
 from caligula.application.ports.sources import ExtractedText, PrivateSourceError
-from caligula.domain.model.claims import Party, PartyRole
+from caligula.domain.model.claims import Bearing, Party, PartyRole
 from caligula.domain.model.documents import SourceKind
 from caligula.domain.model.evidence import AbsenceFinding, AmountRole, EvidenceEdge, FinancialFigure, Relation
+from caligula.domain.model.intake import Decision, IntakeDecision
 from caligula.domain.services.interest import interest, role_of
 from caligula.domain.services.names import EntityKind, match
 from caligula.domain.services.privacy import MINIMISED_KINDS, minimise
@@ -37,6 +39,8 @@ from caligula.domain.services.text import sha256_bytes
 MAX_READ = 8000
 # "Not found" and absences are only credible after this many different searches.
 MIN_ATTEMPTS = 3
+# Suspicions one review may raise: enough to follow real leads, not enough to sprawl.
+MAX_SUSPICIONS_PER_ROUND = 4
 KindName = Literal[
     "official_live", "archive", "foreign_mirror", "audit", "statistics", "contributor", "osint", "news", "social"
 ]
@@ -472,6 +476,8 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
                 {"least_contradicted_first": m.ranking, "evidence_against": m.inconsistency, "untested": m.untested,
                  "diagnostic_items": sum(r.diagnostic for r in m.rows)} for m in v.ach if len(m.hypotheses) > 1],
             "conclusion_depends_on": [{"without": d.origin, "changes": d.changes} for d in v.depends_on],
+            "suspicions": [{"id": s.id, "statement": s.statement, "status": s.status, "tested_by": s.subclaim_id}
+                           for s in ws.suspicions],
             "retcon_flags": [f"{f.canonical_url}: {[c.model_dump() for c in f.changes]}" for f in v.retcon_flags],
             "financial": v.financial.model_dump(exclude={"figures"}) if v.financial else None,
             "missing_evidence": v.missing_evidence,
@@ -633,6 +639,79 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         return f"{party.name} registered as {party.role.value} (aliases: {', '.join(party.aliases) or 'none'})."
 
     @metered
+    def raise_suspicion(
+        statement: str,
+        confirm_by: str,
+        refute_by: str,
+        confirm_specialist: SpecialistName,
+        refute_specialist: SpecialistName,
+        subclaim_id: str | None = None,
+        bearing: Literal["against", "for"] = "against",
+        entities: list[str] | None = None,
+    ) -> str:
+        """Record a suspicion the evidence raises and send the specialists to test it
+        both ways in the next round: one task looks for what would confirm it, one for
+        what would refute it. Its status then follows the evidence as code scores it:
+        it is not settled by your opinion. Suspect documented acts (a payment, a change
+        of record, a link in a register), never intentions or people's private lives.
+        A suspicion that brings in people or companies outside the case goes through
+        the legal policy first and may be refused or held for a lawyer.
+
+        Args:
+            statement: One checkable proposition, e.g. "The 1.8M TND figure was entered
+                after the audit to hide an overpayment".
+            confirm_by: What would confirm it, and where to look.
+            refute_by: What would refute it or explain it innocently, and where to look.
+            confirm_specialist: Who looks for confirmation.
+            refute_specialist: Who looks for refutation.
+            subclaim_id: An existing sub-claim that already states it; otherwise a new
+                sub-claim is created.
+            bearing: "against" if it incriminates the accused, "for" if it would clear them.
+            entities: Every company, body or person the suspicion involves.
+        """
+        if not confirm_by.strip() or not refute_by.strip():
+            raise ToolRefusal("Say both what would confirm and what would refute the suspicion.")
+        if sum(s.round == ws.round for s in ws.suspicions) >= MAX_SUSPICIONS_PER_ROUND:
+            raise ToolRefusal(f"At most {MAX_SUSPICIONS_PER_ROUND} suspicions per review: keep the strongest.")
+        if any(s.statement.casefold() == statement.casefold() for s in ws.suspicions):
+            raise ToolRefusal("This suspicion is already recorded.")
+        if subclaim_id and subclaim_id not in {c.id for c in ws.allegation.subclaims}:
+            raise ToolRefusal(f"No sub-claim {subclaim_id}.")
+        new = unknown_entities(entities or [], ws.allegation, ws.known_entities())
+        s = Suspicion(id=f"S{len(ws.suspicions) + 1}", statement=statement, subclaim_id=subclaim_id,
+                      raised_by=ctx.name, round=ws.round, confirm_by=confirm_by, refute_by=refute_by,
+                      new_entities=new)
+        if new:
+            decision = ws.scope_policy(statement) if ws.scope_policy else IntakeDecision(
+                Decision.LEGAL_REVIEW, ["new people or companies, and no policy check available"])
+            s.note = "; ".join(decision.reasons)
+            if decision.decision == Decision.REFUSE:
+                s.status = SuspicionStatus.REJECTED
+            elif decision.decision == Decision.LEGAL_REVIEW and not ws.poc:
+                s.status = SuspicionStatus.AWAITING_SCOPE
+            elif decision.decision == Decision.LEGAL_REVIEW:
+                ws.ledger.append("poc_unreviewed", "caligula", suspicion=s.id, entities=new)
+                s.note = f"PoC: wider scope not reviewed by a lawyer ({s.note})"
+        with ws.lock:
+            ws.suspicions.append(s)
+        ws.ledger.append("suspicion", ctx.name, id=s.id, statement=statement, status=s.status.value,
+                         new_entities=new, note=s.note)
+        if s.status == SuspicionStatus.REJECTED:
+            return f"{s.id} rejected by the legal policy ({s.note}); nobody will investigate it."
+        if s.status == SuspicionStatus.AWAITING_SCOPE:
+            return f"{s.id} involves {', '.join(new)}, outside the case: it waits for a lawyer to approve the scope."
+        s.subclaim_id = subclaim_id or ws.add_subclaim(statement, Bearing(bearing), [confirm_by, refute_by], ctx.name)
+        for purpose, who, look_for in (("support", confirm_specialist, confirm_by),
+                                       ("challenge", refute_specialist, refute_by)):
+            verb = "confirm" if purpose == "support" else "refute"
+            t = ws.add_task(specialist=who, purpose=purpose, subclaim_ids=[s.subclaim_id], round=ws.round + 1,
+                            created_by=ctx.name, suspicion_id=s.id,
+                            objective=f"Try to {verb} suspicion {s.id} ({statement}). Look for: {look_for}")
+            s.task_ids.append(t.id)
+        return (f"{s.id} recorded, tested by {s.subclaim_id}; tasks {s.task_ids[0]} (confirm, {confirm_specialist}) "
+                f"and {s.task_ids[1]} (refute, {refute_specialist}) queued for the next round.")
+
+    @metered
     def request_collection(
         specialist: SpecialistName,
         instructions: str,
@@ -703,7 +782,7 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         search_evidence, search_web, read_document, compare_versions, find_archived_captures, ingest_archived_capture,
         ingest_url, search_funder_records, fetch_telegram_channel, record_evidence, record_amount, record_absence,
         compare_names, assess, list_tasks, complete_task, post_lead, report, list_proposals, review_proposal, register_party,
-        request_collection, complete_review, finish,
+        raise_suspicion, request_collection, complete_review, finish,
     ]}
     if names is None:
         names = SINGLE_AGENT_TOOLS
