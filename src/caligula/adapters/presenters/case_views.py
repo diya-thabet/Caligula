@@ -9,11 +9,22 @@ summary cites, so a citation chip can open the exact quote.
 
 from __future__ import annotations
 
+from itertools import pairwise
 from typing import Any
 
+from caligula.adapters.presenters.analysis import dependencies
+from caligula.adapters.presenters.analytic import (
+    alternatives,
+    bottom_line,
+    gaps,
+    indicators,
+    key_assumptions,
+    key_judgments,
+)
 from caligula.application.cases.service import Case, CaseStatus
 from caligula.application.investigation.attribution import check_summary
 from caligula.application.investigation.plan import TaskStatus
+from caligula.application.investigation.team import STOP_REASONS
 from caligula.application.investigation.workspace import Workspace
 from caligula.domain.model.documents import Document, SourceKind
 from caligula.domain.model.evidence import AbsenceFinding, EvidenceEdge, FinancialFigure, Relation
@@ -22,6 +33,7 @@ from caligula.domain.model.verdict import Verdict
 from caligula.domain.services.interest import interest, role_of
 from caligula.domain.services.judgment import subclaim_judgment
 from caligula.domain.services.provenance import origin_clusters
+from caligula.domain.services.retcon import diff_fields
 
 # How far a source can be trusted, for the reliability badge shown wherever it is cited. The
 # order follows the scoring weights: how easily the publisher can silently change the record.
@@ -280,3 +292,46 @@ def summary(case: Case) -> Json:
         return {"written": case.review, "published": None, "sentences": []}
     return {"written": case.review, "published": report.published(),
             "sentences": [s.model_dump(mode="json") for s in report.sentences]}
+
+
+def history(case: Case) -> Json:
+    """How the case evolved, round by round, and why it stopped."""
+    result = case.result
+    rounds = [] if result is None else [{
+        "round": r.round, "specialists": r.specialists, "tasks_closed": r.tasks_closed,
+        "new_evidence": r.new_accepted, "accepted": r.accepted, "disputed": r.disputed,
+        "suspicions_raised": r.suspicions_raised, "suspicions_resolved": r.suspicions_changed,
+        "verdict": r.verdict, "confidence": r.confidence, "statuses": r.statuses, "tool_calls": r.tool_calls,
+    } for r in result.rounds]
+    stop = result.stop_reason if result else None
+    return {"rounds": rounds, "stop_reason": stop, "stop_explained": STOP_REASONS.get(stop) if stop else None}
+
+
+def versions(case: Case, doc_id: str) -> Json | None:
+    """Every stored version of a document (same canonical URL), oldest first, and what changed
+    from each version to the next."""
+    ws = case.workspace
+    d = ws.store.get(doc_id) if ws else None
+    if d is None:
+        return None
+    docs = sorted((x for x in ws.store.documents.values() if x.canonical_url == d.canonical_url),
+                  key=lambda x: (x.observed_at, x.id))
+    changes = [{"from": a.id, "to": b.id, "changes": [c.model_dump() for c in diff_fields(a, b)]}
+               for a, b in pairwise(docs)]
+    return {"canonical_url": d.canonical_url, "versions": [_source(x) | {"text": x.text, "extraction": x.extraction}
+                                                           for x in docs], "changes": changes}
+
+
+def analysis(case: Case) -> Json:
+    """The judgment part of the case file, section by section, in Markdown (evidence cited by id)."""
+    ws, v = case.workspace, current_verdict(case)
+    if ws is None or v is None:
+        return {"sections": []}
+    stop = case.result.stop_reason if case.result else None
+    parts = [bottom_line(ws, v, stop), key_judgments(ws, v), alternatives(v, ws), key_assumptions(ws, v),
+             dependencies(v), gaps(ws, v), indicators(ws, v)]
+    sections = []
+    for lines in parts:
+        title = lines[0].removeprefix("## ")
+        sections.append({"title": title, "markdown": "\n".join(lines[1:]).strip()})
+    return {"sections": sections, "final": case.verdict is not None}

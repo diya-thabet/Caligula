@@ -73,6 +73,8 @@ def main(argv: list[str] | None = None) -> int:
     srv.add_argument("--ledgers", type=Path, help="directory for one ledger file per case (default: in memory)")
     srv.add_argument("--cors", action="append", default=[], metavar="ORIGIN",
                      help="allow a browser interface served from this origin (repeatable)")
+    srv.add_argument("--web", type=Path, default=Path("web/dist"),
+                     help="the built interface to serve at / (default web/dist, when built)")
     srv.add_argument("--blobs", type=Path, default=Path("blobs"))
     srv.add_argument("--db", help="PostgreSQL DSN; default is an in-memory store")
     args = parser.parse_args(argv)

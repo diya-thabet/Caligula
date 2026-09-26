@@ -11,12 +11,13 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Annotated
 from urllib.parse import unquote
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from caligula.adapters.presenters import case_views as views
@@ -69,7 +70,8 @@ def _sse(event: Event) -> str:
     return f"id: {event.seq}\nevent: {event.kind}\ndata: {data}\n\n"
 
 
-def create_app(service: CaseService, cors_origins: list[str] | None = None, heartbeat: float = 15.0) -> FastAPI:
+def create_app(service: CaseService, cors_origins: list[str] | None = None, heartbeat: float = 15.0,
+               static_dir: Path | None = None) -> FastAPI:
     app = FastAPI(title="Caligula", version="0.1.0",
                   description="Cases, their evidence and their checkpoints, for the investigation interface.")
     if cors_origins:
@@ -171,6 +173,21 @@ def create_app(service: CaseService, cors_origins: list[str] | None = None, hear
             raise HTTPException(404, f"no document {doc_id} in case {case_id}")
         return doc
 
+    @app.get("/api/cases/{case_id}/documents/{doc_id}/versions")
+    def versions(case_id: str, doc_id: str) -> dict:
+        found = views.versions(case(case_id), doc_id)
+        if found is None:
+            raise HTTPException(404, f"no document {doc_id} in case {case_id}")
+        return found
+
+    @app.get("/api/cases/{case_id}/analysis")
+    def analysis(case_id: str) -> dict:
+        return views.analysis(case(case_id))
+
+    @app.get("/api/cases/{case_id}/history")
+    def history(case_id: str) -> dict:
+        return views.history(case(case_id))
+
     @app.get("/api/cases/{case_id}/timeline")
     def timeline(case_id: str) -> dict:
         return views.timeline(case(case_id))
@@ -228,4 +245,22 @@ def create_app(service: CaseService, cors_origins: list[str] | None = None, hear
         return StreamingResponse(generate(), media_type="text/event-stream",
                                  headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
+    if static_dir is not None:
+        _serve_interface(app, static_dir)
     return app
+
+
+def _serve_interface(app: FastAPI, static_dir: Path) -> None:
+    """The built interface, from the same origin as the API. Paths that are not files are the
+    interface's own routes, answered with its index page."""
+    root = static_dir.resolve()
+    index = root / "index.html"
+
+    @app.get("/{path:path}", include_in_schema=False)
+    def interface(path: str) -> FileResponse:
+        if path.startswith("api/"):
+            raise HTTPException(404, f"no API route /{path}")
+        target = (root / path).resolve()
+        if path and target.is_file() and target.is_relative_to(root):
+            return FileResponse(target)
+        return FileResponse(index)

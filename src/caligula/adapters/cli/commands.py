@@ -175,6 +175,9 @@ def serve(args: argparse.Namespace) -> int:
     service = case_service(args)
     if service.engine is None:
         print("No model configured (--llm or $CALIGULA_LLM): serving replayed cases only.")
+    web = args.web if args.web and (args.web / "index.html").is_file() else None
     print(f"{len(service.cases)} case(s) loaded; API on http://{args.host}:{args.port}/api (docs at /docs)")
-    uvicorn.run(create_app(service, cors_origins=args.cors), host=args.host, port=args.port)
+    print(f"Interface at http://{args.host}:{args.port}/" if web else
+          "Interface not built (cd web && npm ci && npm run build): API only.")
+    uvicorn.run(create_app(service, cors_origins=args.cors, static_dir=web), host=args.host, port=args.port)
     return 0

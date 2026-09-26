@@ -12,7 +12,7 @@ from conftest import FIXTURE
 def args(tmp_path, **kw):
     base = dict(db=None, blobs=tmp_path / "blobs", llm=None, analyst_llm=None, collector_llm=None, reviewer_llm=None,
                 search=None, no_web=True, rounds=8, max_tool_calls=600, replay=[FIXTURE], ledgers=tmp_path / "ledgers",
-                cors=[])
+                cors=[], web=None)
     return argparse.Namespace(**(base | kw))
 
 

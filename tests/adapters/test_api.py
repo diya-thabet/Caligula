@@ -128,3 +128,46 @@ def test_every_surface_answers_on_an_imported_case(store, path):
     service = CaseService(None, new_ledger=lambda case_id: None)
     case = service.add_reviewed(case_workspace(FIXTURE, store), CLAIM, by="replay")
     assert TestClient(create_app(service)).get(f"/api/cases/{case.id}/{path}").status_code == 200
+
+
+def test_history_versions_and_analysis_for_the_interface(store):
+    service = CaseService(None, new_ledger=lambda case_id: None)
+    case = service.add_reviewed(case_workspace(FIXTURE, store), CLAIM, by="replay")
+    client = TestClient(create_app(service))
+    v = client.get(f"/api/cases/{case.id}/documents/jort_award_v2/versions").json()
+    assert [x["doc_id"] for x in v["versions"]] == ["jort_award_v1", "jort_award_v2"]
+    assert v["changes"] == [{"from": "jort_award_v1", "to": "jort_award_v2", "changes": [
+        {"kind": "amount_tnd", "removed": ["120000000"], "added": ["80000000"]}]}]
+    sections = client.get(f"/api/cases/{case.id}/analysis").json()["sections"]
+    assert [s["title"] for s in sections] == [
+        "Bottom line", "Key judgments", "Alternatives considered", "Key assumptions",
+        "What the conclusion depends on", "Gaps and collection requests",
+        "Indicators that would change the assessment"]
+    assert sections[0]["markdown"].startswith("**High suspicion.**")
+    assert client.get(f"/api/cases/{case.id}/history").json() == {"rounds": [], "stop_reason": None,
+                                                                   "stop_explained": None}
+
+
+def test_a_run_s_rounds_are_in_its_history(store):
+    scripts = {}
+    client, service = live(store, scripts)
+    client.post("/api/cases", json={"claim": CLAIM, "case_id": "C-5"}, headers=AMIRA)
+    scripts[("reviewer", 1)] = [("complete_review", {"summary": "More work is needed."})]
+    client.post("/api/cases/C-5/plan/approve", headers=AMIRA)
+    h = client.get("/api/cases/C-5/history").json()
+    assert h["stop_reason"] == "round_limit" and h["rounds"][0]["round"] == 1
+    assert h["stop_explained"] == "the round limit was reached with work still open"
+
+
+def test_the_built_interface_is_served_at_the_root(store, tmp_path):
+    (tmp_path / "assets").mkdir()
+    (tmp_path / "index.html").write_text("<div id=root></div>")
+    (tmp_path / "assets" / "app.js").write_text("console.log(1)")
+    (tmp_path.parent / "secret.txt").write_text("no")
+    client = TestClient(create_app(CaseService(None, new_ledger=lambda c: None), static_dir=tmp_path))
+    assert client.get("/").text == "<div id=root></div>"
+    assert client.get("/cases/C-1/claims").text == "<div id=root></div>"  # the interface's own route
+    assert client.get("/assets/app.js").text == "console.log(1)"
+    assert client.get("/../secret.txt").text != "no"
+    assert client.get("/api/nope").status_code == 404
+    assert client.get("/api/health").json()["status"] == "ok"
