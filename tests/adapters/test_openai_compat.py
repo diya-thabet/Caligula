@@ -106,3 +106,15 @@ def test_deep_parameters_are_sent_only_for_deep_roles(store):
     runner.run("s", [], "b", 3, lambda: False)
     runner.run("s", [], "b", 3, lambda: False, deep=True)
     assert "reasoning_effort" not in requests[0] and requests[1]["reasoning_effort"] == "high"
+
+
+def test_the_judge_sends_the_sentence_and_only_the_cited_quotes():
+    rating = {"rating": "partial", "support_span": "gré à gré", "missing": "the amount"}
+    client, requests = server([({"content": json.dumps(rating)}, "stop")])
+    out = OpenAICompatAnalyst(client).judge("Awarded without tender for 120M TND [E2].",
+                                            [("E2", "par procédure de gré à gré")])
+    assert (out.rating, out.support_span, out.missing) == ("partial", "gré à gré", "the amount")
+    [system, user] = requests[0]["messages"]
+    assert "Be strict" in system["content"] and requests[0]["response_format"]["json_schema"]["name"] == "JudgeRating"
+    assert user["content"] == ("<sentence>\nAwarded without tender for 120M TND [E2].\n</sentence>\n\n"
+                               '<evidence>\n<quote id="E2">par procédure de gré à gré</quote>\n</evidence>')

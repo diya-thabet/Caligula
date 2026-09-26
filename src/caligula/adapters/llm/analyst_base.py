@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Literal, TypeVar
 
 from pydantic import BaseModel
 
+from caligula.domain.model.attribution import JudgeRating
 from caligula.domain.model.claims import Allegation, Hypothesis, HypothesisKind, Party, RuledOut, SubClaim
 from caligula.domain.model.documents import Document
 from caligula.domain.model.evidence import AmountRole, EvidenceEdge, FinancialFigure, Relation
@@ -192,14 +193,40 @@ the named register for it, with expectation_id set to the record's id \
 - budget_weights: relative effort per specialist for this kind of case."""
 
 
+JUDGE_SYSTEM = """\
+You check one sentence of an investigation summary against the evidence it \
+cites. The summary may be published about a public body, so a sentence that \
+says more than its evidence is a legal risk. Be strict.
+
+- supported: every factual element of the sentence (who, what, when, how \
+much, how many, the procedure, the causal link) is stated in the quotes, \
+possibly in other words or another language.
+- partial: some elements are in the quotes, others are not (a stronger \
+word, an added cause, a number or date the quotes do not give).
+- unsupported: the quotes do not state the claim, or say something else.
+- support_span: copy, exactly and in its original language, the words of \
+one quote that carry the claim. Leave it empty unless supported or partial.
+- missing: what the sentence asserts that no quote establishes, briefly; \
+empty if nothing.
+
+Use only the quotes, not what you know about the case or the world. \
+Intentions, motives and blame are never in a quote unless it states them."""
+
+
 class StructuredAnalyst:
-    """`ClaimAnalyst` on top of one structured call, `_parse`, supplied by each provider adapter."""
+    """`ClaimAnalyst` and `AttributionJudge` on top of one structured call, `_parse`,
+    supplied by each provider adapter."""
 
     def _parse(self, system: str, prompt: str, schema: type[T]) -> T:
         raise NotImplementedError
 
     def classify(self, text: str) -> Intake:
         return self._parse(CLASSIFY_SYSTEM, f"<request>\n{text}\n</request>", Intake)
+
+    def judge(self, sentence: str, evidence: list[tuple[str, str]]) -> JudgeRating:
+        quotes = "\n".join(f'<quote id="{eid}">{text}</quote>' for eid, text in evidence)
+        return self._parse(JUDGE_SYSTEM, f"<sentence>\n{sentence}\n</sentence>\n\n<evidence>\n{quotes}\n</evidence>",
+                           JudgeRating)
 
     def plan(self, allegation: Allegation) -> PlanDraft:
         from caligula.application.investigation.plan import PlanDraft

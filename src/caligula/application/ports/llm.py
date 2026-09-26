@@ -1,4 +1,4 @@
-"""Model ports: structured analysis calls, and agent tool loops.
+"""Model ports: structured analysis calls, the attribution judge, and agent tool loops.
 
 The investigation workflow depends on these two interfaces only; which model
 and SDK run behind them is an adapter's business.
@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Protocol
 
+from caligula.domain.model.attribution import JudgeRating
 from caligula.domain.model.claims import Allegation
 from caligula.domain.model.documents import Document
 from caligula.domain.model.evidence import EvidenceEdge, FinancialFigure
@@ -34,6 +35,13 @@ class ClaimAnalyst(Protocol):
     def plan(self, allegation: Allegation) -> PlanDraft: ...
 
     def read(self, allegation: Allegation, doc: Document) -> tuple[list[EvidenceEdge], list[FinancialFigure]]: ...
+
+
+class AttributionJudge(Protocol):
+    """Reads one summary sentence against the quotes it cites. Its "supported" is kept only
+    if code finds the words it points to in a cited quote."""
+
+    def judge(self, sentence: str, evidence: list[tuple[str, str]]) -> JudgeRating: ...
 
 
 class AgentRunner(Protocol):
