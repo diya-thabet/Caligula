@@ -100,6 +100,7 @@ src/caligula/
 ├── application/
 │   ├── ports/                  repository, blobs, ledger, sources, extraction, llm
 │   ├── usecases/               intake, decompose, evaluate_case, calibration, publication
+│   ├── cases/                  service (lifecycle and checkpoints), events
 │   └── investigation/          workspace, plan, toolkit, prompts, brief, suspicions,
 │                               attribution, single_agent, team
 └── adapters/
@@ -108,8 +109,9 @@ src/caligula/
     ├── media/                  text_extraction (PDF, OCR), image_sanitizer
     ├── llm/                    analyst_base (prompts, schemas), claude_analyst, claude_runner,
     │                           openai_compat, tool_schema
-    ├── presenters/             markdown_report, analytic, analysis, evolution, public_reply,
-    │                           cli_summary
+    ├── presenters/             markdown_report, analytic, analysis, evolution, case_views,
+    │                           public_reply, cli_summary
+    ├── api/                    app (HTTP API for the interface, FastAPI)
     ├── fixtures/               case_directory
     └── cli/                    main (argument parsing), bootstrap and models (composition root)
 ```
@@ -128,6 +130,10 @@ How the pieces meet:
 - **The toolkit** (`application/investigation/toolkit.py`) implements what each
   agent tool *does* to the workspace, in plain Python. The Claude adapter only
   binds those methods as tools and translates refusals into tool errors.
+- **Cases** (`application/cases/service.py`) wrap an investigation in its
+  lifecycle: intake, plan approval, the run with pause and stop, scope
+  decisions and sign-off, each recorded in the ledger with who took it. The
+  HTTP API (`adapters/api`, [api.md](api.md)) is one more adapter over it.
 - **The composition root** (`adapters/cli/bootstrap.py`) is the only place
   that chooses concrete adapters (memory or Postgres, Claude, live sources).
 - **Domain services take data, not repositories**: validation and scoring

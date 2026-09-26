@@ -52,7 +52,17 @@ caligula investigate "..." --llm openai:qwen3:32b@http://localhost:11434/v1 --se
 # Mixed: local collectors, a stronger hosted reviewer
 caligula investigate "..." --team --collector-llm openai:qwen3:32b@http://localhost:11434/v1 \
     --reviewer-llm claude --search searxng
+
+# The HTTP API for the investigation interface (docs at http://127.0.0.1:8000/docs)
+pip install -e '.[api]'
+caligula serve --replay fixtures/steg_synthetic                      # no model: replayed cases only
+caligula serve --llm openai:qwen3:32b@http://localhost:11434/v1 --search searxng --ledgers cases/
 ```
+
+The API ([docs/api.md](docs/api.md)) follows each case through its
+checkpoints: intake, plan approval, the run (paused or stopped at will),
+scope decisions by a lawyer, and sign-off, with live events for a step
+tracker and one view per interface surface.
 
 Model specs are `claude[:MODEL]` or `openai:MODEL[@BASE_URL]`; defaults come
 from `CALIGULA_LLM`, `CALIGULA_BASE_URL`, `CALIGULA_API_KEY` and

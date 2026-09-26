@@ -104,6 +104,8 @@ capture ──► verification pipeline (code, per document, in parallel) ──
 
 | Id | Task | Done when |
 |---|---|---|
+| F0 | HTTP API: case lifecycle with checkpoints (legal review, plan approval, scope, sign-off), pause/stop, live events, one view per surface (`caligula serve`, [api.md](api.md)) | Done |
+| F0b | Case repository (cases survive a restart), authentication and roles, checkpoints routed to roles, continuing a finished run | The API can face more than a trusted network |
 | F1 | Web form + case page | A claim can be submitted and followed |
 | F2 | Reviewer UI: evidence board, accept/dispute, publication gate | Human review without the CLI |
 | F3 | WhatsApp intake for contributors (hash on receipt, metadata split) | Uploads land in the store with custody records |
