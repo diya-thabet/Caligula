@@ -145,6 +145,34 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         return json.dumps(rows, ensure_ascii=False) if rows else "No matching documents in the store."
 
     @metered
+    def search_web(
+        query: str,
+        purpose: Literal["support", "challenge", "explore"],
+        subclaim_id: str | None = None,
+        language: Literal["fr", "en", "ar"] | None = None,
+        k: int = 8,
+    ) -> str:
+        """Search the web. Results are leads, not evidence: store a page with ingest_url
+        (and check the archive for official pages) before you rely on it. Search in
+        French and in English; use exact identifiers (market or decree numbers,
+        company names) as well as descriptions.
+
+        Args:
+            query: Search terms.
+            purpose: "support", "challenge" (looking for what would refute or innocently
+                explain a sub-claim) or "explore".
+            subclaim_id: The sub-claim this search is about, if any.
+            language: Preferred result language.
+            k: Number of results.
+        """
+        if ws.connectors.search is None:
+            raise ToolRefusal("Web search not configured.")
+        ws.add_search(Purpose(purpose), subclaim_id, query)
+        hits = ws.connectors.search.search(query, k=k, language=language)
+        return json.dumps([{"url": h.url, "title": h.title, "snippet": h.snippet} for h in hits],
+                          ensure_ascii=False) if hits else "No results."
+
+    @metered
     def read_document(doc_id: str, offset: int = 0) -> str:
         """Read a stored document's text and metadata. Long documents are returned in
         windows; call again with the returned next_offset to continue. Personal
@@ -632,7 +660,7 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
         return "Investigation closed. Reply with a one-line acknowledgement only."
 
     everything = {t.__name__: t for t in [
-        search_evidence, read_document, compare_versions, find_archived_captures, ingest_archived_capture,
+        search_evidence, search_web, read_document, compare_versions, find_archived_captures, ingest_archived_capture,
         ingest_url, search_funder_records, fetch_telegram_channel, record_evidence, record_amount, record_absence,
         compare_names, assess, list_tasks, complete_task, post_lead, report, list_proposals, review_proposal, register_party,
         request_collection, complete_review, finish,
@@ -640,6 +668,17 @@ def build_tools(ws: Workspace, ctx: AgentContext | None = None, names: Iterable[
     if names is None:
         names = SINGLE_AGENT_TOOLS
     return [everything[n] for n in names]
+
+
+def web_search_tools(ws: Workspace, wanted: bool) -> list[str]:
+    """Our `search_web` tool, when web search is wanted and a search connector is configured."""
+    return ["search_web"] if wanted and ws.connectors.search is not None else []
+
+
+def native_web_search(ws: Workspace, wanted: bool) -> bool:
+    """Whether the agent should use the model provider's own search instead: only when
+    web search is wanted and no search connector of ours is configured."""
+    return wanted and ws.connectors.search is None
 
 
 SINGLE_AGENT_TOOLS = [

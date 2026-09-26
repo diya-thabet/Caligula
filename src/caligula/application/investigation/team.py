@@ -28,7 +28,7 @@ from dataclasses import dataclass, field
 from caligula.application.investigation.brief import case_brief, unknown_citations
 from caligula.application.investigation.plan import MIN_BUDGET, Plan, TaskStatus, normalize_plan
 from caligula.application.investigation.prompts import _COLLECTOR, REVIEWER, SPECIALIST_FOCUS
-from caligula.application.investigation.toolkit import build_tools
+from caligula.application.investigation.toolkit import build_tools, native_web_search, web_search_tools
 from caligula.application.investigation.workspace import (
     AgentContext,
     ProposalStatus,
@@ -223,7 +223,8 @@ class InvestigationTeam:
 
     def _collect(self, ws: Workspace, spec: Specialist, budget: int) -> str:
         ctx = AgentContext(name=spec.name, budget=budget)
-        tools = build_tools(ws, ctx, spec.tools)
+        wanted = spec.web_search and self.web_search
+        tools = build_tools(ws, ctx, spec.tools + web_search_tools(ws, wanted))
         system = f"{_COLLECTOR}\n\n{SPECIALIST_FOCUS[spec.name]}"
         tasks = [t.model_dump(include={"id", "objective", "subclaim_ids", "purpose", "queries", "urls",
                                        "expectation_id"}, exclude_none=True)
@@ -233,7 +234,8 @@ class InvestigationTeam:
                  + f"\n\n<entities>\n{json.dumps(entities, ensure_ascii=False)}\n</entities>"
                  + f"\n\n<your_tasks round=\"{ws.round}\">\n{json.dumps(tasks, ensure_ascii=False, indent=1)}\n</your_tasks>"
                  + "\n\nWork your tasks, close each with complete_task, check list_tasks for leads, then report.")
-        self.runner.run(system, tools, brief, budget + 15, lambda: ctx.done, web_search=spec.web_search and self.web_search)
+        self.runner.run(system, tools, brief, budget + 15, lambda: ctx.done,
+                        web_search=native_web_search(ws, wanted))
         return ctx.report or f"({spec.name} ended without a report)"
 
     def _review(self, ws: Workspace, n: int, reports: dict[str, list[str]]) -> str | None:

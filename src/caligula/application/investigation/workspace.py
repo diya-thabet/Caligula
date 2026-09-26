@@ -18,7 +18,14 @@ from enum import StrEnum
 
 from caligula.application.evidence_store import EvidenceStore
 from caligula.application.investigation.plan import EntityHint, Outcome, Task, TaskStatus
-from caligula.application.ports.sources import ArchiveSource, FunderRecords, TelegramChannels, TextExtractor, WebFetcher
+from caligula.application.ports.sources import (
+    ArchiveSource,
+    FunderRecords,
+    TelegramChannels,
+    TextExtractor,
+    WebFetcher,
+    WebSearch,
+)
 from caligula.application.ports.storage import Ledger
 from caligula.domain.model.claims import Allegation, Party
 from caligula.domain.model.evidence import AbsenceFinding, EvidenceEdge, FinancialFigure, RejectedEvidence
@@ -100,6 +107,8 @@ class Connectors:
     funders: FunderRecords | None = None
     telegram: TelegramChannels | None = None
     extractor: TextExtractor | None = None  # plain UTF-8 decoding when absent
+    # Our own web search. Without it, agents use the model provider's built-in search if it has one.
+    search: WebSearch | None = None
 
 
 @dataclass

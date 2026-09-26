@@ -53,6 +53,19 @@ class WebFetcher(Protocol):
     def fetch(self, url: str) -> Fetched: ...
 
 
+@dataclass(frozen=True)
+class SearchResult:
+    url: str
+    title: str
+    snippet: str
+
+
+class WebSearch(Protocol):
+    """A web search engine. Results are leads: a page counts only once fetched and stored."""
+
+    def search(self, query: str, k: int = 8, language: str | None = None) -> list[SearchResult]: ...
+
+
 class FunderRecords(Protocol):
     """Lenders' project records: an independent record of public money."""
 

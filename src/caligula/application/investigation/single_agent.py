@@ -17,7 +17,12 @@ from dataclasses import dataclass
 
 from caligula.application.investigation.brief import case_brief, unknown_citations
 from caligula.application.investigation.prompts import SYSTEM
-from caligula.application.investigation.toolkit import build_tools
+from caligula.application.investigation.toolkit import (
+    SINGLE_AGENT_TOOLS,
+    build_tools,
+    native_web_search,
+    web_search_tools,
+)
 from caligula.application.investigation.workspace import TraceEntry, Workspace
 from caligula.application.ports.llm import AgentRunner
 from caligula.domain.model.verdict import Verdict
@@ -38,9 +43,10 @@ class InvestigatorAgent:
         self.web_search = web_search
 
     def run(self, ws: Workspace) -> InvestigationResult:
-        stop_reason = self.runner.run(SYSTEM[ws.mode], build_tools(ws), case_brief(ws, ws.budget),
+        tools = build_tools(ws, names=SINGLE_AGENT_TOOLS + web_search_tools(ws, self.web_search))
+        stop_reason = self.runner.run(SYSTEM[ws.mode], tools, case_brief(ws, ws.budget),
                                       max_iterations=ws.budget + 20, done=lambda: ws.finished,
-                                      web_search=self.web_search)
+                                      web_search=native_web_search(ws, self.web_search))
         return InvestigationResult(
             verdict=ws.verdict(), summary=ws.summary, unknown_citations=unknown_citations(ws.summary, ws.store),
             trace=ws.trace, stop_reason=stop_reason,
