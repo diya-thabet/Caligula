@@ -1,5 +1,1423 @@
 {
  "case_id": "STEG-2026-07-21-SYNTHETIC",
+ "live": {
+  "C-LEGAL": {
+   "": {
+    "assessment": null,
+    "claim": "Commissions went offshore.",
+    "claim_type": "financial_crime_indicators",
+    "counts": null,
+    "created_at": "2026-09-26T10:00:00+00:00",
+    "created_by": "Amira",
+    "id": "C-LEGAL",
+    "last_activity": "2026-09-26T10:00:00+00:00",
+    "mode": "investigate",
+    "note": "a lawyer must approve the scope first (re-run with --legal-approved NAME)",
+    "parties": [],
+    "pending_approvals": [
+     {
+      "about": "a lawyer must approve the scope first (re-run with --legal-approved NAME)",
+      "kind": "legal_review",
+      "role": "lawyer"
+     }
+    ],
+    "poc": false,
+    "rounds": 0,
+    "sign_off": null,
+    "status": "awaiting_legal_review",
+    "stop_reason": null,
+    "title": "Commissions went offshore."
+   },
+   "/analysis": {
+    "sections": []
+   }
+  },
+  "C-PLAN": {
+   "": {
+    "assessment": null,
+    "claim": "Le marché 2026-017 a été attribué sans appel d'offres.",
+    "claim_type": "procurement",
+    "counts": {
+     "documents": 17,
+     "evidence": 0,
+     "open_suspicions": 0,
+     "open_tasks": 0,
+     "pending_proposals": 0,
+     "tool_calls": 0
+    },
+    "created_at": "2026-09-26T10:00:00+00:00",
+    "created_by": "Amira",
+    "id": "C-PLAN",
+    "last_activity": "2026-09-26T10:00:00+00:00",
+    "mode": "investigate",
+    "note": "plan ready for review",
+    "parties": [
+     {
+      "aliases": [
+       "Société tunisienne de l'électricité et du gaz"
+      ],
+      "name": "STEG",
+      "role": "accused"
+     },
+     {
+      "aliases": [
+       "Ministry of Energy (fictional)"
+      ],
+      "name": "Ministère de l'Énergie (fictif)",
+      "role": "accused"
+     }
+    ],
+    "pending_approvals": [
+     {
+      "about": "14 tasks",
+      "kind": "plan_approval",
+      "role": "investigator"
+     }
+    ],
+    "poc": true,
+    "rounds": 0,
+    "sign_off": null,
+    "status": "awaiting_plan_approval",
+    "stop_reason": null,
+    "title": "Le marché 2026-017 a été attribué sans appel d'offres."
+   },
+   "/plan": {
+    "budgets": {
+     "official": 40,
+     "web_news": 40
+    },
+    "editable": true,
+    "entities": [],
+    "fixes": [
+     "added official task for expected record C3.E1",
+     "no specialist available to search funder_records for C4.E1",
+     "added official task for expected record C5.E1",
+     "added official task for expected record C9.E1",
+     "added official task for expected record C11.E1",
+     "no specialist available to search funder_records for C12.E1",
+     "added official task to test innocent explanation H5",
+     "added official task to test innocent explanation H7",
+     "added web_news task so C3 is covered by two kinds of source",
+     "added official task so C4 is covered by two kinds of source",
+     "added web_news task so C4 is covered by two kinds of source",
+     "added official task so C5 is covered by two kinds of source",
+     "added web_news task so C5 is covered by two kinds of source",
+     "added official task so C6 is covered by two kinds of source",
+     "added web_news task so C6 is covered by two kinds of source"
+    ],
+    "status": "awaiting_plan_approval",
+    "tasks": [
+     {
+      "created_by": "planner",
+      "doc_ids": [],
+      "expectation_id": null,
+      "id": "T1",
+      "note": "",
+      "objective": "Find the award notice",
+      "outcome": null,
+      "purpose": "support",
+      "queries": [
+       "marché 2026-017"
+      ],
+      "round": 1,
+      "specialist": "official",
+      "status": "open",
+      "subclaim_ids": [
+       "C3"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": "C3.E1",
+      "id": "T2",
+      "note": "",
+      "objective": "Search Journal Officiel (JORT): decrees, orders and official notices for: Award notice for market 2026-017 in the JORT. If a proper search finds nothing, close this task not_found, say exactly what you searched, and give the stored capture of the empty result as the first doc_id: the absence is scored.",
+      "outcome": null,
+      "purpose": "support",
+      "queries": [],
+      "round": 1,
+      "specialist": "official",
+      "status": "open",
+      "subclaim_ids": [
+       "C3"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": "C5.E1",
+      "id": "T3",
+      "note": "",
+      "objective": "Search TUNEPS: public procurement notices and awards for: TUNEPS tender notice for the Rades-Fictive extension, published before the award. If a proper search finds nothing, close this task not_found, say exactly what you searched, and give the stored capture of the empty result as the first doc_id: the absence is scored.",
+      "outcome": null,
+      "purpose": "challenge",
+      "queries": [],
+      "round": 1,
+      "specialist": "official",
+      "status": "open",
+      "subclaim_ids": [
+       "C5"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": "C9.E1",
+      "id": "T4",
+      "note": "",
+      "objective": "Search Journal Officiel (JORT): decrees, orders and official notices for: Decree n° 2026-0412 declaring the emergency, in the JORT. If a proper search finds nothing, close this task not_found, say exactly what you searched, and give the stored capture of the empty result as the first doc_id: the absence is scored.",
+      "outcome": null,
+      "purpose": "challenge",
+      "queries": [],
+      "round": 1,
+      "specialist": "official",
+      "status": "open",
+      "subclaim_ids": [
+       "C9"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": "C11.E1",
+      "id": "T5",
+      "note": "",
+      "objective": "Search Journal Officiel (JORT): decrees, orders and official notices for: Erratum or rectification of the notice concerned. If a proper search finds nothing, close this task not_found, say exactly what you searched, and give the stored capture of the empty result as the first doc_id: the absence is scored.",
+      "outcome": null,
+      "purpose": "challenge",
+      "queries": [],
+      "round": 1,
+      "specialist": "official",
+      "status": "open",
+      "subclaim_ids": [
+       "C11"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": null,
+      "id": "T6",
+      "note": "",
+      "objective": "Test the innocent explanation H5 (The price reflects a market price shock, not inflation of the contract.) through C10: Market prices rose enough between the benchmark and the award to explain the price gap. Look for: Did prices of the main inputs (equipment, materials, currency) rise over the period?. Record what you find either way.",
+      "outcome": null,
+      "purpose": "challenge",
+      "queries": [],
+      "round": 1,
+      "specialist": "official",
+      "status": "open",
+      "subclaim_ids": [
+       "C10"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": null,
+      "id": "T7",
+      "note": "",
+      "objective": "Test the innocent explanation H7 (The project is delayed, not abandoned, and the money is accounted for.) through C12: Delivery is delayed for documented reasons (force majeure, suspension, litigation), with the funds unspent or recoverable. Look for: Is a suspension, amendment or extension of the contract documented?; Were the funds returned, frozen or kept in the project account?. Record what you find either way.",
+      "outcome": null,
+      "purpose": "challenge",
+      "queries": [],
+      "round": 1,
+      "specialist": "official",
+      "status": "open",
+      "subclaim_ids": [
+       "C12"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": null,
+      "id": "T8",
+      "note": "",
+      "objective": "Find evidence on C3: A funded capacity-expansion project (market 2026-017) existed before the outage. (Is there an archived JORT or TUNEPS award notice with amount and date?; Does a funder record the same project?)",
+      "outcome": null,
+      "purpose": "support",
+      "queries": [],
+      "round": 1,
+      "specialist": "web_news",
+      "status": "open",
+      "subclaim_ids": [
+       "C3"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": null,
+      "id": "T9",
+      "note": "",
+      "objective": "Find evidence on C4: No capacity has been added on the project site since the award. (Are there progress reports?; Do satellite images show construction?; Is there a dated field photo?)",
+      "outcome": null,
+      "purpose": "support",
+      "queries": [],
+      "round": 1,
+      "specialist": "official",
+      "status": "open",
+      "subclaim_ids": [
+       "C4"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": null,
+      "id": "T10",
+      "note": "",
+      "objective": "Find evidence on C4: No capacity has been added on the project site since the award. (Are there progress reports?; Do satellite images show construction?; Is there a dated field photo?)",
+      "outcome": null,
+      "purpose": "support",
+      "queries": [],
+      "round": 1,
+      "specialist": "web_news",
+      "status": "open",
+      "subclaim_ids": [
+       "C4"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": null,
+      "id": "T11",
+      "note": "",
+      "objective": "Find evidence on C5: The contract was awarded without a competitive tender. (Was a tender notice published on TUNEPS before the award?; Was an emergency procedure legally justified?)",
+      "outcome": null,
+      "purpose": "support",
+      "queries": [],
+      "round": 1,
+      "specialist": "official",
+      "status": "open",
+      "subclaim_ids": [
+       "C5"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": null,
+      "id": "T12",
+      "note": "",
+      "objective": "Find evidence on C5: The contract was awarded without a competitive tender. (Was a tender notice published on TUNEPS before the award?; Was an emergency procedure legally justified?)",
+      "outcome": null,
+      "purpose": "support",
+      "queries": [],
+      "round": 1,
+      "specialist": "web_news",
+      "status": "open",
+      "subclaim_ids": [
+       "C5"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": null,
+      "id": "T13",
+      "note": "",
+      "objective": "Find evidence on C6: The committed amount exceeds the cost of comparable works by more than 20%. (What did comparable works cost in prior TUNEPS awards?)",
+      "outcome": null,
+      "purpose": "support",
+      "queries": [],
+      "round": 1,
+      "specialist": "official",
+      "status": "open",
+      "subclaim_ids": [
+       "C6"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": null,
+      "id": "T14",
+      "note": "",
+      "objective": "Find evidence on C6: The committed amount exceeds the cost of comparable works by more than 20%. (What did comparable works cost in prior TUNEPS awards?)",
+      "outcome": null,
+      "purpose": "support",
+      "queries": [],
+      "round": 1,
+      "specialist": "web_news",
+      "status": "open",
+      "subclaim_ids": [
+       "C6"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     }
+    ],
+    "window": [
+     "2025-01-01T00:00:00",
+     "2026-09-30T00:00:00"
+    ]
+   }
+  },
+  "C-RAN": {
+   "": {
+    "assessment": {
+     "confidence": "low",
+     "confidence_reasons": [
+      "C4 has no evidence",
+      "C5 has no evidence",
+      "C6 has no evidence",
+      "C3 rests on a single independent origin",
+      "the verdict would change without jort_award_v1",
+      "innocent explanation H4 not yet tested",
+      "innocent explanation H5 not yet tested",
+      "innocent explanation H6 not yet tested",
+      "innocent explanation H7 not yet tested",
+      "C3 supported but never challenged"
+     ],
+     "final": true,
+     "likelihood": null,
+     "likelihood_term": "cannot be assessed",
+     "verdict": "partially_supported"
+    },
+    "claim": "Le marché 2026-017 a été attribué sans appel d'offres.",
+    "claim_type": "procurement",
+    "counts": {
+     "documents": 17,
+     "evidence": 1,
+     "open_suspicions": 0,
+     "open_tasks": 16,
+     "pending_proposals": 0,
+     "tool_calls": 5
+    },
+    "created_at": "2026-09-26T10:00:00+00:00",
+    "created_by": "Amira",
+    "id": "C-RAN",
+    "last_activity": "2026-09-26T10:00:00+00:00",
+    "mode": "investigate",
+    "note": "round_limit",
+    "parties": [
+     {
+      "aliases": [
+       "Société tunisienne de l'électricité et du gaz"
+      ],
+      "name": "STEG",
+      "role": "accused"
+     },
+     {
+      "aliases": [
+       "Ministry of Energy (fictional)"
+      ],
+      "name": "Ministère de l'Énergie (fictif)",
+      "role": "accused"
+     }
+    ],
+    "pending_approvals": [
+     {
+      "about": "case file ready for review",
+      "kind": "sign_off",
+      "role": "editor"
+     }
+    ],
+    "poc": true,
+    "rounds": 1,
+    "sign_off": null,
+    "status": "in_review",
+    "stop_reason": "round_limit",
+    "title": "Le marché 2026-017 a été attribué sans appel d'offres."
+   },
+   "/events": [
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "action": "case_opened",
+      "actor": "Amira",
+      "data": {
+       "case_id": "C-RAN",
+       "mode": "investigate",
+       "poc": true
+      }
+     },
+     "kind": "audit",
+     "seq": 1
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "action": "intake",
+      "actor": "caligula",
+      "data": {
+       "case_id": "C-RAN",
+       "decision": "accept",
+       "intake": {
+        "claim_type": "procurement",
+        "documented_act": true,
+        "involves_leaked_or_classified_material": false,
+        "public_nexus": true,
+        "rationale": "scripted",
+        "relies_on_sensitive_traits": false,
+        "subject_types": [
+         "public_body"
+        ]
+       },
+       "reasons": []
+      }
+     },
+     "kind": "audit",
+     "seq": 2
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "note": "decomposing the claim",
+      "status": "preparing"
+     },
+     "kind": "status",
+     "seq": 3
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "action": "decomposition",
+      "actor": "caligula",
+      "data": {
+       "added_by_code": [
+        "added innocent explanation price_shock as H5 (tested by C10)",
+        "added innocent explanation clerical_error as H6 (tested by C11)",
+        "added innocent explanation documented_delay as H7 (tested by C12)"
+       ],
+       "subclaims": 12
+      }
+     },
+     "kind": "audit",
+     "seq": 4
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "note": "plan ready for review",
+      "status": "awaiting_plan_approval"
+     },
+     "kind": "status",
+     "seq": 5
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "action": "plan_approved",
+      "actor": "Amira",
+      "data": {
+       "budgets": {
+        "official": 40,
+        "web_news": 40
+       },
+       "tasks": [
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "T5",
+        "T6",
+        "T7",
+        "T8",
+        "T9",
+        "T10",
+        "T11",
+        "T12",
+        "T13",
+        "T14"
+       ]
+      }
+     },
+     "kind": "audit",
+     "seq": 6
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "note": "plan approved by Amira",
+      "status": "running"
+     },
+     "kind": "status",
+     "seq": 7
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "action": "task",
+      "actor": "planner",
+      "data": {
+       "id": "T1",
+       "objective": "Find the award notice",
+       "purpose": "support",
+       "round": 1,
+       "specialist": "official"
+      }
+     },
+     "kind": "audit",
+     "seq": 8
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "action": "task",
+      "actor": "code",
+      "data": {
+       "id": "T2",
+       "objective": "Search Journal Officiel (JORT): decrees, orders and official notices for: Award notice for market 2026-017 in the JORT. If a proper search finds nothing, close this task not_found, say exactly what you searched, and give the stored capture of the empty result as the first doc_id: the absence is scored.",
+       "purpose": "support",
+       "round": 1,
+       "specialist": "official"
+      }
+     },
+     "kind": "audit",
+     "seq": 9
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "action": "task",
+      "actor": "code",
+      "data": {
+       "id": "T3",
+       "objective": "Search TUNEPS: public procurement notices and awards for: TUNEPS tender notice for the Rades-Fictive extension, published before the award. If a proper search finds nothing, close this task not_found, say exactly what you searched, and give the stored capture of the empty result as the first doc_id: the absence is scored.",
+       "purpose": "challenge",
+       "round": 1,
+       "specialist": "official"
+      }
+     },
+     "kind": "audit",
+     "seq": 10
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "action": "task",
+      "actor": "code",
+      "data": {
+       "id": "T4",
+       "objective": "Search Journal Officiel (JORT): decrees, orders and official notices for: Decree n° 2026-0412 declaring the emergency, in the JORT. If a proper search finds nothing, close this task not_found, say exactly what you searched, and give the stored capture of the empty result as the first doc_id: the absence is scored.",
+       "purpose": "challenge",
+       "round": 1,
+       "specialist": "official"
+      }
+     },
+     "kind": "audit",
+     "seq": 11
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "action": "task",
+      "actor": "code",
+      "data": {
+       "id": "T5",
+       "objective": "Search Journal Officiel (JORT): decrees, orders and official notices for: Erratum or rectification of the notice concerned. If a proper search finds nothing, close this task not_found, say exactly what you searched, and give the stored capture of the empty result as the first doc_id: the absence is scored.",
+       "purpose": "challenge",
+       "round": 1,
+       "specialist": "official"
+      }
+     },
+     "kind": "audit",
+     "seq": 12
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "action": "task",
+      "actor": "code",
+      "data": {
+       "id": "T6",
+       "objective": "Test the innocent explanation H5 (The price reflects a market price shock, not inflation of the contract.) through C10: Market prices rose enough between the benchmark and the award to explain the price gap. Look for: Did prices of the main inputs (equipment, materials, currency) rise over the period?. Record what you find either way.",
+       "purpose": "challenge",
+       "round": 1,
+       "specialist": "official"
+      }
+     },
+     "kind": "audit",
+     "seq": 13
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "action": "task",
+      "actor": "code",
+      "data": {
+       "id": "T7",
+       "objective": "Test the innocent explanation H7 (The project is delayed, not abandoned, and the money is accounted for.) through C12: Delivery is delayed for documented reasons (force majeure, suspension, litigation), with the funds unspent or recoverable. Look for: Is a suspension, amendment or extension of the contract documented?; Were the funds returned, frozen or kept in the project account?. Record what you find either way.",
+       "purpose": "challenge",
+       "round": 1,
+       "specialist": "official"
+      }
+     },
+     "kind": "audit",
+     "seq": 14
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "action": "task",
+      "actor": "code",
+      "data": {
+       "id": "T8",
+       "objective": "Find evidence on C3: A funded capacity-expansion project (market 2026-017) existed before the outage. (Is there an archived JORT or TUNEPS award notice with amount and date?; Does a funder record the same project?)",
+       "purpose": "support",
+       "round": 1,
+       "specialist": "web_news"
+      }
+     },
+     "kind": "audit",
+     "seq": 15
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "action": "task",
+      "actor": "code",
+      "data": {
+       "id": "T9",
+       "objective": "Find evidence on C4: No capacity has been added on the project site since the award. (Are there progress reports?; Do satellite images show construction?; Is there a dated field photo?)",
+       "purpose": "support",
+       "round": 1,
+       "specialist": "official"
+      }
+     },
+     "kind": "audit",
+     "seq": 16
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "action": "task",
+      "actor": "code",
+      "data": {
+       "id": "T10",
+       "objective": "Find evidence on C4: No capacity has been added on the project site since the award. (Are there progress reports?; Do satellite images show construction?; Is there a dated field photo?)",
+       "purpose": "support",
+       "round": 1,
+       "specialist": "web_news"
+      }
+     },
+     "kind": "audit",
+     "seq": 17
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "action": "task",
+      "actor": "code",
+      "data": {
+       "id": "T11",
+       "objective": "Find evidence on C5: The contract was awarded without a competitive tender. (Was a tender notice published on TUNEPS before the award?; Was an emergency procedure legally justified?)",
+       "purpose": "support",
+       "round": 1,
+       "specialist": "official"
+      }
+     },
+     "kind": "audit",
+     "seq": 18
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "action": "task",
+      "actor": "code",
+      "data": {
+       "id": "T12",
+       "objective": "Find evidence on C5: The contract was awarded without a competitive tender. (Was a tender notice published on TUNEPS before the award?; Was an emergency procedure legally justified?)",
+       "purpose": "support",
+       "round": 1,
+       "specialist": "web_news"
+      }
+     },
+     "kind": "audit",
+     "seq": 19
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "action": "task",
+      "actor": "code",
+      "data": {
+       "id": "T13",
+       "objective": "Find evidence on C6: The committed amount exceeds the cost of comparable works by more than 20%. (What did comparable works cost in prior TUNEPS awards?)",
+       "purpose": "support",
+       "round": 1,
+       "specialist": "official"
+      }
+     },
+     "kind": "audit",
+     "seq": 20
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "action": "task",
+      "actor": "code",
+      "data": {
+       "id": "T14",
+       "objective": "Find evidence on C6: The committed amount exceeds the cost of comparable works by more than 20%. (What did comparable works cost in prior TUNEPS awards?)",
+       "purpose": "support",
+       "round": 1,
+       "specialist": "web_news"
+      }
+     },
+     "kind": "audit",
+     "seq": 21
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "detail": "round 1: official, web_news",
+      "phase": "collect"
+     },
+     "kind": "phase",
+     "seq": 22
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "agent": "official",
+      "args": {
+       "purpose": "support",
+       "query": "marché 2026-017",
+       "subclaim_id": "C3"
+      },
+      "outcome": "[{\"doc_id\": \"sentinel\", \"kind\": \"osint\", \"publisher\": \"Copernicus Sentinel-2 (analyse)\", \"observed_at\": \"2026-09-06\", \"url\": \"https://fixture.example/sentinel\", \"snippet\": \"[DOCUMENT FICTIF - données synthétiques de test] Comparaison Sentinel-2 du 01/03/2026 et du 05/09/2026 sur la parcelle du march",
+      "round": 1,
+      "step": 1,
+      "tool": "search_evidence"
+     },
+     "kind": "tool",
+     "seq": 23
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "action": "proposal",
+      "actor": "official",
+      "data": {
+       "id": "P1",
+       "item": {
+        "doc_id": "jort_award_v1",
+        "quote": "extension de 450 MW",
+        "rationale": "r",
+        "relation": "supports",
+        "subclaim_id": "C3"
+       }
+      }
+     },
+     "kind": "audit",
+     "seq": 24
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "agent": "official",
+      "args": {
+       "doc_id": "jort_award_v1",
+       "quote": "extension de 450 MW",
+       "rationale": "r",
+       "relation": "supports",
+       "subclaim_id": "C3"
+      },
+      "outcome": "Proposed as P1; the reviewer decides whether it counts.",
+      "round": 1,
+      "step": 2,
+      "tool": "record_evidence"
+     },
+     "kind": "tool",
+     "seq": 25
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "action": "rejection",
+      "actor": "official",
+      "data": {
+       "item": {
+        "doc_id": "jort_award_v1",
+        "quote": "an invented sentence",
+        "rationale": "r",
+        "relation": "supports",
+        "subclaim_id": "C3"
+       },
+       "reason": "quote not found verbatim in jort_award_v1"
+      }
+     },
+     "kind": "audit",
+     "seq": 26
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "agent": "official",
+      "args": {
+       "doc_id": "jort_award_v1",
+       "quote": "an invented sentence",
+       "rationale": "r",
+       "relation": "supports",
+       "subclaim_id": "C3"
+      },
+      "outcome": "error: Rejected: quote not found verbatim in jort_award_v1",
+      "round": 1,
+      "step": 3,
+      "tool": "record_evidence"
+     },
+     "kind": "tool",
+     "seq": 27
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "detail": "round 1: 1 pending proposals",
+      "phase": "review"
+     },
+     "kind": "phase",
+     "seq": 28
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "action": "review",
+      "actor": "reviewer",
+      "data": {
+       "evidence_id": "E1",
+       "id": "P1",
+       "note": "ok",
+       "status": "accepted"
+      }
+     },
+     "kind": "audit",
+     "seq": 29
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "agent": "reviewer",
+      "args": {
+       "decision": "accept",
+       "note": "ok",
+       "proposal_id": "P1"
+      },
+      "outcome": "P1 accepted: counts as evidence E1.",
+      "round": 1,
+      "step": 4,
+      "tool": "review_proposal"
+     },
+     "kind": "tool",
+     "seq": 30
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "agent": "reviewer",
+      "args": {},
+      "outcome": "The award concerned a 450 MW extension [E1].",
+      "round": 1,
+      "step": 5,
+      "tool": "complete_review"
+     },
+     "kind": "tool",
+     "seq": 31
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "action": "task",
+      "actor": "code",
+      "data": {
+       "id": "T15",
+       "objective": "Look for evidence that refutes or innocently explains C3: A funded capacity-expansion project (market 2026-017) existed before the outage. (emergency procedure, force majeure, erratum, corrected figures, price shock, official justification).",
+       "purpose": "challenge",
+       "round": 2,
+       "specialist": "official"
+      }
+     },
+     "kind": "audit",
+     "seq": 32
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "action": "task",
+      "actor": "code",
+      "data": {
+       "id": "T16",
+       "objective": "Look for evidence that refutes or innocently explains C3: A funded capacity-expansion project (market 2026-017) existed before the outage. (emergency procedure, force majeure, erratum, corrected figures, price shock, official justification).",
+       "purpose": "challenge",
+       "round": 2,
+       "specialist": "web_news"
+      }
+     },
+     "kind": "audit",
+     "seq": 33
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "detail": "{\"round\": 1, \"specialists\": [\"official\", \"web_news\"], \"tasks_closed\": {}, \"accepted\": 1, \"disputed\": 0, \"statuses\": {\"C1\": \"unverified\", \"C2\": \"unverified\", \"C3\": \"supported\", \"C4\": \"unverified\", \"C5\": \"unverified\", \"C6\": \"unverified\", \"C7\": \"unverified\", \"C8\": \"unverified\", \"C9\": \"unverified\", \"C10\": \"unverified\", \"C11\": \"unverified\", \"C12\": \"unverified\"}, \"challenge_tasks_added\": [\"T15\", \"T16\"], \"new_accepted\": 1, \"suspicions_raised\": [], \"suspicions_changed\": {}, \"verdict\": \"partially_supported\", \"confidence\": \"low\", \"tool_calls\": 5}",
+      "phase": "round"
+     },
+     "kind": "phase",
+     "seq": 34
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "detail": "partially_supported (cannot be assessed, low confidence)",
+      "phase": "verdict"
+     },
+     "kind": "phase",
+     "seq": 35
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "action": "stop",
+      "actor": "caligula",
+      "data": {
+       "reason": "round_limit",
+       "rounds": 1
+      }
+     },
+     "kind": "audit",
+     "seq": 36
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "action": "attribution",
+      "actor": "caligula",
+      "data": {
+       "judged": false,
+       "removed": [],
+       "statuses": {
+        "unjudged": 1
+       }
+      }
+     },
+     "kind": "audit",
+     "seq": 37
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "detail": "1 unjudged",
+      "phase": "citations"
+     },
+     "kind": "phase",
+     "seq": 38
+    },
+    {
+     "at": "2026-09-26T10:00:00+00:00",
+     "data": {
+      "note": "round_limit",
+      "status": "in_review"
+     },
+     "kind": "status",
+     "seq": 39
+    }
+   ],
+   "/history": {
+    "rounds": [
+     {
+      "accepted": 1,
+      "confidence": "low",
+      "disputed": 0,
+      "new_evidence": 1,
+      "round": 1,
+      "specialists": [
+       "official",
+       "web_news"
+      ],
+      "statuses": {
+       "C1": "unverified",
+       "C10": "unverified",
+       "C11": "unverified",
+       "C12": "unverified",
+       "C2": "unverified",
+       "C3": "supported",
+       "C4": "unverified",
+       "C5": "unverified",
+       "C6": "unverified",
+       "C7": "unverified",
+       "C8": "unverified",
+       "C9": "unverified"
+      },
+      "suspicions_raised": [],
+      "suspicions_resolved": {},
+      "tasks_closed": {},
+      "tool_calls": 5,
+      "verdict": "partially_supported"
+     }
+    ],
+    "stop_explained": "the round limit was reached with work still open",
+    "stop_reason": "round_limit"
+   },
+   "/plan": {
+    "budgets": {
+     "official": 40,
+     "web_news": 40
+    },
+    "editable": false,
+    "entities": [],
+    "fixes": [
+     "added official task for expected record C3.E1",
+     "no specialist available to search funder_records for C4.E1",
+     "added official task for expected record C5.E1",
+     "added official task for expected record C9.E1",
+     "added official task for expected record C11.E1",
+     "no specialist available to search funder_records for C12.E1",
+     "added official task to test innocent explanation H5",
+     "added official task to test innocent explanation H7",
+     "added web_news task so C3 is covered by two kinds of source",
+     "added official task so C4 is covered by two kinds of source",
+     "added web_news task so C4 is covered by two kinds of source",
+     "added official task so C5 is covered by two kinds of source",
+     "added web_news task so C5 is covered by two kinds of source",
+     "added official task so C6 is covered by two kinds of source",
+     "added web_news task so C6 is covered by two kinds of source"
+    ],
+    "status": "in_review",
+    "tasks": [
+     {
+      "created_by": "planner",
+      "doc_ids": [],
+      "expectation_id": null,
+      "id": "T1",
+      "note": "",
+      "objective": "Find the award notice",
+      "outcome": null,
+      "purpose": "support",
+      "queries": [
+       "marché 2026-017"
+      ],
+      "round": 1,
+      "specialist": "official",
+      "status": "open",
+      "subclaim_ids": [
+       "C3"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": "C3.E1",
+      "id": "T2",
+      "note": "",
+      "objective": "Search Journal Officiel (JORT): decrees, orders and official notices for: Award notice for market 2026-017 in the JORT. If a proper search finds nothing, close this task not_found, say exactly what you searched, and give the stored capture of the empty result as the first doc_id: the absence is scored.",
+      "outcome": null,
+      "purpose": "support",
+      "queries": [],
+      "round": 1,
+      "specialist": "official",
+      "status": "open",
+      "subclaim_ids": [
+       "C3"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": "C5.E1",
+      "id": "T3",
+      "note": "",
+      "objective": "Search TUNEPS: public procurement notices and awards for: TUNEPS tender notice for the Rades-Fictive extension, published before the award. If a proper search finds nothing, close this task not_found, say exactly what you searched, and give the stored capture of the empty result as the first doc_id: the absence is scored.",
+      "outcome": null,
+      "purpose": "challenge",
+      "queries": [],
+      "round": 1,
+      "specialist": "official",
+      "status": "open",
+      "subclaim_ids": [
+       "C5"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": "C9.E1",
+      "id": "T4",
+      "note": "",
+      "objective": "Search Journal Officiel (JORT): decrees, orders and official notices for: Decree n° 2026-0412 declaring the emergency, in the JORT. If a proper search finds nothing, close this task not_found, say exactly what you searched, and give the stored capture of the empty result as the first doc_id: the absence is scored.",
+      "outcome": null,
+      "purpose": "challenge",
+      "queries": [],
+      "round": 1,
+      "specialist": "official",
+      "status": "open",
+      "subclaim_ids": [
+       "C9"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": "C11.E1",
+      "id": "T5",
+      "note": "",
+      "objective": "Search Journal Officiel (JORT): decrees, orders and official notices for: Erratum or rectification of the notice concerned. If a proper search finds nothing, close this task not_found, say exactly what you searched, and give the stored capture of the empty result as the first doc_id: the absence is scored.",
+      "outcome": null,
+      "purpose": "challenge",
+      "queries": [],
+      "round": 1,
+      "specialist": "official",
+      "status": "open",
+      "subclaim_ids": [
+       "C11"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": null,
+      "id": "T6",
+      "note": "",
+      "objective": "Test the innocent explanation H5 (The price reflects a market price shock, not inflation of the contract.) through C10: Market prices rose enough between the benchmark and the award to explain the price gap. Look for: Did prices of the main inputs (equipment, materials, currency) rise over the period?. Record what you find either way.",
+      "outcome": null,
+      "purpose": "challenge",
+      "queries": [],
+      "round": 1,
+      "specialist": "official",
+      "status": "open",
+      "subclaim_ids": [
+       "C10"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": null,
+      "id": "T7",
+      "note": "",
+      "objective": "Test the innocent explanation H7 (The project is delayed, not abandoned, and the money is accounted for.) through C12: Delivery is delayed for documented reasons (force majeure, suspension, litigation), with the funds unspent or recoverable. Look for: Is a suspension, amendment or extension of the contract documented?; Were the funds returned, frozen or kept in the project account?. Record what you find either way.",
+      "outcome": null,
+      "purpose": "challenge",
+      "queries": [],
+      "round": 1,
+      "specialist": "official",
+      "status": "open",
+      "subclaim_ids": [
+       "C12"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": null,
+      "id": "T8",
+      "note": "",
+      "objective": "Find evidence on C3: A funded capacity-expansion project (market 2026-017) existed before the outage. (Is there an archived JORT or TUNEPS award notice with amount and date?; Does a funder record the same project?)",
+      "outcome": null,
+      "purpose": "support",
+      "queries": [],
+      "round": 1,
+      "specialist": "web_news",
+      "status": "open",
+      "subclaim_ids": [
+       "C3"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": null,
+      "id": "T9",
+      "note": "",
+      "objective": "Find evidence on C4: No capacity has been added on the project site since the award. (Are there progress reports?; Do satellite images show construction?; Is there a dated field photo?)",
+      "outcome": null,
+      "purpose": "support",
+      "queries": [],
+      "round": 1,
+      "specialist": "official",
+      "status": "open",
+      "subclaim_ids": [
+       "C4"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": null,
+      "id": "T10",
+      "note": "",
+      "objective": "Find evidence on C4: No capacity has been added on the project site since the award. (Are there progress reports?; Do satellite images show construction?; Is there a dated field photo?)",
+      "outcome": null,
+      "purpose": "support",
+      "queries": [],
+      "round": 1,
+      "specialist": "web_news",
+      "status": "open",
+      "subclaim_ids": [
+       "C4"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": null,
+      "id": "T11",
+      "note": "",
+      "objective": "Find evidence on C5: The contract was awarded without a competitive tender. (Was a tender notice published on TUNEPS before the award?; Was an emergency procedure legally justified?)",
+      "outcome": null,
+      "purpose": "support",
+      "queries": [],
+      "round": 1,
+      "specialist": "official",
+      "status": "open",
+      "subclaim_ids": [
+       "C5"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": null,
+      "id": "T12",
+      "note": "",
+      "objective": "Find evidence on C5: The contract was awarded without a competitive tender. (Was a tender notice published on TUNEPS before the award?; Was an emergency procedure legally justified?)",
+      "outcome": null,
+      "purpose": "support",
+      "queries": [],
+      "round": 1,
+      "specialist": "web_news",
+      "status": "open",
+      "subclaim_ids": [
+       "C5"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": null,
+      "id": "T13",
+      "note": "",
+      "objective": "Find evidence on C6: The committed amount exceeds the cost of comparable works by more than 20%. (What did comparable works cost in prior TUNEPS awards?)",
+      "outcome": null,
+      "purpose": "support",
+      "queries": [],
+      "round": 1,
+      "specialist": "official",
+      "status": "open",
+      "subclaim_ids": [
+       "C6"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": null,
+      "id": "T14",
+      "note": "",
+      "objective": "Find evidence on C6: The committed amount exceeds the cost of comparable works by more than 20%. (What did comparable works cost in prior TUNEPS awards?)",
+      "outcome": null,
+      "purpose": "support",
+      "queries": [],
+      "round": 1,
+      "specialist": "web_news",
+      "status": "open",
+      "subclaim_ids": [
+       "C6"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": null,
+      "id": "T15",
+      "note": "",
+      "objective": "Look for evidence that refutes or innocently explains C3: A funded capacity-expansion project (market 2026-017) existed before the outage. (emergency procedure, force majeure, erratum, corrected figures, price shock, official justification).",
+      "outcome": null,
+      "purpose": "challenge",
+      "queries": [],
+      "round": 2,
+      "specialist": "official",
+      "status": "open",
+      "subclaim_ids": [
+       "C3"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     },
+     {
+      "created_by": "code",
+      "doc_ids": [],
+      "expectation_id": null,
+      "id": "T16",
+      "note": "",
+      "objective": "Look for evidence that refutes or innocently explains C3: A funded capacity-expansion project (market 2026-017) existed before the outage. (emergency procedure, force majeure, erratum, corrected figures, price shock, official justification).",
+      "outcome": null,
+      "purpose": "challenge",
+      "queries": [],
+      "round": 2,
+      "specialist": "web_news",
+      "status": "open",
+      "subclaim_ids": [
+       "C3"
+      ],
+      "suspicion_id": null,
+      "urls": []
+     }
+    ],
+    "window": [
+     "2025-01-01T00:00:00",
+     "2026-09-30T00:00:00"
+    ]
+   }
+  }
+ },
  "views": {
   "/approvals": [
    {

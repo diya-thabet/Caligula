@@ -79,9 +79,17 @@ def test_a_live_case_waiting_for_plan_approval(store):
     service, _ = scripted_cases(store)
     case = service.open(CLAIM, by="Amira", case_id="C-9")
     o = views.overview(case)
-    assert o["status"] == "awaiting_plan_approval" and o["assessment"]["final"] is False
+    assert o["status"] == "awaiting_plan_approval" and o["assessment"] is None
     assert [a["kind"] for a in o["pending_approvals"]] == ["plan_approval"]
     p = views.plan(case)
     assert p["editable"] and p["tasks"][0]["objective"] == "Find the award notice"
     audit = views.audit(case, action="case_opened")
     assert audit["integrity"]["intact"] and [e["actor"] for e in audit["entries"]] == ["Amira"]
+
+
+def test_no_assessment_is_stated_before_the_run_starts(store):
+    service, _ = scripted_cases(store)
+    case = service.open(CLAIM, by="Amira", case_id="C-10")
+    assert views.overview(case)["assessment"] is None
+    assert views.analysis(case) == {"sections": []}
+    assert all(c["status"] == "unverified" for c in views.claims(case)["subclaims"])  # the cards still show

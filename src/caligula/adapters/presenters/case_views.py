@@ -63,6 +63,13 @@ def current_verdict(case: Case) -> Verdict | None:
     return case.workspace.verdict(sensitivity=False) if case.workspace else None
 
 
+def assessed(case: Case) -> Verdict | None:
+    """The verdict to state as an assessment: none before the run starts, when nothing has been
+    looked for yet (the sub-claims are all "unverified" then, which is no finding)."""
+    started = case.verdict is not None or case.status in (CaseStatus.RUNNING, CaseStatus.PAUSED, CaseStatus.FAILED)
+    return current_verdict(case) if started else None
+
+
 def pending_approvals(case: Case) -> list[Json]:
     """What waits for a person, and who: the needs-attention queue."""
     out = []
@@ -78,7 +85,7 @@ def pending_approvals(case: Case) -> list[Json]:
 
 
 def overview(case: Case) -> Json:
-    v = current_verdict(case)
+    v = assessed(case)
     ws = case.workspace
     result = case.result
     return {
@@ -325,7 +332,7 @@ def versions(case: Case, doc_id: str) -> Json | None:
 
 def analysis(case: Case) -> Json:
     """The judgment part of the case file, section by section, in Markdown (evidence cited by id)."""
-    ws, v = case.workspace, current_verdict(case)
+    ws, v = case.workspace, assessed(case)
     if ws is None or v is None:
         return {"sections": []}
     stop = case.result.stop_reason if case.result else None
