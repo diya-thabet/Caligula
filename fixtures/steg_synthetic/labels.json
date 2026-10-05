@@ -1,0 +1,8 @@
+{
+  "_note": "Synthetic labels: the expected outcome the fixture was built to produce.",
+  "verdict": "high_suspicion",
+  "subclaims": {"C1": "supported", "C2": "contradicted", "C3": "supported", "C4": "supported",
+                "C5": "supported", "C6": "supported", "C7": "unverified", "C8": "unverified",
+                "C9": "contradicted"},
+  "substantiated": true
+}

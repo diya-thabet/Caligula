@@ -1,0 +1,2 @@
+[DOCUMENT FICTIF - données synthétiques de test]
+Comparaison Sentinel-2 du 01/03/2026 et du 05/09/2026 sur la parcelle du marché n° 2026-017 : aucun changement de surface bâtie détecté.

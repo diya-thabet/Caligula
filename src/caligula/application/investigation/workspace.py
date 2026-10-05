@@ -1,0 +1,421 @@
+"""State of one investigation, owned by code, not by the model.
+
+Agents change it only through tools, and every write is validated on the spot
+so the model gets immediate feedback. Several agents (source specialists and
+a reviewer) may run in parallel threads on the same workspace, so mutations
+take a lock.
+
+With `review_required`, evidence recorded by collectors is only *proposed*;
+it counts once the reviewer accepts it.
+"""
+
+from __future__ import annotations
+
+import threading
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import StrEnum
+
+from caligula.application.evidence_store import EvidenceStore
+from caligula.application.investigation.control import RunControl
+from caligula.application.investigation.plan import EntityHint, Outcome, Task, TaskStatus
+from caligula.application.investigation.suspicions import Suspicion, SuspicionStatus, resolve
+from caligula.application.ports.sources import (
+    ArchiveSource,
+    FunderRecords,
+    TelegramChannels,
+    TextExtractor,
+    WebFetcher,
+    WebSearch,
+)
+from caligula.application.ports.storage import Ledger
+from caligula.domain.model.attribution import AttributionReport
+from caligula.domain.model.claims import Allegation, Bearing, HypothesisKind, Party, SubClaim
+from caligula.domain.model.evidence import AbsenceFinding, EvidenceEdge, FinancialFigure, RejectedEvidence
+from caligula.domain.model.intake import IntakeDecision
+from caligula.domain.model.verdict import Verdict
+from caligula.domain.services.absence import validate_absences
+from caligula.domain.services.judgment import confidence
+from caligula.domain.services.scoring import DEFAULT_PARAMS, SUPPORTED, Params
+from caligula.domain.services.validation import validate_edges, validate_figures
+from caligula.domain.services.verdict import build_verdict
+
+
+class Mode(StrEnum):
+    # Quick check of a public claim; short budget; answer suitable for a public reply.
+    FACTCHECK = "factcheck"
+    # Full case: multi-hop, financial checks, challenge phase; output goes to human review.
+    INVESTIGATE = "investigate"
+
+
+BUDGETS = {Mode.FACTCHECK: 25, Mode.INVESTIGATE: 80}
+
+
+class Purpose(StrEnum):
+    SUPPORT = "support"
+    CHALLENGE = "challenge"  # looking for evidence that would clear the allegation
+    EXPLORE = "explore"
+
+
+class ProposalStatus(StrEnum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    DISPUTED = "disputed"
+
+
+Item = EvidenceEdge | FinancialFigure | AbsenceFinding
+
+
+@dataclass
+class Proposal:
+    id: str
+    by: str
+    item: Item
+    status: ProposalStatus = ProposalStatus.PENDING
+    note: str = ""
+
+
+@dataclass(frozen=True)
+class Search:
+    """One attempt to find something: a query, an archive lookup, a register or channel read."""
+
+    purpose: Purpose
+    subclaim_id: str | None
+    query: str
+    agent: str = ""
+    round: int = 0
+    task_id: str | None = None
+    tool: str = "search_evidence"
+
+
+@dataclass
+class Lead:
+    """A tip one agent leaves for another during a round (the shared board)."""
+
+    by: str
+    to: str
+    note: str
+    round: int
+
+
+@dataclass
+class TraceEntry:
+    step: int
+    agent: str
+    tool: str
+    args: dict
+    outcome: str
+
+
+@dataclass
+class AgentContext:
+    """One agent's identity and budget within a shared workspace."""
+
+    name: str
+    budget: int
+    done: bool = False
+    report: str | None = None
+    summary_returned: bool = False  # its summary was sent back once for failing the citation check
+
+
+@dataclass
+class Connectors:
+    wayback: ArchiveSource | None = None
+    live: WebFetcher | None = None
+    funders: FunderRecords | None = None
+    telegram: TelegramChannels | None = None
+    extractor: TextExtractor | None = None  # plain UTF-8 decoding when absent
+    # Our own web search. Without it, agents use the model provider's built-in search if it has one.
+    search: WebSearch | None = None
+
+
+@dataclass
+class Workspace:
+    store: EvidenceStore
+    allegation: Allegation
+    mode: Mode
+    ledger: Ledger
+    connectors: Connectors = field(default_factory=Connectors)
+    params: Params = DEFAULT_PARAMS
+    review_required: bool = False
+    edges: list[EvidenceEdge] = field(default_factory=list)
+    figures: list[FinancialFigure] = field(default_factory=list)
+    absences: list[AbsenceFinding] = field(default_factory=list)
+    proposals: list[Proposal] = field(default_factory=list)
+    # Evidence ids ("E1", "E2"...), given to an item the first time it counts and never reused,
+    # so a summary can cite the exact quote or search it relies on.
+    evidence_ids: dict[str, Item] = field(default_factory=dict)
+    tasks: list[Task] = field(default_factory=list)
+    leads: list[Lead] = field(default_factory=list)
+    suspicions: list[Suspicion] = field(default_factory=list)
+    entities: list[EntityHint] = field(default_factory=list)
+    window: tuple[datetime | None, datetime | None] = (None, None)  # period under investigation
+    round: int = 1
+    rejected: list[RejectedEvidence] = field(default_factory=list)
+    trace: list[TraceEntry] = field(default_factory=list)
+    searches: list[Search] = field(default_factory=list)
+    budget: int = 0  # default budget for a single-agent run
+    summary: str | None = None
+    # The latest summary's sentence-level citation check.
+    attribution: AttributionReport | None = None
+    # Proof-of-concept mode: work needing legal review proceeds, marked internal (see usecases/intake.py).
+    poc: bool = True
+    # Legal policy for a statement that widens the case (new people or companies); None: always legal review.
+    scope_policy: Callable[[str], IntakeDecision] | None = None
+    # Pause, resume and stop, from outside the run (see control.py).
+    control: RunControl = field(default_factory=RunControl)
+    # Called with (kind, data) as the investigation moves: each tool call ("tool") and phase
+    # changes the team reports. For live views; nothing the engine decides depends on them.
+    listeners: list[Callable[[str, dict], None]] = field(default_factory=list)
+
+    def __post_init__(self):
+        self.budget = self.budget or BUDGETS[self.mode]
+        self.lock = threading.RLock()
+
+    @property
+    def finished(self) -> bool:
+        return self.summary is not None
+
+    def log(self, agent: str, tool: str, args: dict, outcome: str) -> None:
+        with self.lock:
+            entry = TraceEntry(len(self.trace) + 1, agent, tool, args, outcome)
+            self.trace.append(entry)
+        self.emit("tool", {"step": entry.step, "agent": agent, "tool": tool, "args": args, "outcome": outcome,
+                           "round": self.round})
+
+    def emit(self, kind: str, data: dict) -> None:
+        for listener in list(self.listeners):
+            try:
+                listener(kind, data)
+            except Exception:  # a broken view must not break the investigation
+                pass
+
+    def add_party(self, party: Party, by: str) -> Party:
+        """Declare a party with a stake in the case, or add aliases to a known one."""
+        with self.lock:
+            known = next((p for p in self.allegation.parties if p.name.casefold() == party.name.casefold()), None)
+            if known is None:
+                self.allegation.parties.append(party)
+                known = party
+            else:
+                known.aliases += [a for a in party.aliases if a not in known.aliases]
+            self.ledger.append("party", by, name=known.name, role=known.role.value, aliases=known.aliases)
+            return known
+
+    # --- tasks and leads ---------------------------------------------------
+
+    def add_task(self, **fields) -> Task:
+        with self.lock:
+            task = Task(id=f"T{len(self.tasks) + 1}", **fields)
+            self.tasks.append(task)
+            self.ledger.append("task", task.created_by, id=task.id, specialist=task.specialist,
+                               objective=task.objective, purpose=task.purpose, round=task.round)
+            return task
+
+    def open_tasks(self, specialist: str | None = None) -> list[Task]:
+        with self.lock:
+            return [t for t in self.tasks if t.status == TaskStatus.OPEN and t.round <= self.round
+                    and (specialist is None or t.specialist == specialist)]
+
+    def close_task(self, task_id: str, specialist: str, outcome: Outcome, note: str, doc_ids: list[str]) -> Task:
+        with self.lock:
+            task = next((t for t in self.tasks if t.id == task_id), None)
+            if task is None or task.specialist != specialist:
+                raise KeyError(f"no task {task_id} assigned to {specialist}")
+            unknown = [d for d in doc_ids if self.store.get(d) is None]
+            if unknown:
+                raise ValueError(f"unknown documents {unknown}")
+            task.status, task.outcome, task.note, task.doc_ids = TaskStatus.DONE, outcome, note, doc_ids
+            self.ledger.append("task_closed", specialist, id=task.id, outcome=outcome.value, doc_ids=doc_ids)
+            return task
+
+    def post_lead(self, by: str, to: str, note: str) -> None:
+        with self.lock:
+            self.leads.append(Lead(by, to, note, self.round))
+
+    def leads_for(self, specialist: str) -> list[Lead]:
+        with self.lock:
+            return [lead for lead in self.leads if lead.to in (specialist, "all") and lead.by != specialist]
+
+    def coverage(self) -> dict[str, dict]:
+        """Per sub-claim: which specialists were tasked, task outcomes, and whether it was challenged."""
+        with self.lock:
+            challenged = {s.subclaim_id for s in self.searches if s.purpose == Purpose.CHALLENGE}
+            out = {}
+            for c in self.allegation.subclaims:
+                tasks = [t for t in self.tasks if c.id in t.subclaim_ids]
+                out[c.id] = {
+                    "specialists": sorted({t.specialist for t in tasks}),
+                    "outcomes": {t.id: t.outcome.value if t.outcome else "open" for t in tasks},
+                    "challenged": c.id in challenged
+                    or any(t.purpose == "challenge" and t.status == TaskStatus.DONE for t in tasks),
+                }
+            return out
+
+    def add_subclaim(self, statement: str, bearing: Bearing, questions: list[str], by: str) -> str:
+        """A sub-claim added during the investigation (to test a suspicion). The allegation's
+        hypotheses predict it true if it incriminates, false if it exculpates."""
+        with self.lock:
+            taken = {c.id for c in self.allegation.subclaims}
+            cid = next(f"C{n}" for n in range(1, len(taken) + 2) if f"C{n}" not in taken)
+            self.allegation.subclaims.append(SubClaim(id=cid, statement=statement, verification_questions=questions,
+                                                      bearing=bearing))
+            if bearing != Bearing.NEUTRAL:
+                for h in self.allegation.hypotheses:
+                    if h.kind == HypothesisKind.ALLEGATION:
+                        h.predicts[cid] = bearing == Bearing.AGAINST
+            self.ledger.append("subclaim", by, id=cid, statement=statement, bearing=bearing.value)
+            return cid
+
+    def activate_suspicion(self, s: Suspicion, by: str) -> None:
+        """Tie a suspicion to a sub-claim (created if needed) and queue one task to confirm it
+        and one to refute it for the next round."""
+        with self.lock:
+            s.subclaim_id = s.subclaim_id or self.add_subclaim(s.statement, Bearing(s.bearing),
+                                                                [s.confirm_by, s.refute_by], by)
+            for purpose, who, look_for in (("support", s.confirm_specialist, s.confirm_by),
+                                           ("challenge", s.refute_specialist, s.refute_by)):
+                verb = "confirm" if purpose == "support" else "refute"
+                t = self.add_task(specialist=who, purpose=purpose, subclaim_ids=[s.subclaim_id],
+                                  round=self.round + 1, created_by=by, suspicion_id=s.id,
+                                  objective=f"Try to {verb} suspicion {s.id} ({s.statement}). Look for: {look_for}")
+                s.task_ids.append(t.id)
+
+    def decide_scope(self, suspicion_id: str, approve: bool, by: str, note: str = "") -> Suspicion:
+        """A lawyer's decision on a suspicion held because it widens the case to new people or
+        companies: approved, it is tested like any other; rejected, nobody investigates it."""
+        with self.lock:
+            s = next((s for s in self.suspicions if s.id == suspicion_id), None)
+            if s is None or s.status != SuspicionStatus.AWAITING_SCOPE:
+                raise ValueError(f"no suspicion {suspicion_id} awaiting a scope decision")
+            self.ledger.append("legal_approval" if approve else "legal_refusal", by, suspicion=s.id,
+                               scope=s.statement, entities=s.new_entities, note=note)
+            s.note = f"scope {'approved' if approve else 'refused'} by {by}" + (f": {note}" if note else "")
+            if approve:
+                s.status = SuspicionStatus.OPEN
+                self.activate_suspicion(s, by)
+            else:
+                s.status = SuspicionStatus.REJECTED
+            return s
+
+    def known_entities(self) -> list[str]:
+        return [n for e in self.entities for n in [e.name, *e.aliases]]
+
+    def resolve_suspicions(self, verdict: Verdict | None = None) -> list[Suspicion]:
+        """Update suspicions from the sub-claims that test them; log and return those that changed."""
+        with self.lock:
+            v = verdict or self.verdict(sensitivity=False)
+            changed = resolve(self.suspicions, {c.id: c.status for c in v.by_subclaim}, self.round)
+            for s in changed:
+                self.ledger.append("suspicion_status", "caligula", id=s.id, status=s.status.value, round=self.round)
+            return changed
+
+    def absence_for(self, task: Task, searched_at: datetime) -> AbsenceFinding | None:
+        """The absence finding implied by a task that searched for an expected record and found nothing."""
+        expected = self.allegation.expected().get(task.expectation_id or "")
+        if task.outcome != Outcome.NOT_FOUND or expected is None:
+            return None
+        subclaim_id, record = expected
+        return AbsenceFinding(subclaim_id=subclaim_id, relation=record.absence_means, register_id=record.register_id,
+                              query="; ".join(task.queries) or record.description, searched_at=searched_at,
+                              window_start=self.window[0], window_end=self.window[1],
+                              doc_id=task.doc_ids[0] if task.doc_ids else None,
+                              note=f"{task.id}: {task.note}")
+
+    def add_search(self, purpose: Purpose, subclaim_id: str | None, query: str, agent: str = "",
+                   task_id: str | None = None, tool: str = "search_evidence") -> None:
+        with self.lock:
+            self.searches.append(Search(purpose, subclaim_id, query, agent, self.round, task_id, tool))
+
+    def attempts(self, task: Task, agent: str) -> list[Search]:
+        """Distinct searches an agent made for a task: tagged with its id, or, untagged, on
+        one of its sub-claims during the current round."""
+        with self.lock:
+            seen, out = set(), []
+            for s in self.searches:
+                mine = s.agent == agent and (s.task_id == task.id or (
+                    s.task_id is None and s.round == self.round and s.subclaim_id in task.subclaim_ids))
+                if mine and (s.tool, s.query.casefold()) not in seen:
+                    seen.add((s.tool, s.query.casefold()))
+                    out.append(s)
+            return out
+
+    def record(self, item: Item, by: str) -> tuple[str | None, str | None]:
+        """Validate and record. Returns (rejection reason, proposal id)."""
+        with self.lock:
+            if isinstance(item, EvidenceEdge):
+                kept, rejected = validate_edges(self.store.corpus(), self.allegation, [item])
+            elif isinstance(item, AbsenceFinding):
+                kept, rejected = validate_absences(self.store.corpus(), self.allegation, [item])
+            else:
+                kept, rejected = validate_figures(self.store.corpus(), [item])
+            self.rejected += rejected
+            if rejected:
+                self.ledger.append("rejection", by, item=item.model_dump(mode="json"), reason=rejected[0].reason)
+                return rejected[0].reason, None
+            if not self.review_required:
+                eid = self._accept(item)
+                self.ledger.append("evidence", by, id=eid, item=item.model_dump(mode="json"))
+                return None, None
+            if any(p.item == item for p in self.proposals):
+                return None, next(p.id for p in self.proposals if p.item == item)
+            proposal = Proposal(id=f"P{len(self.proposals) + 1}", by=by, item=item)
+            self.proposals.append(proposal)
+            self.ledger.append("proposal", by, id=proposal.id, item=item.model_dump(mode="json"))
+            return None, proposal.id
+
+    def _target(self, item: Item) -> list:
+        if isinstance(item, EvidenceEdge):
+            return self.edges
+        return self.absences if isinstance(item, AbsenceFinding) else self.figures
+
+    def _accept(self, item: Item) -> str:
+        target = self._target(item)
+        if item not in target:
+            target.append(item)
+        eid = self.evidence_id(item)
+        if eid is None:
+            eid = f"E{len(self.evidence_ids) + 1}"
+            self.evidence_ids[eid] = item
+        return eid
+
+    def evidence_id(self, item: Item) -> str | None:
+        with self.lock:
+            return next((eid for eid, known in self.evidence_ids.items() if known == item), None)
+
+    def counted(self) -> dict[str, Item]:
+        """Evidence that counts now, by id (an item accepted then disputed keeps its id but no longer counts)."""
+        with self.lock:
+            return {eid: item for eid, item in self.evidence_ids.items() if item in self._target(item)}
+
+    def review(self, proposal_id: str, accept: bool, note: str, reviewer: str) -> Proposal:
+        with self.lock:
+            p = next((p for p in self.proposals if p.id == proposal_id), None)
+            if p is None:
+                raise KeyError(proposal_id)
+            if p.status == ProposalStatus.ACCEPTED and not accept:
+                self._target(p.item).remove(p.item)
+            p.status = ProposalStatus.ACCEPTED if accept else ProposalStatus.DISPUTED
+            p.note = note
+            eid = self._accept(p.item) if accept else self.evidence_id(p.item)
+            self.ledger.append("review", reviewer, id=p.id, status=p.status.value, note=note, evidence_id=eid)
+            return p
+
+    def verdict(self, sensitivity: bool = True) -> Verdict:
+        """The verdict from accepted evidence. `sensitivity=False` skips the
+        recomputation per origin when only statuses are needed."""
+        with self.lock:
+            v = build_verdict(self.store.corpus(), self.allegation, list(self.edges), list(self.figures), self.params,
+                              absences=list(self.absences), sensitivity=sensitivity)
+            # Only the workspace knows which sub-claims someone tried to refute.
+            level, reasons = confidence(v, self.allegation, self.params, self.unchallenged(v))
+            v.confidence, v.confidence_reasons = level.value, reasons
+            v.rejected_evidence = self.rejected + v.rejected_evidence
+            return v
+
+    def unchallenged(self, verdict: Verdict | None = None) -> list[str]:
+        """Supported sub-claims nobody has yet tried to refute."""
+        verdict = verdict or self.verdict(sensitivity=False)
+        cov = self.coverage()
+        return [c.id for c in verdict.by_subclaim if c.status == SUPPORTED and not cov[c.id]["challenged"]]
