@@ -1,0 +1,4 @@
+[DOCUMENT FICTIF - données synthétiques de test]
+Bailleur international (fictif) - Fiche projet P-000000
+Composante 2 : extension de capacité, centrale de Rades-Fictive (marché n° 2026-017).
+Montant décaissé au 30/06/2026 : 110 000 000 TND (équivalent).

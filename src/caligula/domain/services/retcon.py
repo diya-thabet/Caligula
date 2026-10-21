@@ -1,0 +1,53 @@
+"""Retcon detection: compare versions of the same logical document.
+
+A raw-hash change alone is not a finding (re-rendering changes bytes). A
+text-hash change is reported only when an extracted field (amount, date,
+decree number) differs, so the flag says *what* was rewritten.
+"""
+
+from __future__ import annotations
+
+from collections import Counter, defaultdict
+from collections.abc import Iterable
+from itertools import pairwise
+
+from caligula.domain.model.documents import Document
+from caligula.domain.model.verdict import FieldChange, RetconFlag
+from caligula.domain.services.extraction import extract_fields
+
+
+def diff_fields(earlier: Document, later: Document) -> list[FieldChange]:
+    before, after = extract_fields(earlier.text), extract_fields(later.text)
+    changes = []
+    for kind in before:
+        b, a = Counter(before[kind]), Counter(after[kind])
+        removed, added = sorted((b - a).elements()), sorted((a - b).elements())
+        if removed or added:
+            changes.append(FieldChange(kind=kind, removed=removed, added=added))
+    return changes
+
+
+def detect_retcons(documents: Iterable[Document]) -> list[RetconFlag]:
+    by_url: dict[str, list[Document]] = defaultdict(list)
+    for doc in documents:
+        by_url[doc.canonical_url].append(doc)
+    flags = []
+    for url, docs in by_url.items():
+        versions = sorted(docs, key=lambda d: d.observed_at)
+        for earlier, later in pairwise(versions):
+            if earlier.text_sha256 == later.text_sha256:
+                continue
+            changes = diff_fields(earlier, later)
+            if changes:
+                flags.append(
+                    RetconFlag(
+                        canonical_url=url,
+                        earlier_doc_id=earlier.id,
+                        later_doc_id=later.id,
+                        earlier_observed_at=earlier.observed_at,
+                        later_observed_at=later.observed_at,
+                        changes=changes,
+                        needs_review="ocr" in (earlier.extraction, later.extraction),
+                    )
+                )
+    return flags

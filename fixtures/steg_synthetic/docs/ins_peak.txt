@@ -1,0 +1,6 @@
+[DOCUMENT FICTIF - données synthétiques de test]
+Institut national de la statistique - série annuelle fictive
+Pointe annuelle de la demande électrique nationale :
+2024 : 4 790 MW
+2025 : 4 830 MW
+2026 : 4 870 MW (+0,8 % par rapport à 2025)

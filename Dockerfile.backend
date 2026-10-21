@@ -1,0 +1,24 @@
+# Backend: replay-only API (no model key needed).
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+COPY pyproject.toml README.md ./
+COPY src/ src/
+COPY fixtures/ fixtures/
+
+RUN pip install --upgrade pip && pip install -e '.[api]'
+
+EXPOSE 8000
+
+VOLUME ["/data/blobs", "/data/cases", "/data/out"]
+
+# Replay-only: serves fixtures/steg_synthetic, no --llm, no --db (in-memory store).
+# To use Postgres later, append: --db postgresql://caligula:caligula@db:5432/caligula
+CMD ["caligula", "serve", "--host", "0.0.0.0", "--port", "8000", \
+     "--replay", "fixtures/steg_synthetic", \
+     "--ledgers", "/data/cases", "--blobs", "/data/blobs"]

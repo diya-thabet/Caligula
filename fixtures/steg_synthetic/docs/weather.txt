@@ -1,0 +1,3 @@
+[DOCUMENT FICTIF - données synthétiques de test]
+Relevé météorologique, station Tunis-Carthage
+Température maximale le 21/07/2026 : 41 °C. Température maximale le 24/07/2025 : 42 °C. Aucun épisode de chaleur exceptionnel par rapport à l'été 2025.

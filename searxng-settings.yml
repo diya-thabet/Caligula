@@ -1,0 +1,23 @@
+# Local SearXNG for Caligula agents. Private instance: rate limiting off,
+# JSON enabled (the app queries /search?format=json). Outgoing engine
+# traffic comes from this host's IP.
+use_default_settings: true
+server:
+  secret_key: "caligula-local-dev-secret-change-me"
+  bind_address: "0.0.0.0"
+  port: 8080
+  limiter: false
+  public_instance: false
+  base_url: false
+search:
+  formats:
+    - html
+    - json
+botdetection:
+  ip_lists:
+    block_ip: []
+    pass_ip:
+      - 127.0.0.0/8
+      - 10.0.0.0/8
+      - 172.16.0.0/12
+      - 192.168.0.0/16

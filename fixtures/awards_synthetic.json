@@ -1,0 +1,84 @@
+{
+  "_note": "Synthetic award records; every buyer and supplier is fictional.",
+  "awards": [
+    {
+      "id": "2026-017",
+      "buyer": "STEG (fictif)",
+      "supplier": "Société Zeta Travaux (fictive)",
+      "object": "Extension 450 MW Rades-Fictive",
+      "amount_tnd": 120000000,
+      "procedure": "negotiated",
+      "award_date": "2026-02-20T00:00:00Z",
+      "estimated_value_tnd": 65000000,
+      "supplier_registered_at": "2025-09-01T00:00:00Z",
+      "source_doc_ids": [
+        "jort_award_v1"
+      ]
+    },
+    {
+      "id": "2024-088",
+      "buyer": "STEG (fictif)",
+      "supplier": "Omega Energie (fictive)",
+      "object": "Extension 450 MW Sousse-Fictive",
+      "amount_tnd": 60000000,
+      "procedure": "open",
+      "award_date": "2024-11-05T00:00:00Z",
+      "notice_published_at": "2024-08-01T00:00:00Z",
+      "submission_deadline": "2024-09-15T00:00:00Z",
+      "estimated_value_tnd": 62000000,
+      "bids": 5,
+      "supplier_registered_at": "2008-01-01T00:00:00Z"
+    },
+    {
+      "id": "2026-10",
+      "buyer": "Municipalité Fictive-Ville",
+      "supplier": "Kappa Services (fictive)",
+      "object": "Entretien éclairage lot 1",
+      "amount_tnd": 185000,
+      "procedure": "restricted",
+      "award_date": "2026-01-10T00:00:00Z",
+      "notice_published_at": null,
+      "bids": 1,
+      "supplier_registered_at": "2019-05-01T00:00:00Z"
+    },
+    {
+      "id": "2026-11",
+      "buyer": "Municipalité Fictive-Ville",
+      "supplier": "Kappa Services (fictive)",
+      "object": "Entretien éclairage lot 2",
+      "amount_tnd": 190000,
+      "procedure": "restricted",
+      "award_date": "2026-02-02T00:00:00Z",
+      "notice_published_at": null,
+      "bids": 1,
+      "supplier_registered_at": "2019-05-01T00:00:00Z"
+    },
+    {
+      "id": "2026-12",
+      "buyer": "Municipalité Fictive-Ville",
+      "supplier": "Kappa Services (fictive)",
+      "object": "Entretien éclairage lot 3",
+      "amount_tnd": 178000,
+      "procedure": "restricted",
+      "award_date": "2026-03-01T00:00:00Z",
+      "notice_published_at": null,
+      "bids": 1,
+      "supplier_registered_at": "2019-05-01T00:00:00Z"
+    },
+    {
+      "id": "2026-020",
+      "buyer": "Municipalité Fictive-Ville",
+      "supplier": "Lambda Travaux (fictive)",
+      "object": "Voirie",
+      "amount_tnd": 400000,
+      "procedure": "open",
+      "award_date": "2026-04-01T00:00:00Z",
+      "notice_published_at": "2026-03-20T00:00:00Z",
+      "submission_deadline": "2026-03-30T00:00:00Z",
+      "bids": 3,
+      "amendments_tnd": [
+        150000
+      ]
+    }
+  ]
+}

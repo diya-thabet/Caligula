@@ -1,0 +1,206 @@
+"""Case file in Markdown, built by code from the workspace (no model involved).
+
+The judgment comes first, in the analytic order (see `analytic.py`); the
+annexes hold the detail it rests on. Everything traces to a stored document,
+a task outcome or a ledger entry, so an editor can check any line.
+"""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime
+
+from caligula.adapters.presenters.analysis import competing_hypotheses, dependencies, likelihood_text
+from caligula.adapters.presenters.analytic import (
+    alternatives,
+    bottom_line,
+    checked_summary,
+    gaps,
+    indicators,
+    key_assumptions,
+    key_judgments,
+)
+from caligula.adapters.presenters.evolution import evolution, suspicions
+from caligula.application.investigation.attribution import check_summary
+from caligula.application.investigation.plan import TaskStatus
+from caligula.application.investigation.team import RoundSummary
+from caligula.application.investigation.workspace import ProposalStatus, Workspace
+from caligula.domain.model.evidence import AbsenceFinding, EvidenceEdge
+from caligula.domain.model.registers import REGISTERS
+from caligula.domain.model.verdict import Verdict
+from caligula.domain.services.interest import Interest, interest, role_of
+from caligula.domain.services.provenance import origin_clusters
+
+POC_BANNER = (
+    "> **PROOF OF CONCEPT — internal working document.** Not reviewed by a lawyer or an editor. "
+    "Not for publication or circulation outside the project."
+)
+
+
+def _doc_line(ws: Workspace, doc_id: str) -> str:
+    d = ws.store.get(doc_id)
+    date = (d.published_at or d.observed_at).date().isoformat()
+    return f"`{d.id}` {d.publisher} ({d.source_kind}, {date})"
+
+
+_STAKE = {
+    Interest.SELF_SERVING: " · *self-serving: the publisher is a party and this helps it*",
+    Interest.AGAINST_INTEREST: " · *against the publisher's own interest*",
+}
+
+
+def _stake_note(ws: Workspace, e: EvidenceEdge) -> str:
+    d = ws.store.get(e.doc_id)
+    stake = interest(role_of(d.publisher, ws.allegation.parties), ws.allegation.bearing_of(e.subclaim_id), e.relation)
+    return _STAKE.get(stake, "")
+
+
+def _absence_line(a: AbsenceFinding) -> str:
+    capture = f"capture `{a.doc_id}`" if a.doc_id else "no capture stored"
+    return (f"absence ({a.relation}) · {REGISTERS[a.register_id].name}: nothing found for « {a.query} » "
+            f"({capture})")
+
+
+def _cell(text: str) -> str:
+    return text.replace("|", "\\|").replace("\n", " ")
+
+
+def build_report(ws: Workspace, verdict: Verdict, review: str | None = None, poc: bool = True,
+                 stop_reason: str | None = None, rounds: list[RoundSummary] | None = None) -> str:
+    a = ws.allegation
+    out: list[str] = [f"# Case {a.id}", ""]
+    if poc:
+        out += [POC_BANNER, ""]
+    out += [
+        f"Generated {datetime.now(UTC):%Y-%m-%d %H:%M} UTC · verdict **{verdict.verdict}** · "
+        f"core facts: {likelihood_text(verdict)} · confidence: {verdict.confidence}"
+        + (f" · stopped: {stop_reason}" if stop_reason else ""),
+        "", *bottom_line(ws, verdict, stop_reason), "## Claim", "", a.text, "",
+    ]
+    if a.parties:
+        out += ["Parties: " + "; ".join(f"{p.name} ({p.role.value})" for p in a.parties), ""]
+    out += [*key_judgments(ws, verdict), *alternatives(verdict, ws), *key_assumptions(ws, verdict),
+            *dependencies(verdict), *gaps(ws, verdict), *indicators(ws, verdict)]
+    out += ["## Limits of this assessment", ""]
+    if verdict.rejected_evidence:
+        out.append(f"- {len(verdict.rejected_evidence)} proposed item(s) rejected by validation "
+                   "(quotes not found, dates incompatible, unknown sub-claims).")
+    out.append(f"- {verdict.disclaimer}")
+    if review:
+        # The check the loop ran (with its judge), or, for a summary that never went through it, the checks in code.
+        out += ["", *checked_summary(ws.attribution or check_summary(ws, review, verdict=verdict))]
+
+    out += ["", "---", "", "# Annexes", "", "The detail every judgment above rests on.", "",
+            "## Sub-claims", "",
+            "| | Statement | Status | Support | Against | Independent sources (for / against) |",
+            "|---|---|---|---|---|---|",
+    ]
+    for c in verdict.by_subclaim:
+        core = " (core)" if c.id in a.core_subclaims else ""
+        out.append(f"| {c.id}{core} | {_cell(c.statement)} | {c.status} | {c.support:.2f} | "
+                   f"{c.contradiction:.2f} | {len(c.supporting_clusters)} / {len(c.contradicting_clusters)} |")
+    out += ["", *competing_hypotheses(verdict)]
+
+    out += ["## Anomalies", ""]
+    if not verdict.retcon_flags and not (verdict.financial and verdict.financial.flagged):
+        out.append("None detected by code.")
+    for f in verdict.retcon_flags:
+        changes = "; ".join(f"{c.kind} {c.removed} → {c.added}" for c in f.changes)
+        review_note = " (OCR text: verify against the scan)" if f.needs_review else ""
+        out.append(f"- **Record rewritten**: {f.canonical_url} between {f.earlier_observed_at:%Y-%m-%d} "
+                   f"(`{f.earlier_doc_id}`) and {f.later_observed_at:%Y-%m-%d} (`{f.later_doc_id}`): {changes}{review_note}")
+    if verdict.financial:
+        fin = verdict.financial
+        out.append(f"- **Financial check** ({'flagged' if fin.flagged else 'not flagged'}): {fin.reference_role} "
+                   f"{fin.reference_amount_tnd:,.0f} TND vs proven/benchmark {fin.proven_spend_tnd:,.0f} TND, "
+                   f"gap {fin.discrepancy_tnd:,.0f} TND ({fin.discrepancy_ratio:.0%}), "
+                   f"{fin.independent_clusters} independent origins")
+        figures = fin.figures + [f for f in ws.figures if f not in fin.figures]
+        for f in figures:
+            eid = ws.evidence_id(f)
+            unused = "" if f in fin.figures else " · *not used by the check (see the rewritten record above)*"
+            out.append(f"  - {f'**{eid}** ' if eid else ''}{f.role} {f.amount_tnd:,.0f} TND · "
+                       f"{_doc_line(ws, f.doc_id)}: « {f.quote} »{unused}")
+
+    out += ["", "## Evidence by sub-claim", ""]
+    clusters = origin_clusters(ws.store.documents)
+
+    def origin_note(doc_id: str, siblings: list[str]) -> str:
+        same = sorted(d for d in siblings if d != doc_id and clusters[d] == clusters[doc_id])
+        return f" · same origin as {', '.join(f'`{d}`' for d in same)}" if same else ""
+
+    counted = ws.counted()
+
+    def mark(status: str, item) -> str:
+        tag = {"accepted": "✓", "disputed": "✗", "pending": "?"}[status]
+        eid = next((e for e, known in counted.items() if known == item), None)
+        return f"{tag} **{eid}**" if eid and status == "accepted" else tag
+
+    for c in a.subclaims:
+        props = [p for p in ws.proposals if isinstance(p.item, EvidenceEdge) and p.item.subclaim_id == c.id]
+        direct = [e for e in ws.edges if e.subclaim_id == c.id and not any(p.item == e for p in props)]
+        absent = [p for p in ws.proposals if isinstance(p.item, AbsenceFinding) and p.item.subclaim_id == c.id]
+        absent_direct = [f for f in ws.absences if f.subclaim_id == c.id and not any(p.item == f for p in absent)]
+        if not props and not direct and not absent and not absent_direct:
+            continue
+        out += [f"### {c.id}. {c.statement}", ""]
+        siblings = [p.item.doc_id for p in props] + [e.doc_id for e in direct]
+        for p in props:
+            e = p.item
+            note = f" — reviewer: {p.note}" if p.note and p.status != ProposalStatus.PENDING else ""
+            out.append(f"- {mark(p.status, e)} {e.relation} · {_doc_line(ws, e.doc_id)} · proposed by {p.by}: "
+                       f"« {e.quote} »{_stake_note(ws, e)}{origin_note(e.doc_id, siblings)}{note}")
+        for e in direct:
+            out.append(f"- {mark('accepted', e)} {e.relation} · {_doc_line(ws, e.doc_id)}: « {e.quote} »"
+                       f"{_stake_note(ws, e)}{origin_note(e.doc_id, siblings)}")
+        for p in absent:
+            note = f" — reviewer: {p.note}" if p.note and p.status != ProposalStatus.PENDING else ""
+            out.append(f"- {mark(p.status, p.item)} {_absence_line(p.item)} · proposed by {p.by}{note}")
+        out += [f"- {mark('accepted', f)} {_absence_line(f)}" for f in absent_direct]
+        out.append("")
+
+    expected = a.expected()
+    if expected:
+        out += ["## Expected records", "",
+                "What should exist in a register if the sub-claim were false (or true), and what the search found.",
+                "", "| Record | Register | If absent | Searches | Absence counted |", "|---|---|---|---|---|"]
+        for eid, (cid, record) in expected.items():
+            searches = ", ".join(f"{t.id} {t.outcome.value if t.outcome else 'open'}"
+                                 for t in ws.tasks if t.expectation_id == eid) or "none"
+            counted = [f for f in ws.absences if f.subclaim_id == cid and f.register_id == record.register_id]
+            out.append(f"| {eid} {_cell(record.description)} | {record.register_id} | {record.absence_means} {cid} | "
+                       f"{searches} | {'yes' if counted else 'no'} |")
+        out.append("")
+
+    out += ["## Timeline", ""]
+    used = {e.doc_id for e in ws.edges} | {f.doc_id for f in ws.figures}
+    events = []
+    for doc_id in used:
+        d = ws.store.get(doc_id)
+        when = d.published_at or d.observed_at
+        seen = f" (first seen {d.observed_at:%Y-%m-%d})" if abs((d.observed_at - when).days) > 1 else ""
+        events.append((when, f"{_doc_line(ws, doc_id)}{seen}"))
+    for c in a.subclaims:
+        if c.event_date:
+            events.append((c.event_date, f"**event** ({c.id}): {c.statement}"))
+    for f in verdict.retcon_flags:
+        events.append((f.later_observed_at, f"**rewritten version observed**: `{f.later_doc_id}` differs from "
+                                            f"`{f.earlier_doc_id}`"))
+    # Sorted on text too: same-day events must come out in the same order on every run.
+    out += [f"- {when:%Y-%m-%d} {what}" for when, what in sorted(events)] or ["(no dated evidence)"]
+
+    story = [*suspicions(ws), *evolution(rounds or [], stop_reason)]
+    if story:
+        out += ["", *story]
+    if ws.tasks:
+        out += ["", "## Collection tasks", "", "| Task | Specialist | Purpose | Objective | Outcome | Note |",
+                "|---|---|---|---|---|---|"]
+        for t in ws.tasks:
+            outcome = t.outcome.value if t.status == TaskStatus.DONE else "not run"
+            out.append(f"| {t.id} (r{t.round}, {t.created_by}) | {t.specialist} | {t.purpose} | "
+                       f"{_cell(t.objective[:140])} | {outcome} | {_cell(t.note[:160])} |")
+
+    broken = ws.ledger.verify()
+    out += ["", "## Integrity", "",
+            f"- Documents in store: {len(ws.store.documents)}; ledger entries: {len(ws.ledger.entries)}; "
+            f"head `{ws.ledger.head[:16]}…`; chain {'intact' if broken is None else f'BROKEN at entry {broken}'}."]
+    return "\n".join(out) + "\n"
