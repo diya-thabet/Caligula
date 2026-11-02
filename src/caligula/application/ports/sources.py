@@ -99,7 +99,7 @@ class TelegramChannels(Protocol):
 @dataclass(frozen=True)
 class ExtractedText:
     text: str
-    method: str  # plain | pdf_text | ocr
+    method: str  # plain | html | pdf_text | ocr
 
 
 class TextExtractor(Protocol):

@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS documents (
     raw_sha256     char(64) NOT NULL,
     text_sha256    char(64) NOT NULL,
     text           text NOT NULL,
-    extraction     text NOT NULL DEFAULT 'plain',  -- plain | pdf_text | ocr
+    extraction     text NOT NULL DEFAULT 'plain',  -- plain | html | pdf_text | ocr
     cites          text[] NOT NULL DEFAULT '{}',
     derived_from   text[] NOT NULL DEFAULT '{}',
     -- 'simple' keeps Arabic and French tokens as-is (no language-specific stemming).
